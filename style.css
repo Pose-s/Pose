@@ -3,6 +3,7 @@
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -13,9 +14,14 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
+  width: 100%;
 }
 
-/* Sidebar Styling */
+/* =========================================================
+   STILI DESKTOP / PC
+   ========================================================= */
+
+/* Sidebar */
 .sidebar {
   width: 240px;
   background-color: #ffffff;
@@ -25,7 +31,9 @@ body {
   padding: 28px 20px;
   position: fixed;
   height: 100vh;
-  z-index: 10;
+  z-index: 100;
+  left: 0;
+  top: 0;
 }
 
 .brand {
@@ -73,7 +81,6 @@ body {
   font-size: 15px;
   border-radius: 10px;
   background-color: #f3e8ff;
-  transition: all 0.2s ease;
 }
 
 .sidebar-footer {
@@ -82,12 +89,13 @@ body {
   font-weight: 500;
 }
 
-/* Main Content Styling */
+/* Area Principale */
 .main-content {
   margin-left: 240px;
-  flex-grow: 1;
+  flex: 1;
   padding: 40px 48px;
-  max-width: 960px;
+  max-width: 900px;
+  width: calc(100% - 240px);
 }
 
 .content-header {
@@ -107,11 +115,15 @@ body {
   color: #64748b;
 }
 
-/* Categories Bar */
+/* Filtri Categorie */
+.categories-wrapper {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
 .categories {
   display: flex;
   gap: 10px;
-  margin-bottom: 32px;
   flex-wrap: wrap;
 }
 
@@ -134,8 +146,6 @@ body {
 .cat-btn:hover {
   background-color: #f1f5f9;
   color: #0f172a;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
 }
 
 .cat-btn.active {
@@ -145,11 +155,12 @@ body {
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
-/* News Container & Cards */
+/* Cards Notizie */
 .news-container {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  width: 100%;
 }
 
 .news-card {
@@ -158,31 +169,26 @@ body {
   overflow: hidden;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   border: 1px solid #f1f5f9;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .news-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08);
 }
 
 .card-image-wrapper {
   position: relative;
   width: 100%;
-  height: 340px;
+  height: 320px;
   background-color: #e2e8f0;
-  overflow: hidden;
 }
 
 .news-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
-}
-
-.news-card:hover img {
-  transform: scale(1.03);
+  display: block;
 }
 
 .news-content {
@@ -206,7 +212,6 @@ body {
   border-radius: 6px;
   text-transform: uppercase;
   font-size: 11px;
-  letter-spacing: 0.5px;
 }
 
 .news-title {
@@ -219,7 +224,6 @@ body {
 .news-title a {
   text-decoration: none;
   color: #0f172a;
-  transition: color 0.2s ease;
 }
 
 .news-title a:hover {
@@ -232,25 +236,105 @@ body {
   line-height: 1.6;
 }
 
-/* Loading & Error Feedback */
-.state-box {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  text-align: center;
-  color: #64748b;
-  font-size: 16px;
-  border: 1px solid #e2e8f0;
-}
+/* =========================================================
+   ADATTAMENTO PER SMARTPHONE E TABLET (Mobile)
+   ========================================================= */
+@media screen and (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
 
-.spinner {
-  font-size: 28px;
-  color: #7c3aed;
-  margin-bottom: 12px;
-  animation: spin 1s linear infinite;
-}
+  /* La Sidebar diventa la Topbar del telefono */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 60px;
+    padding: 12px 16px;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+  }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  .brand {
+    margin-bottom: 0;
+  }
+
+  .brand-icon-wrapper {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+  }
+
+  .nav-menu, .sidebar-footer {
+    display: none; /* Rimuove elementi non necessari nello smartphone */
+  }
+
+  /* Main Content occupa tutto lo schermo del telefono */
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px 16px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  /* I tasti si possono scorrere orizzontalmente con il dito su mobile */
+  .categories-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    margin-bottom: 20px;
+    padding-bottom: 4px;
+    scrollbar-width: none; /* Nasconde scrollbar */
+  }
+
+  .categories-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .categories {
+    flex-wrap: nowrap;
+    display: inline-flex;
+  }
+
+  .cat-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* Cards proporzionate allo schermo dello smartphone */
+  .news-card {
+    border-radius: 14px;
+  }
+
+  .card-image-wrapper {
+    height: 200px;
+  }
+
+  .news-content {
+    padding: 16px;
+  }
+
+  .news-title {
+    font-size: 17px;
+  }
+
+  .news-description {
+    font-size: 14px;
+  }
 }

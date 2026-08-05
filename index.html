@@ -2,19 +2,19 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pose - News Feed</title>
   <link rel="stylesheet" href="style.css" />
   <!-- FontAwesome per le icone -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Font Google Inter per una tipografia moderna -->
+  <!-- Font Google Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar Sinistra -->
+    <!-- Sidebar / Topbar Responsive -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-icon-wrapper">
@@ -37,31 +37,33 @@
     <main class="main-content">
       <header class="content-header">
         <h1 class="page-title">News Feed</h1>
-        <p class="subtitle">Le ultime notizie in tempo reale curate da BBC News</p>
+        <p class="subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
       </header>
 
-      <!-- Barra Filtri Categorie Cliccabili -->
-      <div class="categories">
-        <button class="cat-btn active" data-category="top">
-          <i class="fa-solid fa-fire"></i> <span>Top News</span>
-        </button>
-        <button class="cat-btn" data-category="technology">
-          <i class="fa-solid fa-laptop"></i> <span>Tech</span>
-        </button>
-        <button class="cat-btn" data-category="science_and_environment">
-          <i class="fa-solid fa-flask"></i> <span>Science</span>
-        </button>
-        <button class="cat-btn" data-category="business">
-          <i class="fa-solid fa-chart-line"></i> <span>Business</span>
-        </button>
-        <button class="cat-btn" data-category="world">
-          <i class="fa-solid fa-earth-americas"></i> <span>World</span>
-        </button>
+      <!-- Barra Filtri Categorie (Scorrevole su Mobile) -->
+      <div class="categories-wrapper">
+        <div class="categories">
+          <button class="cat-btn active" data-category="top">
+            <i class="fa-solid fa-fire"></i> <span>Top News</span>
+          </button>
+          <button class="cat-btn" data-category="technology">
+            <i class="fa-solid fa-laptop"></i> <span>Tech</span>
+          </button>
+          <button class="cat-btn" data-category="science_and_environment">
+            <i class="fa-solid fa-flask"></i> <span>Science</span>
+          </button>
+          <button class="cat-btn" data-category="business">
+            <i class="fa-solid fa-chart-line"></i> <span>Business</span>
+          </button>
+          <button class="cat-btn" data-category="world">
+            <i class="fa-solid fa-earth-americas"></i> <span>World</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Feed Notizie -->
+      <!-- Container Notizie Dynamic -->
       <div id="news-container" class="news-container">
-        <!-- Contenuto generato dinamicamente da script.js -->
+        <!-- Generato via JavaScript -->
       </div>
     </main>
   </div>
