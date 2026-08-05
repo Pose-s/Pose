@@ -3,17 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pose - News App</title>
+  <title>Pose - News Feed</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Icone FontAwesome per la grafica -->
+  <!-- FontAwesome per le icone -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Font Google Inter per una tipografia moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-container">
     <!-- Sidebar Sinistra -->
     <aside class="sidebar">
       <div class="brand">
-        <i class="fa-solid fa-bolt brand-icon"></i>
+        <div class="brand-icon-wrapper">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
         <span class="brand-name">Pose</span>
       </div>
       <nav class="nav-menu">
@@ -29,30 +35,33 @@
 
     <!-- Contenuto Principale -->
     <main class="main-content">
-      <h1 class="page-title">News Feed</h1>
+      <header class="content-header">
+        <h1 class="page-title">News Feed</h1>
+        <p class="subtitle">Le ultime notizie in tempo reale curate da BBC News</p>
+      </header>
 
-      <!-- Categorie -->
+      <!-- Barra Filtri Categorie Cliccabili -->
       <div class="categories">
         <button class="cat-btn active" data-category="top">
-          <i class="fa-solid fa-fire"></i> Top News
+          <i class="fa-solid fa-fire"></i> <span>Top News</span>
         </button>
         <button class="cat-btn" data-category="technology">
-          <i class="fa-solid fa-laptop"></i> Tech
+          <i class="fa-solid fa-laptop"></i> <span>Tech</span>
         </button>
         <button class="cat-btn" data-category="science_and_environment">
-          <i class="fa-solid fa-flask"></i> Science
+          <i class="fa-solid fa-flask"></i> <span>Science</span>
         </button>
         <button class="cat-btn" data-category="business">
-          <i class="fa-solid fa-chart-line"></i> Business
+          <i class="fa-solid fa-chart-line"></i> <span>Business</span>
         </button>
         <button class="cat-btn" data-category="world">
-          <i class="fa-solid fa-puzzle-piece"></i> World
+          <i class="fa-solid fa-earth-americas"></i> <span>World</span>
         </button>
       </div>
 
-      <!-- Feed Notizie BBC -->
+      <!-- Feed Notizie -->
       <div id="news-container" class="news-container">
-        <!-- Le notizie vengono caricate qui via JS -->
+        <!-- Contenuto generato dinamicamente da script.js -->
       </div>
     </main>
   </div>
