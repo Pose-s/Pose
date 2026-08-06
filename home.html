@@ -4,8 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pose - Home</title>
+  
+  <!-- Font Google Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Icone Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Fogli di Stile -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <i data-lucide="zap" class="logo-icon"></i>
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="home.html" class="nav-item active">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </a>
+        <a href="index.html" class="nav-item">
+          <i data-lucide="newspaper"></i>
+          <span>News</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        © 2026 Pose
+      </div>
+    </aside>
+
+    <!-- Contenuto Principale -->
+    <main class="main-content">
+      <!-- Qui in futuro andranno i post -->
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>
