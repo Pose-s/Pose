@@ -1,91 +1,106 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pose - News Feed</title>
-  
-  <!-- Font Google Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Icone Lucide -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  
-  <!-- Fogli di Stile -->
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pose</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome per le icone della sidebar -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
   <div class="app-container">
-    <!-- Sidebar -->
+    
+    <!-- SIDEBAR DI SINISTRA -->
     <aside class="sidebar">
       <div class="logo">
-        <i data-lucide="zap" class="logo-icon"></i>
-        <span>Pose</span>
+        <i class="fa-solid fa-bolt"></i> Pose
       </div>
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active">
-          <i data-lucide="newspaper"></i>
-          <span>News</span>
-        </a>
+      
+      <nav class="nav-menu">
+        <button class="nav-btn active" id="btn-news" onclick="switchTab('news')">
+          <i class="fa-regular fa-newspaper"></i> News
+        </button>
+        <button class="nav-btn" id="btn-home" onclick="switchTab('home')">
+          <i class="fa-solid fa-house"></i> Home
+        </button>
       </nav>
-      <div class="sidebar-footer">
-        © 2026 Pose
-      </div>
     </aside>
 
-    <!-- Contenuto Principale -->
+    <!-- CONTENUTO PRINCIPALE -->
     <main class="main-content">
-      <header class="page-header">
-        <h1>News Feed</h1>
-        <p>Le ultime notizie aggiornate in tempo reale da BBC News</p>
-      </header>
 
-      <!-- Pulsanti Categorie -->
-      <div class="categories-bar" id="categoriesBar">
-        <button class="category-btn active" data-category="top">
-          <i data-lucide="flame"></i> Top News
-        </button>
-        <button class="category-btn" data-category="tech">
-          <i data-lucide="laptop"></i> Tech
-        </button>
-        <button class="category-btn" data-category="science">
-          <i data-lucide="flask-conical"></i> Science
-        </button>
-        <button class="category-btn" data-category="business">
-          <i data-lucide="trending-up"></i> Business
-        </button>
-        <button class="category-btn" data-category="world">
-          <i data-lucide="globe"></i> World
-        </button>
-      </div>
+      <!-- SEZIONE NEWS (NON TOCCATA) -->
+      <section id="news-section" class="content-section">
+        <header class="page-header">
+          <h1>News Feed</h1>
+          <p>Le ultime notizie aggiornate in tempo reale da BBC News</p>
+        </header>
 
-      <!-- Spinner Caricamento -->
-      <div id="loader" class="loader hidden">
-        <div class="spinner"></div>
-      </div>
+        <!-- Filtri News -->
+        <div class="news-filters">
+          <button class="filter-btn active"><i class="fa-solid fa-fire"></i> Top News</button>
+          <button class="filter-btn"><i class="fa-solid fa-laptop"></i> Tech</button>
+          <button class="filter-btn"><i class="fa-solid fa-flask"></i> Science</button>
+          <button class="filter-btn"><i class="fa-solid fa-chart-line"></i> Business</button>
+          <button class="filter-btn"><i class="fa-solid fa-globe"></i> World</button>
+        </div>
 
-      <!-- Griglia Notizie -->
-      <div class="news-grid" id="newsGrid"></div>
+        <!-- Griglia Articoli -->
+        <div class="news-grid">
+          
+          <article class="news-card">
+            <img src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=600" alt="News Image">
+            <div class="card-content">
+              <div class="card-meta">
+                <span class="badge">BBC NEWS</span>
+                <span class="time"><i class="fa-regular fa-clock"></i> 6h ago</span>
+              </div>
+              <h3>Young women tell BBC of rape, assault and harassment at Army training college for teenagers</h3>
+              <p>They say the incidents happened at the Army Foundation College in Harrogate when they were aged 17.</p>
+            </div>
+          </article>
+
+          <article class="news-card">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600" alt="News Image">
+            <div class="card-content">
+              <div class="card-meta">
+                <span class="badge">BBC NEWS</span>
+                <span class="time"><i class="fa-regular fa-clock"></i> 4h ago</span>
+              </div>
+              <h3>Cambridge professor at centre of plagiarism row resigns</h3>
+              <p>Prof Jason Arday said he had "concluded that the only way to bring this chapter to an end is to step away".</p>
+            </div>
+          </article>
+
+          <article class="news-card">
+            <img src="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600" alt="News Image">
+            <div class="card-content">
+              <div class="card-meta">
+                <span class="badge">BBC NEWS</span>
+                <span class="time"><i class="fa-regular fa-clock"></i> 6h ago</span>
+              </div>
+              <h3>Car washes and vape shops can still sponsor skilled foreign workers despite visa changes</h3>
+              <p>The rules were tightened in July 2025 to restrict the scheme mostly to graduate-level employees who would be earning at least £41,700.</p>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- SEZIONE HOME (SOLO PULSANTE + IN BASSO CENTRATO) -->
+      <section id="home-section" class="content-section hidden">
+        <div class="home-container">
+          <button class="home-add-btn" id="create-post-btn" aria-label="Genera Post">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+      </section>
+
     </main>
+
   </div>
-  
-  <!-- Vista della Home -->
-<div class="home-container">
-  
-  <!-- Area Contenuti (attualmente vuota) -->
-  <main class="content-area">
-    <!-- Qui in futuro compariranno i post generati -->
-  </main>
-
-  <!-- Pulsante di creazione post (+) -->
-  <button class="fab-btn" id="createPostBtn" aria-label="Crea nuovo post">
-    +
-  </button>
-
-</div>
 
   <script src="script.js"></script>
 </body>
