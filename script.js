@@ -1,23 +1,24 @@
 const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/';
+// API Cloud pubblica gratuita per salvare/sincronizzare i post condivisi tra tutti gli utenti
+const CLOUD_STORAGE_URL = 'https://api.jsonbin.io/v3/b/66b1e2c4e41b4d34e41c4a22';
+
 const newsContainer = document.getElementById('news-container');
 const categoryButtons = document.querySelectorAll('.cat-btn');
 
-// Elementi di Navigazione
 const navButtons = document.querySelectorAll('.nav-item');
 const pageHome = document.getElementById('page-home');
 const pageNews = document.getElementById('page-news');
 
-// Elementi Modale Post
 const addPostBtn = document.getElementById('add-post-btn');
 const postModal = document.getElementById('post-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const createPostForm = document.getElementById('create-post-form');
+const submitPostBtn = document.getElementById('submit-post-btn');
 const postsContainer = document.getElementById('posts-container');
 
-// Array locale per memorizzare i post creati
 let posts = [];
 
-// CAMBIO PAGINA (HOME / NEWS)
+// NAVIGAZIONE (HOME / NEWS)
 navButtons.forEach(button => {
   button.addEventListener('click', () => {
     navButtons.forEach(btn => btn.classList.remove('active'));
@@ -28,6 +29,7 @@ navButtons.forEach(button => {
     if (targetPage === 'home') {
       pageHome.classList.remove('hidden');
       pageNews.classList.add('hidden');
+      loadCloudPosts();
     } else if (targetPage === 'news') {
       pageHome.classList.add('hidden');
       pageNews.classList.remove('hidden');
@@ -38,29 +40,53 @@ navButtons.forEach(button => {
   });
 });
 
-// GESTIONE POPUP MODALE
-addPostBtn.addEventListener('click', () => {
-  postModal.classList.remove('hidden');
-});
+// MODALE CREAZIONE POST
+addPostBtn.addEventListener('click', () => postModal.classList.remove('hidden'));
+closeModalBtn.addEventListener('click', () => postModal.classList.add('hidden'));
 
-closeModalBtn.addEventListener('click', () => {
-  postModal.classList.add('hidden');
-});
-
-// Chiusura cliccando fuori dal riquadro
 postModal.addEventListener('click', (e) => {
-  if (e.target === postModal) {
-    postModal.classList.add('hidden');
-  }
+  if (e.target === postModal) postModal.classList.add('hidden');
 });
 
-// CREAZIONE NUOVO POST
-createPostForm.addEventListener('submit', (e) => {
+// CARICA I POST DAL CLOUD (VISIBILI A TUTTI)
+async function loadCloudPosts() {
+  postsContainer.innerHTML = `
+    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
+      <p>Caricamento post della community...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch('https://api.npoint.io/4612344793f64c679a95');
+    if (res.ok) {
+      const data = await res.json();
+      posts = data || [];
+      renderPosts();
+    } else {
+      fallbackLocalPosts();
+    }
+  } catch (err) {
+    fallbackLocalPosts();
+  }
+}
+
+function fallbackLocalPosts() {
+  const local = localStorage.getItem('pose_posts');
+  posts = local ? JSON.parse(local) : [];
+  renderPosts();
+}
+
+// PUBLICA POST E SALVA ONLINE
+createPostForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const title = document.getElementById('post-title').value;
-  const content = document.getElementById('post-content').value;
-  const imageUrl = document.getElementById('post-image').value;
+  submitPostBtn.innerText = 'Pubblicazione in corso...';
+  submitPostBtn.disabled = true;
+
+  const title = document.getElementById('post-title').value.trim();
+  const content = document.getElementById('post-content').value.trim();
+  const imageUrl = document.getElementById('post-image').value.trim();
 
   const newPost = {
     id: Date.now(),
@@ -71,14 +97,27 @@ createPostForm.addEventListener('submit', (e) => {
   };
 
   posts.unshift(newPost);
-  renderPosts();
+  localStorage.setItem('pose_posts', JSON.stringify(posts));
 
-  // Reset e chiusura form
+  // Invia al server
+  try {
+    await fetch('https://api.npoint.io/4612344793f64c679a95', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(posts)
+    });
+  } catch (err) {
+    console.warn('Salvato in locale');
+  }
+
+  renderPosts();
   createPostForm.reset();
+  submitPostBtn.innerText = 'Pubblica Post';
+  submitPostBtn.disabled = false;
   postModal.classList.add('hidden');
 });
 
-// MOSTRA POST IN HOME
+// RENDERING DEI POST SULLO SCHERMO
 function renderPosts() {
   postsContainer.innerHTML = '';
 
@@ -86,7 +125,7 @@ function renderPosts() {
     postsContainer.innerHTML = `
       <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
         <i class="fa-regular fa-folder-open" style="font-size: 40px; margin-bottom: 12px;"></i>
-        <p style="font-size: 16px;">Nessun post presente in Home.<br>Clicca sul tasto <strong>(+)</strong> in basso per crearne uno!</p>
+        <p style="font-size: 15px;">Nessun post presente.<br>Premi il tasto <strong>(+)</strong> per crearne uno!</p>
       </div>
     `;
     return;
@@ -96,7 +135,14 @@ function renderPosts() {
     const card = document.createElement('div');
     card.className = 'user-post-card';
 
-    let imageHtml = post.image ? `<img src="${post.image}" alt="Immagine post">` : '';
+    let imageHtml = '';
+    if (post.image && post.image.length > 5) {
+      imageHtml = `
+        <div class="post-img-wrapper">
+          <img src="${post.image}" alt="Foto Post" onerror="this.parentElement.style.display='none'">
+        </div>
+      `;
+    }
 
     card.innerHTML = `
       <h2 class="user-post-title">${post.title}</h2>
@@ -109,7 +155,7 @@ function renderPosts() {
   });
 }
 
-// INIZIALIZZAZIONE SEZIONE NEWS (Intatta)
+// SEZIONE NEWS BBC
 const bbcFeeds = {
   top: 'rss.xml',
   technology: 'technology/rss.xml',
@@ -122,7 +168,7 @@ async function fetchNews(categoryKey = 'top') {
   newsContainer.innerHTML = `
     <div style="text-align: center; padding: 40px 20px; color: #64748b;">
       <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
-      <p style="font-weight: 500;">Caricamento ultime notizie BBC...</p>
+      <p>Caricamento notizie BBC...</p>
     </div>
   `;
 
@@ -180,5 +226,5 @@ categoryButtons.forEach(button => {
   });
 });
 
-// Render dei post iniziali vuoti
-renderPosts();
+// Avvio
+loadCloudPosts();
