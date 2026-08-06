@@ -1,226 +1,116 @@
-const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/';
-const newsContainer = document.getElementById('news-container');
-const categoryButtons = document.querySelectorAll('.cat-btn');
+// Sostituisci con i tuoi dati reali presi da Supabase
+const SUPABASE_URL = 'https://tuo-id-progetto.supabase.co';
+const SUPABASE_KEY = 'la-tua-chiave-anon-public';
 
-const navButtons = document.querySelectorAll('.nav-item');
-const pageHome = document.getElementById('page-home');
-const pageNews = document.getElementById('page-news');
+// Inizializza il client
+const supabase = supabase.createClient("https://bbytjhnxrhidoadgoubt.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJieXRqaG54cmhpZG9hZGdvdWJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTYwODYsImV4cCI6MjEwMTUzMjA4Nn0.aWedNEWQU2zAb0ftYtqpqj_QGX0lpIJ7KYjGjMmpC6E");
 
-const addPostBtn = document.getElementById('add-post-btn');
-const postModal = document.getElementById('post-modal');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const createPostForm = document.getElementById('create-post-form');
-const submitPostBtn = document.getElementById('submit-post-btn');
-const postsContainer = document.getElementById('posts-container');
 
-let posts = [];
+async function fetchForYouFeed() {
+  const newsContainer = document.getElementById('news-container');
 
-// NAVIGAZIONE (HOME / NEWS)
-navButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    navButtons.forEach(btn => btn.classList.remove('active'));
-    button.classList.add('active');
-
-    const targetPage = button.getAttribute('data-page');
-
-    if (targetPage === 'home') {
-      pageHome.classList.remove('hidden');
-      pageNews.classList.add('hidden');
-      loadCloudPosts();
-    } else if (targetPage === 'news') {
-      pageHome.classList.add('hidden');
-      pageNews.classList.remove('hidden');
-      if (newsContainer.children.length === 0) {
-        fetchNews('top');
-      }
-    }
-  });
-});
-
-// MODALE CREAZIONE POST
-addPostBtn.addEventListener('click', () => postModal.classList.remove('hidden'));
-closeModalBtn.addEventListener('click', () => postModal.classList.add('hidden'));
-
-postModal.addEventListener('click', (e) => {
-  if (e.target === postModal) postModal.classList.add('hidden');
-});
-
-// CARICA I POST CONDIVISI
-async function loadCloudPosts() {
-  postsContainer.innerHTML = `
-    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
-      <p>Caricamento post in corso...</p>
-    </div>
-  `;
-
-  try {
-    const res = await fetch('https://api.npoint.io/4612344793f64c679a95');
-    if (res.ok) {
-      const data = await res.json();
-      posts = data || [];
-      renderPosts();
-    } else {
-      fallbackLocalPosts();
-    }
-  } catch (err) {
-    fallbackLocalPosts();
-  }
-}
-
-function fallbackLocalPosts() {
-  const local = localStorage.getItem('pose_posts');
-  posts = local ? JSON.parse(local) : [];
-  renderPosts();
-}
-
-// PUBBLICA POST
-createPostForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  submitPostBtn.innerText = 'Pubblicazione in corso...';
-  submitPostBtn.disabled = true;
-
-  const title = document.getElementById('post-title').value.trim();
-  const content = document.getElementById('post-content').value.trim();
-  const imageUrl = document.getElementById('post-image').value.trim();
-
-  const newPost = {
-    id: Date.now(),
-    title: title,
-    content: content,
-    image: imageUrl,
-    date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  };
-
-  posts.unshift(newPost);
-  localStorage.setItem('pose_posts', JSON.stringify(posts));
-
-  try {
-    await fetch('https://api.npoint.io/4612344793f64c679a95', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(posts)
-    });
-  } catch (err) {
-    console.warn('Salvato in locale');
-  }
-
-  renderPosts();
-  createPostForm.reset();
-  submitPostBtn.innerText = 'Pubblica Post';
-  submitPostBtn.disabled = false;
-  postModal.classList.add('hidden');
-});
-
-// RENDERING DEI POST SULLO SCHERMO
-function renderPosts() {
-  postsContainer.innerHTML = '';
-
-  if (posts.length === 0) {
-    postsContainer.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
-        <i class="fa-regular fa-folder-open" style="font-size: 40px; margin-bottom: 12px;"></i>
-        <p style="font-size: 15px;">Nessun post presente.<br>Premi il tasto <strong>(+)</strong> per crearne uno!</p>
-      </div>
-    `;
-    return;
-  }
-
-  posts.forEach(post => {
-    const card = document.createElement('div');
-    card.className = 'user-post-card';
-
-    let imageHtml = '';
-    if (post.image && post.image.length > 5) {
-      imageHtml = `
-        <div class="post-img-wrapper">
-          <img src="${post.image}" alt="Foto Post" onerror="this.parentElement.style.display='none'">
-        </div>
-      `;
-    }
-
-    card.innerHTML = `
-      <h2 class="user-post-title">${post.title}</h2>
-      <div class="user-post-date"><i class="fa-regular fa-clock"></i> ${post.date}</div>
-      <p class="user-post-content">${post.content}</p>
-      ${imageHtml}
-    `;
-
-    postsContainer.appendChild(card);
-  });
-}
-
-// SEZIONE NEWS BBC
-const bbcFeeds = {
-  top: 'rss.xml',
-  technology: 'technology/rss.xml',
-  science_and_environment: 'science_and_environment/rss.xml',
-  business: 'business/rss.xml',
-  world: 'world/rss.xml'
-};
-
-async function fetchNews(categoryKey = 'top') {
+  // 1. Loader di caricamento
   newsContainer.innerHTML = `
     <div style="text-align: center; padding: 40px 20px; color: #64748b;">
       <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
-      <p>Caricamento notizie BBC...</p>
+      <p style="font-weight: 500;">Caricamento feed Per Te...</p>
     </div>
   `;
 
-  const feedEndpoint = bbcFeeds[categoryKey] || bbcFeeds.top;
-  const requestUrl = `${RSS_API}${feedEndpoint}`;
+  // 2. Chiamata al Database Supabase
+  const { data: posts, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false }); // Ordine dal più recente
 
-  try {
-    const response = await fetch(requestUrl);
-    const data = await response.json();
+  if (error) {
+    console.error('Errore nel recupero dei post:', error);
+    newsContainer.innerHTML = `<p>Si è verificato un errore nel caricamento.</p>`;
+    return;
+  }
 
-    if (data.status === 'ok' && data.items && data.items.length > 0) {
-      renderArticles(data.items);
-    }
-  } catch (error) {
-    console.error('Errore notizie:', error);
+  // 3. Se non ci sono post
+  if (!posts || posts.length === 0) {
+    newsContainer.innerHTML = `<p style="text-align:center;">Nessun post disponibile.</p>`;
+    return;
+  }
+
+  // 4. Stampa dei post a schermo
+  renderPosts(posts);
+}
+
+function renderPosts(posts) {// Funzione per pubblicare un nuovo post su Supabase
+async function createPost() {
+  const username = document.getElementById('post-username').value;
+  const caption = document.getElementById('post-caption').value;
+  const mediaUrl = document.getElementById('post-imageurl').value;
+
+  if (!caption || !mediaUrl) {
+    alert('Compila almeno la descrizione e il link dell\'immagine!');
+    return;
+  }
+
+  // Invia i dati a Supabase
+  const { data, error } = await supabase
+    .from('posts')
+    .insert([
+      { 
+        user_name: username || 'Utente Anonimo', 
+        caption: caption, 
+        media_url: mediaUrl 
+      }
+    ]);
+
+  if (error) {
+    console.error('Errore durante la pubblicazione:', error);
+    alert('Si è verificato un errore nella pubblicazione.');
+  } else {
+    alert('Post pubblicato con successo!');
+    // Pulisci i campi di testo
+    document.getElementById('post-caption').value = '';
+    document.getElementById('post-imageurl').value = '';
+    // Ricarica il feed per mostrare subito il nuovo post
+    fetchForYouFeed();
   }
 }
 
-function renderArticles(articles) {
-  newsContainer.innerHTML = '';
+// Collega il click del bottone Pubblica alla funzione
+document.getElementById('btn-publish').addEventListener('click', createPost);
+  const newsContainer = document.getElementById('news-container');
+  newsContainer.innerHTML = ''; // Pulisci il container
 
-  articles.forEach(item => {
-    let imageUrl = item.thumbnail || (item.enclosure && item.enclosure.link) || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1000';
-    const cleanDescription = item.description ? item.description.replace(/<[^>]*>?/gm, '') : '';
-    const publishDate = item.pubDate ? new Date(item.pubDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : 'BBC News';
-
-    const card = document.createElement('article');
-    card.className = 'news-card';
-
-    card.innerHTML = `
-      <div class="card-image-wrapper">
-        <img src="${imageUrl}" alt="${item.title}" loading="lazy">
+  posts.forEach(post => {
+    const postElement = document.createElement('div');
+    postElement.className = 'post-card'; // Puoi stilizzarlo in style.css
+    postElement.innerHTML = `
+      <div class="post-header">
+        <strong>${post.user_name || 'Utente Anonimo'}</strong>
       </div>
-      <div class="news-content">
-        <div class="news-meta">
-          <span class="news-source">BBC NEWS</span>
-          <span class="news-date"><i class="fa-regular fa-clock"></i> ${publishDate}</span>
-        </div>
-        <h2 class="news-title">
-          <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
-        </h2>
-        <p class="news-description">${cleanDescription}</p>
+      <img src="${post.media_url}" alt="Post image" style="width: 100%; border-radius: 8px; margin: 10px 0;" />
+      <p class="post-caption"><strong>${post.user_name}:</strong> ${post.caption}</p>
+      <div class="post-actions">
+        <button onclick="likePost(${post.id})">❤️ ${post.likes || 0}</button>
       </div>
     `;
-
-    newsContainer.appendChild(card);
+    newsContainer.appendChild(postElement);
   });
 }
+const btnHome = document.getElementById('btn-home');
+const btnNews = document.getElementById('btn-news');
+const createPostCard = document.getElementById('create-post-card');
 
-categoryButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    categoryButtons.forEach(btn => btn.classList.remove('active'));
-    button.classList.add('active');
-    fetchNews(button.getAttribute('data-category'));
-  });
+// Clic su HOME
+btnHome.addEventListener('click', () => {
+  btnHome.classList.add('active');
+  btnNews.classList.remove('active');
+  createPostCard.style.display = 'block'; // Mostra il box per pubblicare
+  fetchForYouFeed(); // Carica i post del social
 });
 
-// Avvio
-loadCloudPosts();
+// Clic su NEWS
+btnNews.addEventListener('click', () => {
+  btnNews.classList.add('active');
+  btnHome.classList.remove('active');
+  createPostCard.style.display = 'none'; // Nascondi il box per pubblicare
+  fetchNews(); // Carica le notizie BBC (la tua vecchia funzione)
+});
