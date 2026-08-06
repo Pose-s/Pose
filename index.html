@@ -1,46 +1,120 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pose App</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pose - App</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Font Google Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- CONTENUTO PRINCIPALE DELLA PAGINA -->
-  <main class="main-content">
-    <div class="empty-state">
-      <div class="folder-icon">📁</div>
-      <p>Nessun post presente.<br>Premi il tasto <strong>(+)</strong> per crearne uno!</p>
-    </div>
-  </main>
-
-<!-- BARRA DI NAVIGAZIONE IN BASSO -->
-  <nav class="bottom-nav">
+  <div class="app-container">
     
-    <!-- Tasto Home -->
-    <a href="#" class="nav-btn active" data-page="home">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-      </svg>
-      <span>Home</span>
-    </a>
+    <!-- Header / Sidebar Navigazione -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon-wrapper">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <span class="brand-name">Pose</span>
+      </div>
 
-    <!-- Tasto (+) centrale fluttuante per aprire il modale -->
-    <button id="add-post-btn" class="add-btn" aria-label="Crea post">+</button>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-page="home">
+          <i class="fa-solid fa-house"></i>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-page="news">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>News</span>
+        </button>
+      </nav>
 
-    <!-- Tasto News -->
-    <a href="#" class="nav-btn" data-page="news">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-      </svg>
-      <span>News</span>
-    </a>
+      <div class="sidebar-footer">
+        © 2026 Pose
+      </div>
+    </aside>
 
-  </nav>
+    <!-- Contenuto Principale -->
+    <main class="main-content">
+      
+      <!-- SEZIONE HOME -->
+      <section id="page-home" class="page-section">
+        <div id="posts-container" class="posts-container">
+          <!-- Post caricati qui -->
+        </div>
 
-  <!-- COLLEGAMENTO SCRIPT -->
+        <!-- Tasto (+) Fluttuante in basso al centro -->
+        <button id="add-post-btn" class="fab-btn" title="Crea nuovo post">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </section>
+
+      <!-- SEZIONE NEWS (Intatta) -->
+      <section id="page-news" class="page-section hidden">
+        <header class="content-header">
+          <h1 class="page-title">News Feed</h1>
+          <p class="subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
+        </header>
+
+        <div class="categories-wrapper">
+          <div class="categories">
+            <button class="cat-btn active" data-category="top">
+              <i class="fa-solid fa-fire"></i> <span>Top News</span>
+            </button>
+            <button class="cat-btn" data-category="technology">
+              <i class="fa-solid fa-laptop"></i> <span>Tech</span>
+            </button>
+            <button class="cat-btn" data-category="science_and_environment">
+              <i class="fa-solid fa-flask"></i> <span>Science</span>
+            </button>
+            <button class="cat-btn" data-category="business">
+              <i class="fa-solid fa-chart-line"></i> <span>Business</span>
+            </button>
+            <button class="cat-btn" data-category="world">
+              <i class="fa-solid fa-earth-americas"></i> <span>World</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="news-container" class="news-container"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODALE SCHERMATA CREAZIONE POST -->
+  <div id="post-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Crea un nuovo post</h2>
+        <button id="close-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="create-post-form" class="modal-body">
+        <div class="form-group">
+          <label for="post-title">Titolo</label>
+          <input type="text" id="post-title" placeholder="Inserisci il titolo..." required />
+        </div>
+        <div class="form-group">
+          <label for="post-content">Contenuto</label>
+          <textarea id="post-content" rows="4" placeholder="Cosa vuoi condividere?" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="post-image">URL Immagine (opzionale)</label>
+          <input type="url" id="post-image" placeholder="https://esempio.com/immagine.jpg" />
+        </div>
+        <div class="modal-actions">
+          <button type="submit" id="submit-post-btn" class="submit-post-btn">Pubblica Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>

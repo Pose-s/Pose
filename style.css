@@ -1,102 +1,327 @@
-/* Resettaggio di base */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: #f8fafc;
-  color: #334155;
-  padding-bottom: 90px; /* Spazio per la barra in basso */
+  color: #0f172a;
+  overflow-x: hidden;
 }
 
-/* Layout area principale */
-.main-content {
-  min-height: calc(100vh - 90px);
+.app-container {
   display: flex;
-  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.page-section {
+  display: block;
+  width: 100%;
+}
+
+.page-section.hidden {
+  display: none !important;
+}
+
+/* ================= DESKTOP STYLES ================= */
+.sidebar {
+  width: 240px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px;
+  position: fixed;
+  height: 100vh;
+  z-index: 100;
+  left: 0;
+  top: 0;
+}
+
+.brand {
+  display: flex;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.brand-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #5b21b6;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #64748b;
+  background: none;
+  border: none;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.nav-item.active {
+  color: #6d28d9;
+  background-color: #f3e8ff;
+}
+
+.sidebar-footer {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Area Principale Desktop */
+.main-content {
+  margin-left: 240px;
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 800px;
+  width: calc(100% - 240px);
+  padding-bottom: 110px;
+}
+
+/* Tasto (+) Fluttuante in basso al centro */
+.fab-btn {
+  position: fixed;
+  bottom: 30px;
+  left: calc(50% + 120px);
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  transition: transform 0.2s ease;
+}
+
+.fab-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* Posts Container */
+.posts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.user-post-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
   padding: 20px;
 }
 
-.empty-state {
-  text-align: center;
+.user-post-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.user-post-date {
+  font-size: 12px;
   color: #94a3b8;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.folder-icon {
-  font-size: 64px;
   margin-bottom: 12px;
-  opacity: 0.6;
 }
 
-/* ---------------------------------- */
-/* STRUTTURA BARRA DI NAVIGAZIONE IN BASSO */
-/* ---------------------------------- */
+.user-post-content {
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-line;
+}
 
-.bottom-nav {
+.post-img-wrapper {
+  margin-top: 14px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.post-img-wrapper img {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Modale */
+.modal-overlay {
   position: fixed;
-  bottom: 0;
+  top: 0;
   left: 0;
   width: 100%;
-  height: 65px;
-  background-color: #ffffff;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-  z-index: 1000;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
 }
 
-/* Pulsanti Home e News */
-.nav-btn {
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-box {
+  background: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 { font-size: 18px; color: #0f172a; }
+.close-btn { background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; }
+
+.form-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 500;
-  width: 70px;
-  transition: color 0.2s ease;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
-.nav-btn.active, 
-.nav-btn:hover {
-  color: #7c3aed; /* Viola brand */
+.form-group label { font-size: 13px; font-weight: 600; color: #475569; }
+.form-group input, .form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
 }
 
-.nav-icon {
-  width: 24px;
-  height: 24px;
-  margin-bottom: 3px;
+.form-group input:focus, .form-group textarea:focus { border-color: #7c3aed; }
+
+.submit-post-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-/* Pulsante (+) centrale in rilievo */
-.add-btn {
-  position: relative;
-  top: -18px;
-  width: 56px;
-  height: 56px;
-  background-color: #7c3aed;
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-size: 32px;
-  font-weight: 300;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
+/* Sezione News Intatta */
+.content-header { margin-bottom: 20px; }
+.page-title { font-size: 28px; font-weight: 700; color: #0f172a; }
+.subtitle { font-size: 14px; color: #64748b; }
+.categories-wrapper { overflow-x: auto; margin-bottom: 24px; scrollbar-width: none; }
+.categories-wrapper::-webkit-scrollbar { display: none; }
+.categories { display: flex; gap: 10px; }
+.cat-btn { padding: 9px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; flex-shrink: 0; }
+.cat-btn.active { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border-color: transparent; }
+.news-container { display: flex; flex-direction: column; gap: 24px; }
+.news-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #f1f5f9; }
+.card-image-wrapper { height: 240px; }
+.news-card img { width: 100%; height: 100%; object-fit: cover; }
+.news-content { padding: 20px; }
+.news-meta { display: flex; gap: 10px; margin-bottom: 8px; font-size: 12px; color: #64748b; }
+.news-source { background: #f3e8ff; color: #7c3aed; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 11px; }
+.news-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.news-title a { text-decoration: none; color: #0f172a; }
+.news-description { font-size: 14px; color: #475569; line-height: 1.5; }
 
-.add-btn:active {
-  transform: scale(0.92);
-  background-color: #6d28d9;
+/* ================= MOBILE RESPONSIVE (TEL) ================= */
+@media screen and (max-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 12px 16px;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+  }
+
+  .brand { margin-bottom: 0; }
+  .brand-icon-wrapper { width: 32px; height: 32px; font-size: 15px; }
+  .brand-name { font-size: 18px; }
+
+  .nav-menu {
+    flex-direction: row;
+    width: auto;
+    gap: 8px;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    width: auto;
+  }
+
+  .sidebar-footer { display: none; }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px;
+    padding-bottom: 100px;
+  }
+
+  .fab-btn {
+    left: 50%;
+    bottom: 24px;
+  }
 }
