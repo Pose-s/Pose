@@ -2,21 +2,18 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Pose - News Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pose - App</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- FontAwesome per le icone -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Font Google Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<!-- CDN Supabase Client -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <body>
   <div class="app-container">
-    <!-- Sidebar / Topbar Responsive -->
+    
+    <!-- Sidebar / Navigation Menu -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-icon-wrapper">
@@ -24,16 +21,18 @@
         </div>
         <span class="brand-name">Pose</span>
       </div>
+
       <nav class="nav-menu">
-  <a href="#" id="btn-home" class="nav-item active">
-    <i class="fa-solid fa-house"></i>
-    <span>Home</span>
-  </a>
-  <a href="#" id="btn-news" class="nav-item">
+        <button class="nav-item active" data-page="home">
+          <i class="fa-solid fa-house"></i>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-page="news">
           <i class="fa-solid fa-newspaper"></i>
           <span>News</span>
-        </a>
+        </button>
       </nav>
+
       <div class="sidebar-footer">
         © 2026 Pose
       </div>
@@ -41,52 +40,52 @@
 
     <!-- Contenuto Principale -->
     <main class="main-content">
-      <header class="content-header">
-        <h1 class="page-title">News Feed</h1>
-        <p class="subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
-      </header>
-<!-- Contenuto Principale -->
-<main class="main-content">
-  <header class="content-header">
-    <h1 class="page-title" id="feed-title">Home Feed</h1>
-    <p class="subtitle" id="feed-subtitle">Cosa sta succedendo nella community</p>
-  </header>
-
-  <!-- INSERT QUI: Form per creare un nuovo post -->
-  <div id="create-post-card" style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <h3 style="margin-top: 0; margin-bottom: 12px; color: #1e293b;">Crea un nuovo post</h3>
-    <input type="text" id="post-username" placeholder="Il tuo nome" style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-    <input type="text" id="post-caption" placeholder="A cosa stai pensando?" style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-    <input type="text" id="post-imageurl" placeholder="URL Immagine (es. https://picsum.photos/500)" style="width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-    <button id="btn-publish" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Pubblica</button>
-  </div>
-
-
-      <!-- Barra Filtri Categorie (Scorrevole su Mobile) -->
-      <div class="categories-wrapper">
-        <div class="categories">
-          <button class="cat-btn active" data-category="top">
-            <i class="fa-solid fa-fire"></i> <span>Top News</span>
-          </button>
-          <button class="cat-btn" data-category="technology">
-            <i class="fa-solid fa-laptop"></i> <span>Tech</span>
-          </button>
-          <button class="cat-btn" data-category="science_and_environment">
-            <i class="fa-solid fa-flask"></i> <span>Science</span>
-          </button>
-          <button class="cat-btn" data-category="business">
-            <i class="fa-solid fa-chart-line"></i> <span>Business</span>
-          </button>
-          <button class="cat-btn" data-category="world">
-            <i class="fa-solid fa-earth-americas"></i> <span>World</span>
-          </button>
+      
+      <!-- SEZIONE HOME -->
+      <section id="page-home" class="page-section">
+        <header class="content-header">
+          <h1 class="page-title">Benvenuto su Pose</h1>
+          <p class="subtitle">La tua piattaforma principale per contenuti e informazioni</p>
+        </header>
+        <div class="home-card">
+          <i class="fa-solid fa-bolt home-hero-icon"></i>
+          <h2>Esplora l'App</h2>
+          <p>Seleziona la voce <strong>News</strong> dal menu per consultare le notizie aggiornate dalla BBC divise per categoria.</p>
         </div>
-      </div>
+      </section>
 
-      <!-- Container Notizie Dynamic -->
-      <div id="news-container" class="news-container">
-        <!-- Generato via JavaScript -->
-      </div>
+      <!-- SEZIONE NEWS -->
+      <section id="page-news" class="page-section hidden">
+        <header class="content-header">
+          <h1 class="page-title">News Feed</h1>
+          <p class="subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
+        </header>
+
+        <!-- Filtri categorie (visibili SOLO nella sezione News) -->
+        <div class="categories-wrapper">
+          <div class="categories">
+            <button class="cat-btn active" data-category="top">
+              <i class="fa-solid fa-fire"></i> <span>Top News</span>
+            </button>
+            <button class="cat-btn" data-category="technology">
+              <i class="fa-solid fa-laptop"></i> <span>Tech</span>
+            </button>
+            <button class="cat-btn" data-category="science_and_environment">
+              <i class="fa-solid fa-flask"></i> <span>Science</span>
+            </button>
+            <button class="cat-btn" data-category="business">
+              <i class="fa-solid fa-chart-line"></i> <span>Business</span>
+            </button>
+            <button class="cat-btn" data-category="world">
+              <i class="fa-solid fa-earth-americas"></i> <span>World</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Feed Notizie -->
+        <div id="news-container" class="news-container"></div>
+      </section>
+
     </main>
   </div>
 
