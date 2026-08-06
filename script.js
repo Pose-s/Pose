@@ -93,3 +93,12 @@ function formatTimeAgo(date) {
 
 // Caricamento iniziale
 fetchBBCNews('top');
+const createPostBtn = document.getElementById('createPostBtn');
+
+createPostBtn.addEventListener('click', () => {
+  // Esempio: apri la finestra/modale per la creazione del post
+  console.log("Apertura schermata creazione post...");
+  
+  // Inserisci qui la funzione per aprire il form/modal del post
+  // openCreatePostModal();
+});

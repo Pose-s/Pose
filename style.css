@@ -245,3 +245,37 @@ body {
   color: #64748b;
   line-height: 1.5;
 }
+/* Contenitore principale */
+.home-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f9f9f9; /* o il colore del tuo tema */
+}
+
+/* Pulsante Fluttuante (+) */
+.fab-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #007bff; /* Colore primario */
+  color: #ffffff;
+  border: none;
+  font-size: 32px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* Effetto al passaggio del mouse/click */
+.fab-btn:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
