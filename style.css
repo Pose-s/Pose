@@ -245,3 +245,42 @@ body {
   color: #64748b;
   line-height: 1.5;
 }
+
+  /* Home Header */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.home-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.add-post-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background-color: #7c3aed;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  transition: all 0.2s ease;
+}
+
+.add-post-btn:hover {
+  background-color: #6d28d9;
+  transform: translateY(-1px);
+}
+
+.add-post-btn i {
+  width: 22px;
+  height: 22px;
+}
