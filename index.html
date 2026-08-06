@@ -13,7 +13,7 @@
 <body>
   <div class="app-container">
     
-    <!-- Sidebar / Navigation Menu -->
+    <!-- Sidebar / Topbar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-icon-wrapper">
@@ -43,25 +43,24 @@
       
       <!-- SEZIONE HOME -->
       <section id="page-home" class="page-section">
-        <header class="content-header">
-          <h1 class="page-title">Benvenuto su Pose</h1>
-          <p class="subtitle">La tua piattaforma principale per contenuti e informazioni</p>
-        </header>
-        <div class="home-card">
-          <i class="fa-solid fa-bolt home-hero-icon"></i>
-          <h2>Esplora l'App</h2>
-          <p>Seleziona la voce <strong>News</strong> dal menu per consultare le notizie aggiornate dalla BBC divise per categoria.</p>
+        <!-- Contenitore dinamico dei post creati -->
+        <div id="posts-container" class="posts-container">
+          <!-- I post pubblicati compariranno qui -->
         </div>
+
+        <!-- Tasto (+) in basso al centro -->
+        <button id="add-post-btn" class="fab-btn" title="Crea nuovo post">
+          <i class="fa-solid fa-plus"></i>
+        </button>
       </section>
 
-      <!-- SEZIONE NEWS -->
+      <!-- SEZIONE NEWS (Intatta) -->
       <section id="page-news" class="page-section hidden">
         <header class="content-header">
           <h1 class="page-title">News Feed</h1>
           <p class="subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
         </header>
 
-        <!-- Filtri categorie (visibili SOLO nella sezione News) -->
         <div class="categories-wrapper">
           <div class="categories">
             <button class="cat-btn active" data-category="top">
@@ -82,11 +81,37 @@
           </div>
         </div>
 
-        <!-- Feed Notizie -->
         <div id="news-container" class="news-container"></div>
       </section>
 
     </main>
+  </div>
+
+  <!-- MODALE / POPUP CREAZIONE POST -->
+  <div id="post-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Crea un nuovo post</h2>
+        <button id="close-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="create-post-form" class="modal-body">
+        <div class="form-group">
+          <label for="post-title">Titolo</label>
+          <input type="text" id="post-title" placeholder="Inserisci il titolo del post..." required />
+        </div>
+        <div class="form-group">
+          <label for="post-content">Contenuto</label>
+          <textarea id="post-content" rows="4" placeholder="Cosa vuoi condividere?" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="post-image">URL Immagine (opzionale)</label>
+          <input type="url" id="post-image" placeholder="https://esempio.com/immagine.jpg" />
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="submit-post-btn">Pubblica Post</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script src="script.js"></script>
