@@ -1,15 +1,16 @@
 const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/';
-// API Cloud pubblica gratuita per salvare/sincronizzare i post condivisi tra tutti gli utenti
 const CLOUD_STORAGE_URL = 'https://api.jsonbin.io/v3/b/66b1e2c4e41b4d34e41c4a22';
 
+// Elementi DOM
 const newsContainer = document.getElementById('news-container');
 const categoryButtons = document.querySelectorAll('.cat-btn');
 
-const navButtons = document.querySelectorAll('.nav-item');
+// Selezione sia per classe .nav-item che .nav-btn per sicurezza
+const navButtons = document.querySelectorAll('.nav-item, .nav-btn'); 
 const pageHome = document.getElementById('page-home');
 const pageNews = document.getElementById('page-news');
 
-const addPostBtn = document.getElementById('add-post-btn');
+const addPostBtn = document.getElementById('add-post-btn') || document.querySelector('.add-btn');
 const postModal = document.getElementById('post-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const createPostForm = document.getElementById('create-post-form');
@@ -20,36 +21,51 @@ let posts = [];
 
 // NAVIGAZIONE (HOME / NEWS)
 navButtons.forEach(button => {
-  button.addEventListener('click', () => {
+  button.addEventListener('click', (e) => {
+    // Evita il ricaricamento della pagina se si usano tag <a>
+    e.preventDefault(); 
+
     navButtons.forEach(btn => btn.classList.remove('active'));
     button.classList.add('active');
 
     const targetPage = button.getAttribute('data-page');
 
     if (targetPage === 'home') {
-      pageHome.classList.remove('hidden');
-      pageNews.classList.add('hidden');
+      if (pageHome) pageHome.classList.remove('hidden');
+      if (pageNews) pageNews.classList.add('hidden');
       loadCloudPosts();
     } else if (targetPage === 'news') {
-      pageHome.classList.add('hidden');
-      pageNews.classList.remove('hidden');
-      if (newsContainer.children.length === 0) {
+      if (pageHome) pageHome.classList.add('hidden');
+      if (pageNews) pageNews.classList.remove('hidden');
+      if (newsContainer && newsContainer.children.length === 0) {
         fetchNews('top');
       }
     }
   });
 });
 
-// MODALE CREAZIONE POST
-addPostBtn.addEventListener('click', () => postModal.classList.remove('hidden'));
-closeModalBtn.addEventListener('click', () => postModal.classList.add('hidden'));
+// MODALE CREAZIONE POST (Pulsante +)
+if (addPostBtn && postModal) {
+  addPostBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    postModal.classList.remove('hidden');
+  });
+}
 
-postModal.addEventListener('click', (e) => {
-  if (e.target === postModal) postModal.classList.add('hidden');
-});
+if (closeModalBtn && postModal) {
+  closeModalBtn.addEventListener('click', () => postModal.classList.add('hidden'));
+}
+
+if (postModal) {
+  postModal.addEventListener('click', (e) => {
+    if (e.target === postModal) postModal.classList.add('hidden');
+  });
+}
 
 // CARICA I POST DAL CLOUD (VISIBILI A TUTTI)
 async function loadCloudPosts() {
+  if (!postsContainer) return;
+
   postsContainer.innerHTML = `
     <div style="text-align: center; padding: 40px 20px; color: #64748b;">
       <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
@@ -77,48 +93,55 @@ function fallbackLocalPosts() {
   renderPosts();
 }
 
-// PUBLICA POST E SALVA ONLINE
-createPostForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
+// PUBBLICA POST E SALVA ONLINE
+if (createPostForm) {
+  createPostForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  submitPostBtn.innerText = 'Pubblicazione in corso...';
-  submitPostBtn.disabled = true;
+    if (submitPostBtn) {
+      submitPostBtn.innerText = 'Pubblicazione in corso...';
+      submitPostBtn.disabled = true;
+    }
 
-  const title = document.getElementById('post-title').value.trim();
-  const content = document.getElementById('post-content').value.trim();
-  const imageUrl = document.getElementById('post-image').value.trim();
+    const title = document.getElementById('post-title')?.value.trim() || '';
+    const content = document.getElementById('post-content')?.value.trim() || '';
+    const imageUrl = document.getElementById('post-image')?.value.trim() || '';
 
-  const newPost = {
-    id: Date.now(),
-    title: title,
-    content: content,
-    image: imageUrl,
-    date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  };
+    const newPost = {
+      id: Date.now(),
+      title: title,
+      content: content,
+      image: imageUrl,
+      date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    };
 
-  posts.unshift(newPost);
-  localStorage.setItem('pose_posts', JSON.stringify(posts));
+    posts.unshift(newPost);
+    localStorage.setItem('pose_posts', JSON.stringify(posts));
 
-  // Invia al server
-  try {
-    await fetch('https://api.npoint.io/4612344793f64c679a95', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(posts)
-    });
-  } catch (err) {
-    console.warn('Salvato in locale');
-  }
+    // Invia al server
+    try {
+      await fetch('https://api.npoint.io/4612344793f64c679a95', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(posts)
+      });
+    } catch (err) {
+      console.warn('Salvato in locale');
+    }
 
-  renderPosts();
-  createPostForm.reset();
-  submitPostBtn.innerText = 'Pubblica Post';
-  submitPostBtn.disabled = false;
-  postModal.classList.add('hidden');
-});
+    renderPosts();
+    createPostForm.reset();
+    if (submitPostBtn) {
+      submitPostBtn.innerText = 'Pubblica Post';
+      submitPostBtn.disabled = false;
+    }
+    if (postModal) postModal.classList.add('hidden');
+  });
+}
 
 // RENDERING DEI POST SULLO SCHERMO
 function renderPosts() {
+  if (!postsContainer) return;
   postsContainer.innerHTML = '';
 
   if (posts.length === 0) {
@@ -165,6 +188,8 @@ const bbcFeeds = {
 };
 
 async function fetchNews(categoryKey = 'top') {
+  if (!newsContainer) return;
+
   newsContainer.innerHTML = `
     <div style="text-align: center; padding: 40px 20px; color: #64748b;">
       <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
@@ -188,6 +213,7 @@ async function fetchNews(categoryKey = 'top') {
 }
 
 function renderArticles(articles) {
+  if (!newsContainer) return;
   newsContainer.innerHTML = '';
 
   articles.forEach(item => {
