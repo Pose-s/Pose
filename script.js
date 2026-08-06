@@ -1,201 +1,95 @@
-// ==========================================
-// CONFIGURAZIONE SUPABASE
-// ==========================================
-const SUPABASE_URL = 'https://bbytjhnxrhidoadgoubt.supabase.co';
-const SUPABASE_KEY = 'INCOLLA_QUI_LA_TUA_CHIAVE_ANON_PUBLIC';
-
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ==========================================
-// CONFIGURAZIONE NEWS BBC
-// ==========================================
-const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/';
-const newsContainer = document.getElementById('news-container');
-const categoryButtons = document.querySelectorAll('.cat-btn');
-
-const bbcFeeds = {
-  top: 'rss.xml',
-  technology: 'technology/rss.xml',
-  science_and_environment: 'science_and_environment/rss.xml',
-  business: 'business/rss.xml',
-  world: 'world/rss.xml'
+const FEEDS = {
+  top: 'https://feeds.bbci.co.uk/news/rss.xml',
+  tech: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+  science: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
+  business: 'https://feeds.bbci.co.uk/news/business/rss.xml',
+  world: 'https://feeds.bbci.co.uk/news/world/rss.xml'
 };
 
-// ==========================================
-// FUNZIONI SEZIONE NEWS (BBC)
-// ==========================================
-async function fetchNews(categoryKey = 'top') {
-  newsContainer.innerHTML = `
-    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
-      <p style="font-weight: 500;">Caricamento ultime notizie BBC...</p>
-    </div>
-  `;
+const newsGrid = document.getElementById('newsGrid');
+const loader = document.getElementById('loader');
+const categoryButtons = document.querySelectorAll('.category-btn');
 
-  const feedEndpoint = bbcFeeds[categoryKey] || bbcFeeds.top;
-  const requestUrl = `${RSS_API}${feedEndpoint}`;
+// Inizializza icone Lucide
+lucide.createIcons();
+
+// Listener per i bottoni delle categorie
+categoryButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    categoryButtons.forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    
+    const category = button.dataset.category;
+    fetchBBCNews(category);
+  });
+});
+
+// Funzione per caricare le notizie tramite API rss2json
+async function fetchBBCNews(categoryKey) {
+  newsGrid.innerHTML = '';
+  loader.classList.remove('hidden');
+
+  const feedUrl = FEEDS[categoryKey] || FEEDS.top;
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
 
   try {
-    const response = await fetch(requestUrl);
+    const response = await fetch(apiUrl);
     const data = await response.json();
 
-    if (data.status === 'ok' && data.items && data.items.length > 0) {
+    if (data.status === 'ok' && data.items) {
       renderArticles(data.items);
     } else {
-      newsContainer.innerHTML = `<div style="text-align: center; padding: 30px; background: white; border-radius: 12px; color: #64748b;">Nessuna notizia disponibile al momento per questa categoria.</div>`;
+      newsGrid.innerHTML = '<p style="color: #64748b;">Nessuna notizia trovata.</p>';
     }
   } catch (error) {
-    console.error('Errore nel caricamento notizie:', error);
-    newsContainer.innerHTML = `<div style="text-align: center; padding: 30px; color: #ef4444;">Si è verificato un errore nel caricamento delle notizie.</div>`;
+    console.error('Errore durante il recupero dei dati:', error);
+    newsGrid.innerHTML = '<p style="color: #ef4444;">Errore nel caricamento delle notizie.</p>';
+  } finally {
+    loader.classList.add('hidden');
   }
 }
 
+// Render delle schede notizie
 function renderArticles(items) {
-  newsContainer.innerHTML = '';
-
-  items.forEach(item => {
-    const article = document.createElement('article');
-    article.className = 'news-card';
+  newsGrid.innerHTML = items.map(item => {
+    // Estrazione eventuale immagine o placeholder
+    const imageUrl = item.thumbnail || (item.enclosure && item.enclosure.link) || '';
+    const cleanDescription = item.description ? item.description.replace(/<[^>]*>?/gm, '') : '';
     
-    // Gestione Immagine
-    let imageUrl = item.thumbnail || (item.enclosure && item.enclosure.link) || '';
-    const imgHtml = imageUrl ? `<img src="${imageUrl}" alt="${item.title}" style="width:100%; border-radius: 8px; margin-bottom: 12px;">` : '';
+    // Calcolo del tempo trascorso approssimativo
+    const timeAgo = formatTimeAgo(new Date(item.pubDate));
 
-    article.innerHTML = `
-      ${imgHtml}
-      <div class="news-content">
-        <span style="background: #f1f5f9; color: #7c3aed; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">BBC NEWS</span>
-        <h2 style="font-size: 18px; margin: 0 0 8px 0;"><a href="${item.link}" target="_blank" style="text-decoration: none; color: #0f172a;">${item.title}</a></h2>
-        <p style="color: #64748b; font-size: 14px; margin: 0;">${item.description}</p>
-      </div>
+    return `
+      <article class="news-card">
+        ${imageUrl ? `<img src="${imageUrl}" alt="${item.title}" class="news-image" />` : ''}
+        <div class="news-body">
+          <div class="news-meta">
+            <span class="badge-bbc">BBC NEWS</span>
+            <span class="news-time">
+              <i data-lucide="clock"></i> ${timeAgo}
+            </span>
+          </div>
+          <h2 class="news-title">
+            <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+          </h2>
+          <p class="news-desc">${cleanDescription}</p>
+        </div>
+      </article>
     `;
-    newsContainer.appendChild(article);
-  });
+  }).join('');
+
+  // Re-inizializza le icone Lucide create dinamicamente
+  lucide.createIcons();
 }
 
-// Event listener per i bottoni delle categorie notizie
-categoryButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    categoryButtons.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const category = btn.getAttribute('data-category');
-    fetchNews(category);
-  });
-});
-
-// ==========================================
-// FUNZIONI SEZIONE HOME / SOCIAL (Supabase)
-// ==========================================
-async function fetchForYouFeed() {
-  newsContainer.innerHTML = `
-    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #7c3aed; margin-bottom: 12px;"></i>
-      <p style="font-weight: 500;">Caricamento feed Per Te...</p>
-    </div>
-  `;
-
-  const { data: posts, error } = await supabase
-    .from('posts')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Errore nel recupero dei post:', error);
-    newsContainer.innerHTML = `<p style="text-align:center; color: #ef4444;">Errore nel caricamento del feed.</p>`;
-    return;
-  }
-
-  if (!posts || posts.length === 0) {
-    newsContainer.innerHTML = `<p style="text-align:center; padding: 20px;">Nessun post disponibile. Sii il primo a pubblicarne uno!</p>`;
-    return;
-  }
-
-  renderPosts(posts);
+// Formattatore orario "X ore fa"
+function formatTimeAgo(date) {
+  const diffInMinutes = Math.floor((new Date() - date) / (1000 * 60));
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  return `${Math.floor(diffInHours / 24)}d ago`;
 }
 
-function renderPosts(posts) {
-  newsContainer.innerHTML = '';
-
-  posts.forEach(post => {
-    const postElement = document.createElement('div');
-    postElement.className = 'post-card';
-    postElement.style.cssText = 'background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);';
-    postElement.innerHTML = `
-      <div style="margin-bottom: 10px; font-weight: bold; color: #1e293b;">
-        <i class="fa-solid fa-user-circle"></i> ${post.user_name || 'Utente Anonimo'}
-      </div>
-      <img src="${post.media_url}" alt="Post image" style="width: 100%; border-radius: 8px; margin-bottom: 10px;" />
-      <p style="margin: 0; color: #334155;"><strong>${post.user_name || 'Utente'}:</strong> ${post.caption}</p>
-    `;
-    newsContainer.appendChild(postElement);
-  });
-}
-
-// Pubblicazione Post
-async function createPost() {
-  const username = document.getElementById('post-username').value;
-  const caption = document.getElementById('post-caption').value;
-  const mediaUrl = document.getElementById('post-imageurl').value;
-
-  if (!caption || !mediaUrl) {
-    alert('Compila almeno la descrizione e il link dell\'immagine!');
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from('posts')
-    .insert([{ user_name: username || 'Utente Anonimo', caption: caption, media_url: mediaUrl }]);
-
-  if (error) {
-    console.error('Errore durante la pubblicazione:', error);
-    alert('Si è verificato un errore nella pubblicazione.');
-  } else {
-    alert('Post pubblicato con successo!');
-    document.getElementById('post-caption').value = '';
-    document.getElementById('post-imageurl').value = '';
-    fetchForYouFeed();
-  }
-}
-
-document.getElementById('btn-publish').addEventListener('click', createPost);
-
-// ==========================================
-// GESTIONE NAVIGAZIONE SIDEBAR (Home vs News)
-// ==========================================
-const btnHome = document.getElementById('btn-home');
-const btnNews = document.getElementById('btn-news');
-const createPostCard = document.getElementById('create-post-card');
-const categoriesWrapper = document.getElementById('categories-wrapper');
-const feedTitle = document.getElementById('feed-title');
-const feedSubtitle = document.getElementById('feed-subtitle');
-
-btnHome.addEventListener('click', (e) => {
-  e.preventDefault();
-  btnHome.classList.add('active');
-  btnNews.classList.remove('active');
-  
-  feedTitle.innerText = "Home Feed";
-  feedSubtitle.innerText = "Cosa sta succedendo nella community";
-  
-  createPostCard.style.display = 'block';
-  categoriesWrapper.style.display = 'none';
-  
-  fetchForYouFeed();
-});
-
-btnNews.addEventListener('click', (e) => {
-  e.preventDefault();
-  btnNews.classList.add('active');
-  btnHome.classList.remove('active');
-  
-  feedTitle.innerText = "News Feed";
-  feedSubtitle.innerText = "Le ultime notizie aggiornate in tempo reale da BBC News";
-  
-  createPostCard.style.display = 'none';
-  categoriesWrapper.style.display = 'flex';
-  
-  fetchNews('top');
-});
-
-// Caricamento iniziale: mostra le notizie BBC di default
-fetchNews('top');
+// Caricamento iniziale
+fetchBBCNews('top');

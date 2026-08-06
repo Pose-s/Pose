@@ -1,39 +1,36 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pose</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pose - News Feed</title>
+  
+  <!-- Font Google Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
   
-  <!-- Client Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Icone Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Fogli di Stile -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app-container">
-    <!-- Sidebar / Menu Laterale -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon-wrapper">
-          <i class="fa-solid fa-bolt"></i>
-        </div>
-        <span class="brand-name">Pose</span>
-      </div>
 
-      <nav class="nav-menu">
-        <a href="#" id="btn-home" class="nav-item">
-          <i class="fa-solid fa-house"></i>
-          <span>Home</span>
-        </a>
-        <a href="#" id="btn-news" class="nav-item active">
-          <i class="fa-solid fa-newspaper"></i>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <i data-lucide="zap" class="logo-icon"></i>
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <i data-lucide="newspaper"></i>
           <span>News</span>
         </a>
       </nav>
-
       <div class="sidebar-footer">
         © 2026 Pose
       </div>
@@ -41,31 +38,37 @@
 
     <!-- Contenuto Principale -->
     <main class="main-content">
-      <header class="content-header">
-        <h1 class="page-title" id="feed-title">News Feed</h1>
-        <p class="subtitle" id="feed-subtitle">Le ultime notizie aggiornate in tempo reale da BBC News</p>
+      <header class="page-header">
+        <h1>News Feed</h1>
+        <p>Le ultime notizie aggiornate in tempo reale da BBC News</p>
       </header>
 
-      <!-- Modulo per pubblicare un nuovo post (invisibile di default nelle News) -->
-      <div id="create-post-card" style="display: none; background: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-        <h3 style="margin-top: 0; margin-bottom: 12px; color: #1e293b;">Crea un nuovo post</h3>
-        <input type="text" id="post-username" placeholder="Il tuo nome" style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-        <input type="text" id="post-caption" placeholder="A cosa stai pensando?" style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-        <input type="text" id="post-imageurl" placeholder="URL Immagine (es. https://picsum.photos/500)" style="width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
-        <button id="btn-publish" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Pubblica</button>
+      <!-- Pulsanti Categorie -->
+      <div class="categories-bar" id="categoriesBar">
+        <button class="category-btn active" data-category="top">
+          <i data-lucide="flame"></i> Top News
+        </button>
+        <button class="category-btn" data-category="tech">
+          <i data-lucide="laptop"></i> Tech
+        </button>
+        <button class="category-btn" data-category="science">
+          <i data-lucide="flask-conical"></i> Science
+        </button>
+        <button class="category-btn" data-category="business">
+          <i data-lucide="trending-up"></i> Business
+        </button>
+        <button class="category-btn" data-category="world">
+          <i data-lucide="globe"></i> World
+        </button>
       </div>
 
-      <!-- Barra Filtri Categorie (Solo per News) -->
-      <div class="categories-wrapper" id="categories-wrapper">
-        <button class="cat-btn active" data-category="top"><i class="fa-solid fa-fire"></i> Top News</button>
-        <button class="cat-btn" data-category="technology"><i class="fa-solid fa-laptop"></i> Tech</button>
-        <button class="cat-btn" data-category="science_and_environment"><i class="fa-solid fa-flask"></i> Science</button>
-        <button class="cat-btn" data-category="business"><i class="fa-solid fa-chart-line"></i> Business</button>
-        <button class="cat-btn" data-category="world"><i class="fa-solid fa-globe"></i> World</button>
+      <!-- Spinner Caricamento -->
+      <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
       </div>
 
-      <!-- Container dei Post / Notizie -->
-      <div id="news-container"></div>
+      <!-- Griglia Notizie -->
+      <div class="news-grid" id="newsGrid"></div>
     </main>
   </div>
 
