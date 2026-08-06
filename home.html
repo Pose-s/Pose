@@ -49,6 +49,11 @@
         </button>
       </header>
 
+      <!-- Loader -->
+      <div id="postsLoader" class="loader hidden">
+        <div class="spinner"></div>
+      </div>
+
       <!-- Griglia Post -->
       <div class="posts-grid" id="postsGrid"></div>
     </main>
@@ -82,11 +87,11 @@
           <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
         </div>
 
-        <button type="submit" class="publish-btn">Pubblica</button>
+        <button type="submit" class="publish-btn" id="publishBtn">Pubblica</button>
       </form>
     </div>
   </div>
 
-  <script src="home.js"></script>
+  <script type="module" src="home.js"></script>
 </body>
 </html>

@@ -1,7 +1,42 @@
+// Import Firebase SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadString,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+
+// Configurazione Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyD5nn41jQU8Vk_ujlTO5t4r125zyq4p1z0",
+  authDomain: "pose-s.firebaseapp.com",
+  projectId: "pose-s",
+  storageBucket: "pose-s.firebasestorage.app",
+  messagingSenderId: "293624221790",
+  appId: "1:293624221790:web:873913cf322c08610464cf",
+  measurementId: "G-J836C70BTW"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// Riferimenti DOM
 const addPostBtn = document.getElementById('addPostBtn');
 const postModal = document.getElementById('postModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const postForm = document.getElementById('postForm');
+const publishBtn = document.getElementById('publishBtn');
 
 const logoInput = document.getElementById('logoInput');
 const logoPreview = document.getElementById('logoPreview');
@@ -10,8 +45,7 @@ const photoPreview = document.getElementById('photoPreview');
 const captionInput = document.getElementById('captionInput');
 
 const postsGrid = document.getElementById('postsGrid');
-
-const STORAGE_KEY = 'pose_posts';
+const postsLoader = document.getElementById('postsLoader');
 
 // Inizializza icone Lucide
 lucide.createIcons();
@@ -34,13 +68,8 @@ function closeModal() {
 }
 
 // Anteprima immagini caricate
-logoInput.addEventListener('change', () => {
-  previewImage(logoInput, logoPreview);
-});
-
-photoInput.addEventListener('change', () => {
-  previewImage(photoInput, photoPreview);
-});
+logoInput.addEventListener('change', () => previewImage(logoInput, logoPreview));
+photoInput.addEventListener('change', () => previewImage(photoInput, photoPreview));
 
 function previewImage(input, previewEl) {
   const file = input.files[0];
@@ -56,11 +85,11 @@ function previewImage(input, previewEl) {
   reader.readAsDataURL(file);
 }
 
-// Converte un file in base64
+// Converte un file in base64 (data URL)
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
-      resolve('');
+      resolve(null);
       return;
     }
     const reader = new FileReader();
@@ -68,6 +97,16 @@ function fileToBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// Carica un'immagine su Firebase Storage e restituisce l'URL pubblico
+async function uploadImage(file, folder) {
+  if (!file) return '';
+  const base64 = await fileToBase64(file);
+  const fileName = `${folder}/${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, fileName);
+  await uploadString(storageRef, base64, 'data_url');
+  return await getDownloadURL(storageRef);
 }
 
 // Invio form
@@ -79,62 +118,70 @@ postForm.addEventListener('submit', async (e) => {
 
   if (!photoFile) return;
 
-  const logoBase64 = await fileToBase64(logoFile);
-  const photoBase64 = await fileToBase64(photoFile);
+  publishBtn.disabled = true;
+  publishBtn.textContent = 'Pubblicazione in corso...';
 
-  const newPost = {
-    id: Date.now(),
-    logo: logoBase64,
-    photo: photoBase64,
-    caption: captionInput.value.trim(),
-    date: new Date().toISOString()
-  };
+  try {
+    const logoUrl = await uploadImage(logoFile, 'logos');
+    const photoUrl = await uploadImage(photoFile, 'photos');
 
-  savePost(newPost);
-  renderPosts();
-  closeModal();
+    await addDoc(collection(db, 'posts'), {
+      logoUrl,
+      photoUrl,
+      caption: captionInput.value.trim(),
+      createdAt: serverTimestamp()
+    });
+
+    closeModal();
+  } catch (error) {
+    console.error('Errore durante la pubblicazione:', error);
+    alert('Errore durante la pubblicazione del post. Riprova.');
+  } finally {
+    publishBtn.disabled = false;
+    publishBtn.textContent = 'Pubblica';
+  }
 });
 
-// Salvataggio in localStorage
-function getPosts() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
+// Ascolto in tempo reale dei post (tutti gli utenti vedono gli stessi post)
+const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
 
-function savePost(post) {
-  const posts = getPosts();
-  posts.unshift(post); // aggiunge in cima
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-}
+postsLoader.classList.remove('hidden');
 
-// Render dei post
-function renderPosts() {
-  const posts = getPosts();
+onSnapshot(postsQuery, (snapshot) => {
+  postsLoader.classList.add('hidden');
 
-  if (posts.length === 0) {
+  if (snapshot.empty) {
     postsGrid.innerHTML = '<p style="color:#94a3b8;">Nessun post ancora. Clicca su "+" per crearne uno!</p>';
     return;
   }
 
-  postsGrid.innerHTML = posts.map(post => `
-    <article class="post-card">
-      <div class="post-header">
-        ${post.logo 
-          ? `<img src="${post.logo}" class="post-logo" alt="Logo" />` 
-          : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-        }
-        <span class="post-date">${formatDate(post.date)}</span>
-      </div>
-      <img src="${post.photo}" class="post-photo" alt="Post" />
-      ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
-    </article>
-  `).join('');
+  postsGrid.innerHTML = snapshot.docs.map(doc => {
+    const post = doc.data();
+    return `
+      <article class="post-card">
+        <div class="post-header">
+          ${post.logoUrl 
+            ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" />` 
+            : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+          }
+          <span class="post-date">${formatDate(post.createdAt)}</span>
+        </div>
+        <img src="${post.photoUrl}" class="post-photo" alt="Post" />
+        ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+      </article>
+    `;
+  }).join('');
 
   lucide.createIcons();
-}
+}, (error) => {
+  postsLoader.classList.add('hidden');
+  console.error('Errore nel caricamento dei post:', error);
+  postsGrid.innerHTML = '<p style="color:#ef4444;">Errore nel caricamento dei post.</p>';
+});
 
-function formatDate(isoDate) {
-  const date = new Date(isoDate);
+function formatDate(timestamp) {
+  if (!timestamp) return 'Ora';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
@@ -143,6 +190,3 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
-
-// Caricamento iniziale
-renderPosts();
