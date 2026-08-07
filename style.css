@@ -1406,3 +1406,9 @@ a.search-result-item {
     font-size: 20px;
   }
 }
+@media (max-width: 600px) {
+  .posts-grid {
+    grid-template-columns: 220px;
+    justify-content: center;
+  }
+}
