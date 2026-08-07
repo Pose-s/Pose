@@ -895,3 +895,64 @@ body {
     padding-right: 24px;
   }
 }
+/* Toggle Email/Telefono */
+.contact-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toggle-btn.active {
+  background-color: #7c3aed;
+  color: #ffffff;
+  border-color: #7c3aed;
+}
+
+.auth-box-wide {
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.field-hint {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.hint-ok {
+  color: #16a34a;
+}
+
+.hint-error {
+  color: #ef4444;
+}
+
+.otp-info {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.auth-box textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+}

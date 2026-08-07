@@ -15,17 +15,31 @@
   <div class="auth-container">
     <div class="auth-box">
       <div class="logo" style="justify-content:center; margin-bottom: 24px;">
-        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <img src="logo.png" class="logo-img" alt="Pose" />
         <span>Pose</span>
       </div>
 
-      <h2 id="formTitle">Accedi</h2>
+      <h2>Accedi</h2>
+
+      <div class="form-group">
+        <label>Accedi con</label>
+        <div class="contact-toggle">
+          <button type="button" class="toggle-btn active" data-type="email">Email</button>
+          <button type="button" class="toggle-btn" data-type="phone">Telefono</button>
+        </div>
+      </div>
 
       <form id="authForm">
-        <div class="form-group">
+        <div class="form-group" id="loginEmailField">
           <label for="emailInput">Email</label>
-          <input type="email" id="emailInput" required />
+          <input type="email" id="emailInput" />
         </div>
+
+        <div class="form-group hidden" id="loginPhoneField">
+          <label for="phoneInput">Numero di telefono</label>
+          <input type="tel" id="phoneInput" placeholder="+39 333 1234567" />
+        </div>
+
         <div class="form-group">
           <label for="passwordInput">Password</label>
           <input type="password" id="passwordInput" required minlength="6" />
@@ -35,8 +49,8 @@
       </form>
 
       <p class="auth-toggle">
-        <span id="toggleText">Non hai un account?</span>
-        <a href="#" id="toggleLink">Registrati</a>
+        <span>Non hai un account?</span>
+        <a href="register.html">Registrati</a>
       </p>
     </div>
   </div>
