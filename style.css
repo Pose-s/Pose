@@ -1074,3 +1074,109 @@ body {
   margin-bottom: 16px;
   text-align: center;
 }
+/* Barra di ricerca a pillola espandibile */
+.search-bar-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 10px 16px;
+  width: 140px;
+  transition: width 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-bar-container:hover,
+.search-bar-container:focus-within {
+  width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: #334155;
+  width: 100%;
+}
+
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background-color: #f8fafc;
+}
+
+.search-result-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.search-result-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-result-avatar-placeholder i {
+  width: 16px;
+  height: 16px;
+}
+
+.search-empty {
+  padding: 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Su mobile, evita che la barra spinga via il pulsante + */
+@media (max-width: 480px) {
+  .search-bar-container {
+    width: 100px;
+  }
+  .search-bar-container:hover,
+  .search-bar-container:focus-within {
+    width: 200px;
+  }
+}

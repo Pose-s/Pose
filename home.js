@@ -378,3 +378,63 @@ commentForm.addEventListener('submit', async (e) => {
     console.error('Errore nell\'invio del commento:', error);
   }
 });
+import { collection as fsCollection, query as fsQuery, where as fsWhere, limit as fsLimit, getDocs as fsGetDocs } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+const searchBarContainer = document.getElementById('searchBarContainer');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+let searchTimeout;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const term = searchInput.value.trim().toLowerCase();
+
+  if (!term) {
+    searchResults.classList.add('hidden');
+    searchResults.innerHTML = '';
+    return;
+  }
+
+  searchTimeout = setTimeout(async () => {
+    try {
+      const usersQuery = fsQuery(
+        fsCollection(db, 'users'),
+        fsWhere('username', '>=', term),
+        fsWhere('username', '<=', term + '\uf8ff'),
+        fsLimit(8)
+      );
+
+      const snapshot = await fsGetDocs(usersQuery);
+
+      if (snapshot.empty) {
+        searchResults.innerHTML = '<p class="search-empty">Nessun utente trovato</p>';
+      } else {
+        searchResults.innerHTML = snapshot.docs.map(docSnap => {
+          const u = docSnap.data();
+          return `
+            <div class="search-result-item">
+              ${u.logoUrl
+                ? `<img src="${u.logoUrl}" class="search-result-avatar" alt="${u.username}" />`
+                : `<div class="search-result-avatar-placeholder"><i data-lucide="user"></i></div>`
+              }
+              <span>@${escapeHtml(u.username)}</span>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }
+
+      searchResults.classList.remove('hidden');
+    } catch (error) {
+      console.error('Errore nella ricerca:', error);
+    }
+  }, 300);
+});
+
+// Chiudi risultati cliccando fuori
+document.addEventListener('click', (e) => {
+  if (!searchBarContainer.contains(e.target)) {
+    searchResults.classList.add('hidden');
+  }
+});

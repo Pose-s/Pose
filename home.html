@@ -45,11 +45,15 @@
 
     <main class="main-content">
       <header class="home-header">
-        <h1>Home</h1>
-        <button class="add-post-btn" id="addPostBtn">
-          <i data-lucide="plus"></i>
-        </button>
-      </header>
+  <div class="search-bar-container" id="searchBarContainer">
+    <i data-lucide="search" class="search-icon"></i>
+    <input type="text" id="searchInput" class="search-input" placeholder="Cerca..." autocomplete="off" />
+    <div class="search-results hidden" id="searchResults"></div>
+  </div>
+  <button class="add-post-btn" id="addPostBtn">
+    <i data-lucide="plus"></i>
+  </button>
+</header>
 
       <div id="postsLoader" class="loader hidden">
         <div class="spinner"></div>
