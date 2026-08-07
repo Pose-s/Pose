@@ -571,8 +571,8 @@ body {
 }
 
 .profile-logo-placeholder-lg {
-  width: 180px;
-  height: 180px;
+  width: 190px;
+  height: 190px;
   border-radius: 50%;
   background-color: #f3e8ff;
   color: #7c3aed;
@@ -974,8 +974,8 @@ body {
 }
 
 .profile-username {
-  font-size: 50px;
-  font-weight: 1000;
+  font-size: 30px;
+  font-weight: 870;
   color: #0f172a;
 }
 
@@ -984,8 +984,8 @@ body {
 }
 
 .profile-avatar-lg {
-  width: 180px;
-  height: 180px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #f1f5f9;
@@ -1005,22 +1005,23 @@ body {
 }
 
 .stat-number {
-  font-size: 50px;
-  font-weight: 1000;
+  font-size: 30px;
+  font-weight: 870;
   color: #0f172a;
 }
 
 .stat-label {
-  font-size: 30px;
+  font-size: 18px;
   color: #64748b;
 }
 
 .profile-bio {
-  font-size: 30px;
+  font-size: 18px;
   color: #334155;
   line-height: 1.5;
   margin-bottom: 20px;
   min-height: 20px;
+  text-align: center;
 }
 
 .edit-profile-btn {
