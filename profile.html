@@ -13,13 +13,14 @@
 <body>
 
   <div class="app-container">
-     <button class="menu-toggle-btn" id="menuToggleBtn">
-    <i data-lucide="menu"></i>
-  </button>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <aside class="sidebar">
-     <div class="logo">
-  <img src="logo.png.png" class="logo-img" alt="Pose" />
+      <div class="logo">
+        <img src="logo.png" class="logo-img" alt="Pose" />
         <span>Pose</span>
       </div>
       <nav class="sidebar-nav">
@@ -44,30 +45,69 @@
     </aside>
 
     <main class="main-content">
-      <header class="home-header">
-        <h1>Il tuo profilo</h1>
-      </header>
+      <div class="profile-page">
 
-      <div class="profile-card">
-        <button type="button" class="avatar-upload-btn" id="avatarUploadBtn">
-          <img id="currentLogo" class="preview-circle hidden" alt="Logo profilo" />
-          <div class="profile-logo-placeholder-lg" id="logoPlaceholder">
-            <i data-lucide="user"></i>
+        <div class="profile-top-row">
+          <div class="profile-username-block">
+            <span class="profile-username" id="profileUsername">@nomeutente</span>
           </div>
-          <div class="avatar-overlay">
-            <i data-lucide="camera"></i>
+
+          <div class="profile-avatar-block">
+            <img id="currentLogo" class="profile-avatar-lg hidden" alt="Logo profilo" />
+            <div class="profile-logo-placeholder-lg" id="logoPlaceholder">
+              <i data-lucide="user"></i>
+            </div>
           </div>
+
+          <div class="profile-stats">
+            <div class="stat-item">
+              <span class="stat-number" id="statPosts">0</span>
+              <span class="stat-label">Post</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number" id="statFollowers">0</span>
+              <span class="stat-label">Follower</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number" id="statFollowing">0</span>
+              <span class="stat-label">Seguiti</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="profile-bio" id="profileBio"></p>
+
+        <button type="button" class="edit-profile-btn" id="editProfileToggleBtn">
+          Modifica profilo
         </button>
-        <input type="file" id="newLogoInput" accept="image/*" class="hidden" />
 
-        <form id="profileForm">
-          <div class="form-group">
-            <label for="displayNameInput">Nome visualizzato</label>
-            <input type="text" id="displayNameInput" required />
-          </div>
-          <p id="profileMsg" class="auth-error hidden"></p>
-          <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
-        </form>
+        <!-- Form di modifica, nascosto finché non si clicca il pulsante sopra -->
+        <div class="profile-card hidden" id="editProfileCard">
+          <button type="button" class="avatar-upload-btn" id="avatarUploadBtn">
+            <img id="editLogoPreview" class="preview-circle hidden" alt="Logo profilo" />
+            <div class="profile-logo-placeholder-lg" id="editLogoPlaceholder">
+              <i data-lucide="user"></i>
+            </div>
+            <div class="avatar-overlay">
+              <i data-lucide="camera"></i>
+            </div>
+          </button>
+          <input type="file" id="newLogoInput" accept="image/*" class="hidden" />
+
+          <form id="profileForm">
+            <div class="form-group">
+              <label for="displayNameInput">Nome visualizzato</label>
+              <input type="text" id="displayNameInput" required />
+            </div>
+            <div class="form-group">
+              <label for="bioEditInput">Bio</label>
+              <textarea id="bioEditInput" placeholder="Parlaci un po' di te..."></textarea>
+            </div>
+            <p id="profileMsg" class="auth-error hidden"></p>
+            <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
+          </form>
+        </div>
+
       </div>
     </main>
   </div>

@@ -1,16 +1,29 @@
 import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { compressImage } from './utils.js';
+import { compressImage, escapeHtml } from './utils.js';
 
 lucide.createIcons();
 
+// Riferimenti header profilo
+const profileUsername = document.getElementById('profileUsername');
 const currentLogo = document.getElementById('currentLogo');
 const logoPlaceholder = document.getElementById('logoPlaceholder');
+const statPosts = document.getElementById('statPosts');
+const statFollowers = document.getElementById('statFollowers');
+const statFollowing = document.getElementById('statFollowing');
+const profileBio = document.getElementById('profileBio');
+
+// Riferimenti form modifica
+const editProfileToggleBtn = document.getElementById('editProfileToggleBtn');
+const editProfileCard = document.getElementById('editProfileCard');
+const editLogoPreview = document.getElementById('editLogoPreview');
+const editLogoPlaceholder = document.getElementById('editLogoPlaceholder');
 const avatarUploadBtn = document.getElementById('avatarUploadBtn');
 const newLogoInput = document.getElementById('newLogoInput');
 const displayNameInput = document.getElementById('displayNameInput');
+const bioEditInput = document.getElementById('bioEditInput');
 const profileForm = document.getElementById('profileForm');
 const profileMsg = document.getElementById('profileMsg');
 const saveProfileBtn = document.getElementById('saveProfileBtn');
@@ -29,34 +42,50 @@ onAuthStateChanged(auth, async (user) => {
   const userDoc = await getDoc(doc(db, 'users', user.uid));
   const data = userDoc.exists() ? userDoc.data() : {};
 
-  displayNameInput.value = data.displayName || user.email.split('@')[0];
+  // Header
+  profileUsername.textContent = data.username ? `@${data.username}` : `@${user.email.split('@')[0]}`;
+  profileBio.textContent = data.bio || '';
   currentLogoUrl = data.logoUrl || '';
+  updateAvatarDisplay(currentLogoUrl, currentLogo, logoPlaceholder);
 
-  updateAvatarPreview(currentLogoUrl);
+  // Statistiche
+  statFollowers.textContent = (data.followers || []).length;
+  statFollowing.textContent = (data.following || []).length;
+
+  const postsQuery = query(collection(db, 'posts'), where('uid', '==', user.uid));
+  const postsSnap = await getDocs(postsQuery);
+  statPosts.textContent = postsSnap.size;
+
+  // Precompila form di modifica
+  displayNameInput.value = data.displayName || data.username || user.email.split('@')[0];
+  bioEditInput.value = data.bio || '';
+  updateAvatarDisplay(currentLogoUrl, editLogoPreview, editLogoPlaceholder);
 });
 
-function updateAvatarPreview(url) {
+function updateAvatarDisplay(url, imgEl, placeholderEl) {
   if (url) {
-    currentLogo.src = url;
-    currentLogo.classList.remove('hidden');
-    logoPlaceholder.classList.add('hidden');
+    imgEl.src = url;
+    imgEl.classList.remove('hidden');
+    placeholderEl.classList.add('hidden');
   } else {
-    currentLogo.classList.add('hidden');
-    logoPlaceholder.classList.remove('hidden');
+    imgEl.classList.add('hidden');
+    placeholderEl.classList.remove('hidden');
   }
 }
 
-// Cliccando sull'avatar si apre il selettore file
-avatarUploadBtn.addEventListener('click', () => {
-  newLogoInput.click();
+// Toggle form di modifica
+editProfileToggleBtn.addEventListener('click', () => {
+  editProfileCard.classList.toggle('hidden');
 });
 
-// Anteprima immediata dopo la scelta del file
+// Upload avatar dal form di modifica
+avatarUploadBtn.addEventListener('click', () => newLogoInput.click());
+
 newLogoInput.addEventListener('change', () => {
   const file = newLogoInput.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => updateAvatarPreview(e.target.result);
+  reader.onload = (e) => updateAvatarDisplay(e.target.result, editLogoPreview, editLogoPlaceholder);
   reader.readAsDataURL(file);
 });
 
@@ -82,12 +111,18 @@ profileForm.addEventListener('submit', async (e) => {
       logoUrl = await getDownloadURL(storageRef);
     }
 
+    const bio = bioEditInput.value.trim();
+
     await setDoc(doc(db, 'users', currentUser.uid), {
       displayName: displayNameInput.value.trim(),
+      bio,
       logoUrl
-    });
+    }, { merge: true });
 
     currentLogoUrl = logoUrl;
+    profileBio.textContent = bio;
+    updateAvatarDisplay(logoUrl, currentLogo, logoPlaceholder);
+
     profileMsg.textContent = 'Profilo aggiornato con successo!';
     profileMsg.classList.remove('hidden', 'auth-error');
     profileMsg.classList.add('auth-success');
