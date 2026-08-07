@@ -408,18 +408,20 @@ searchInput.addEventListener('input', () => {
       const snapshot = await fsGetDocs(usersQuery);
 
       if (snapshot.empty) {
-       searchResults.innerHTML = snapshot.docs.map(docSnap => {
-  const u = docSnap.data();
-  return `
-    <a href="user.html?u=${encodeURIComponent(u.username)}" class="search-result-item">
-      ${u.logoUrl
-        ? `<img src="${u.logoUrl}" class="search-result-avatar" alt="${u.username}" />`
-        : `<div class="search-result-avatar-placeholder"><i data-lucide="user"></i></div>`
-      }
-      <span>@${escapeHtml(u.username)}</span>
-    </a>
-  `;
-}).join('');
+        searchResults.innerHTML = '<p class="search-empty">Nessun utente trovato</p>';
+      } else {
+        searchResults.innerHTML = snapshot.docs.map(docSnap => {
+          const u = docSnap.data();
+          return `
+            <a href="user.html?u=${encodeURIComponent(u.username)}" class="search-result-item">
+              ${u.logoUrl
+                ? `<img src="${u.logoUrl}" class="search-result-avatar" alt="${u.username}" />`
+                : `<div class="search-result-avatar-placeholder"><i data-lucide="user"></i></div>`
+              }
+              <span>@${escapeHtml(u.username)}</span>
+            </a>
+          `;
+        }).join('');
         lucide.createIcons();
       }
 
