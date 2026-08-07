@@ -17,7 +17,7 @@ const commentInput = document.getElementById('commentInput');
 lucide.createIcons();
 
 let currentUser = null;
-let currentProfile = { displayName: '', logoUrl: '' };
+let currentProfile = { displayName: '', logoUrl: '', username: '' };
 let viewedUid = null;
 let viewedUsername = null;
 let activeCommentsPostId = null;
@@ -108,7 +108,6 @@ async function renderProfile() {
     </button>
 
     <div class="profile-posts-section">
-      <h2 class="profile-posts-title">Post</h2>
       <div id="userPostsLoader" class="loader hidden">
         <div class="spinner"></div>
       </div>
@@ -141,6 +140,16 @@ async function toggleFollow() {
     } else {
       await updateDoc(targetRef, { followers: arrayUnion(currentUser.uid) });
       await updateDoc(myRef, { following: arrayUnion(viewedUid) });
+
+      await addDoc(collection(db, 'notifications'), {
+        toUid: viewedUid,
+        fromUid: currentUser.uid,
+        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+        fromLogoUrl: currentProfile.logoUrl || '',
+        type: 'follow',
+        read: false,
+        createdAt: serverTimestamp()
+      });
     }
     renderProfile();
   } catch (error) {
@@ -208,12 +217,26 @@ function attachPostActionListeners() {
       const postId = btn.dataset.id;
       const postRef = doc(db, 'posts', postId);
       const postDoc = await getDoc(postRef);
-      const likes = postDoc.data()?.likes || [];
+      const postData = postDoc.data();
+      const likes = postData?.likes || [];
       const isLiked = likes.includes(currentUser.uid);
 
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
       });
+
+      if (!isLiked) {
+        await addDoc(collection(db, 'notifications'), {
+          toUid: viewedUid,
+          fromUid: currentUser.uid,
+          fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+          fromLogoUrl: currentProfile.logoUrl || '',
+          type: 'like',
+          postId,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      }
     });
   });
 
@@ -222,7 +245,7 @@ function attachPostActionListeners() {
   });
 }
 
-// ===== Commenti (identico alla Home) =====
+// ===== Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
@@ -273,7 +296,7 @@ commentForm.addEventListener('submit', async (e) => {
   try {
     await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
       uid: currentUser.uid,
-      authorName: currentProfile.displayName || currentUser.email?.split('@')[0] || 'Utente',
+      authorName: currentProfile.username || currentProfile.displayName || currentUser.email?.split('@')[0] || 'Utente',
       text,
       createdAt: serverTimestamp()
     });

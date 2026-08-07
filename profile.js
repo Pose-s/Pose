@@ -322,3 +322,87 @@ function closeAllProfileMenus() {
 }
 
 document.addEventListener('click', closeAllProfileMenus);
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  alert('Sezione Impostazioni in arrivo!');
+});
+import { collection as nCollection, query as nQuery, where as nWhere, orderBy as nOrderBy, onSnapshot as nOnSnapshot, doc as nDoc, updateDoc as nUpdateDoc, limit as nLimit } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+const notificationBtn = document.getElementById('notificationBtn');
+const notifBadgeDot = document.getElementById('notifBadgeDot');
+const notificationsPanel = document.getElementById('notificationsPanel');
+const notificationsList = document.getElementById('notificationsList');
+
+let unreadNotifIds = [];
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) return;
+
+  const notifQuery = nQuery(
+    nCollection(db, 'notifications'),
+    nWhere('toUid', '==', user.uid),
+    nOrderBy('createdAt', 'desc'),
+    nLimit(30)
+  );
+
+  nOnSnapshot(notifQuery, (snapshot) => {
+    unreadNotifIds = [];
+
+    if (snapshot.empty) {
+      notificationsList.innerHTML = '<p class="search-empty">Nessuna notifica per ora.</p>';
+      notifBadgeDot.classList.add('hidden');
+      notificationBtn.classList.remove('has-notifications');
+      return;
+    }
+
+    let hasUnread = false;
+
+    notificationsList.innerHTML = snapshot.docs.map(docSnap => {
+      const n = docSnap.data();
+      if (!n.read) {
+        hasUnread = true;
+        unreadNotifIds.push(docSnap.id);
+      }
+
+      const text = n.type === 'like'
+        ? `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like a un tuo post`
+        : `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
+
+      return `
+        <div class="notification-item ${n.read ? '' : 'unread'}">
+          ${n.fromLogoUrl
+            ? `<img src="${n.fromLogoUrl}" class="notification-avatar" alt="" />`
+            : `<div class="notification-avatar-placeholder"><i data-lucide="user"></i></div>`
+          }
+          <span class="notification-text">${text}</span>
+        </div>
+      `;
+    }).join('');
+
+    lucide.createIcons();
+
+    if (hasUnread) {
+      notifBadgeDot.classList.remove('hidden');
+      notificationBtn.classList.add('has-notifications');
+    } else {
+      notifBadgeDot.classList.add('hidden');
+      notificationBtn.classList.remove('has-notifications');
+    }
+  });
+});
+
+notificationBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  notificationsPanel.classList.toggle('hidden');
+
+  if (!notificationsPanel.classList.contains('hidden') && unreadNotifIds.length > 0) {
+    for (const id of unreadNotifIds) {
+      nUpdateDoc(nDoc(db, 'notifications', id), { read: true }).catch(() => {});
+    }
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!notificationsPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
+    notificationsPanel.classList.add('hidden');
+  }
+});

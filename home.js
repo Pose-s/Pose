@@ -284,22 +284,35 @@ function attachPostListeners() {
 
   // Like
   document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!currentUser) return;
-      const postId = btn.dataset.id;
-      const post = postsCache.get(postId);
-      const likes = post?.likes || [];
-      const isLiked = likes.includes(currentUser.uid);
+  btn.addEventListener('click', async () => {
+    if (!currentUser) return;
+    const postId = btn.dataset.id;
+    const post = postsCache.get(postId);
+    const likes = post?.likes || [];
+    const isLiked = likes.includes(currentUser.uid);
 
-      try {
-        await updateDoc(doc(db, 'posts', postId), {
-          likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+
+      if (!isLiked && post.uid !== currentUser.uid) {
+        await addDoc(collection(db, 'notifications'), {
+          toUid: post.uid,
+          fromUid: currentUser.uid,
+          fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+          fromLogoUrl: currentProfile.logoUrl || '',
+          type: 'like',
+          postId,
+          read: false,
+          createdAt: serverTimestamp()
         });
-      } catch (error) {
-        console.error('Errore like:', error);
       }
-    });
+    } catch (error) {
+      console.error('Errore like:', error);
+    }
   });
+});
 
   // Commenti
   document.querySelectorAll('.comment-btn').forEach(btn => {
