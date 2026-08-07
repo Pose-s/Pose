@@ -628,3 +628,42 @@ body {
   width: 18px;
   height: 18px;
 }
+/* Avatar cliccabile nel profilo */
+.avatar-upload-btn {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.avatar-upload-btn .preview-circle,
+.avatar-upload-btn .profile-logo-placeholder-lg {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 0;
+}
+
+.avatar-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #7c3aed;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.avatar-overlay i {
+  width: 14px;
+  height: 14px;
+}

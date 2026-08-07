@@ -8,8 +8,9 @@ lucide.createIcons();
 
 const currentLogo = document.getElementById('currentLogo');
 const logoPlaceholder = document.getElementById('logoPlaceholder');
-const displayNameInput = document.getElementById('displayNameInput');
+const avatarUploadBtn = document.getElementById('avatarUploadBtn');
 const newLogoInput = document.getElementById('newLogoInput');
+const displayNameInput = document.getElementById('displayNameInput');
 const profileForm = document.getElementById('profileForm');
 const profileMsg = document.getElementById('profileMsg');
 const saveProfileBtn = document.getElementById('saveProfileBtn');
@@ -31,14 +32,32 @@ onAuthStateChanged(auth, async (user) => {
   displayNameInput.value = data.displayName || user.email.split('@')[0];
   currentLogoUrl = data.logoUrl || '';
 
-  if (currentLogoUrl) {
-    currentLogo.src = currentLogoUrl;
+  updateAvatarPreview(currentLogoUrl);
+});
+
+function updateAvatarPreview(url) {
+  if (url) {
+    currentLogo.src = url;
     currentLogo.classList.remove('hidden');
     logoPlaceholder.classList.add('hidden');
   } else {
     currentLogo.classList.add('hidden');
     logoPlaceholder.classList.remove('hidden');
   }
+}
+
+// Cliccando sull'avatar si apre il selettore file
+avatarUploadBtn.addEventListener('click', () => {
+  newLogoInput.click();
+});
+
+// Anteprima immediata dopo la scelta del file
+newLogoInput.addEventListener('change', () => {
+  const file = newLogoInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => updateAvatarPreview(e.target.result);
+  reader.readAsDataURL(file);
 });
 
 logoutBtn.addEventListener('click', async () => {
@@ -68,6 +87,7 @@ profileForm.addEventListener('submit', async (e) => {
       logoUrl
     });
 
+    currentLogoUrl = logoUrl;
     profileMsg.textContent = 'Profilo aggiornato con successo!';
     profileMsg.classList.remove('hidden', 'auth-error');
     profileMsg.classList.add('auth-success');
