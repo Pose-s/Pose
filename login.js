@@ -3,6 +3,10 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+
+const resendBtn = document.getElementById('resendBtn');
+let lastUnverifiedUser = null;
 
 const authForm = document.getElementById('authForm');
 const emailInput = document.getElementById('emailInput');
@@ -52,6 +56,8 @@ authForm.addEventListener('submit', async (e) => {
       if (!cred.user.emailVerified) {
         errorMsg.textContent = 'Devi prima confermare la tua email tramite il link che ti abbiamo inviato.';
         errorMsg.classList.remove('hidden');
+        resendBtn.classList.remove('hidden');
+  lastUnverifiedUser = cred.user;
         authBtn.disabled = false;
         return;
       }
@@ -79,3 +85,20 @@ function translateError(code) {
   };
   return map[code] || 'Si è verificato un errore. Riprova.';
 }
+resendBtn.addEventListener('click', async () => {
+  if (!lastUnverifiedUser) return;
+  resendBtn.disabled = true;
+  resendBtn.textContent = 'Invio in corso...';
+
+  try {
+    await sendEmailVerification(lastUnverifiedUser);
+    errorMsg.textContent = 'Nuova email inviata! Controlla anche Spam e Promozioni.';
+    errorMsg.classList.remove('hidden');
+  } catch (error) {
+    errorMsg.textContent = 'Errore durante l\'invio. Riprova tra qualche minuto.';
+    errorMsg.classList.remove('hidden');
+  } finally {
+    resendBtn.disabled = false;
+    resendBtn.textContent = 'Reinvia email di conferma';
+  }
+});
