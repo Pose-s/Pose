@@ -117,4 +117,82 @@
 
           <form id="profileForm">
             <div class="form-group">
-              <label for="usernameEditInput">Nome
+              <label for="usernameEditInput">Nome utente</label>
+              <input type="text" id="usernameEditInput" required pattern="[a-zA-Z0-9_]{3,20}" />
+              <span class="field-hint" id="usernameEditHint"></span>
+            </div>
+            <div class="form-group">
+              <label for="displayNameInput">Nome visualizzato</label>
+              <input type="text" id="displayNameInput" required />
+            </div>
+            <div class="form-group">
+              <label for="bioEditInput">Bio</label>
+              <textarea id="bioEditInput" placeholder="Parlaci un po' di te..."></textarea>
+            </div>
+            <p id="profileMsg" class="auth-error hidden"></p>
+            <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
+          </form>
+        </div>
+
+        <!-- Post dell'utente -->
+        <div class="profile-posts-section">
+          <div id="profilePostsLoader" class="loader hidden">
+            <div class="spinner"></div>
+          </div>
+          <div class="posts-grid" id="profilePostsGrid"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modale Modifica Post -->
+  <div class="modal-overlay hidden" id="postModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Modifica post</h2>
+        <button class="modal-close" id="closeModalBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="postForm">
+        <div class="form-group">
+          <label for="photoInput">Foto del post</label>
+          <input type="file" id="photoInput" accept="image/*" />
+          <img id="photoPreview" class="preview-rect hidden" alt="Anteprima foto" />
+        </div>
+
+        <div class="form-group">
+          <label for="captionInput">Didascalia</label>
+          <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
+        </div>
+
+        <button type="submit" class="publish-btn" id="publishBtn">Salva modifiche</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale Commenti -->
+  <div class="modal-overlay hidden" id="commentsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Commenti</h2>
+        <button class="modal-close" id="closeCommentsBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="comments-list" id="commentsList"></div>
+      <form id="commentForm" class="comment-form">
+        <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
+        <button type="submit" class="comment-send-btn">
+          <i data-lucide="send"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="profile.js"></script>
+  <script src="sidebar-toggle.js"></script>
+</body>
+</html>
