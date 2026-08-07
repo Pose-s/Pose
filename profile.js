@@ -2,7 +2,8 @@ import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   doc, getDoc, setDoc, collection, query, where, orderBy,
-  onSnapshot, deleteDoc, updateDoc
+  onSnapshot, deleteDoc, updateDoc, addDoc, serverTimestamp,
+  increment, arrayUnion, arrayRemove, limit
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
@@ -25,12 +26,15 @@ const editLogoPreview = document.getElementById('editLogoPreview');
 const editLogoPlaceholder = document.getElementById('editLogoPlaceholder');
 const avatarUploadBtn = document.getElementById('avatarUploadBtn');
 const newLogoInput = document.getElementById('newLogoInput');
+const usernameEditInput = document.getElementById('usernameEditInput');
+const usernameEditHint = document.getElementById('usernameEditHint');
 const displayNameInput = document.getElementById('displayNameInput');
 const bioEditInput = document.getElementById('bioEditInput');
 const profileForm = document.getElementById('profileForm');
 const profileMsg = document.getElementById('profileMsg');
 const saveProfileBtn = document.getElementById('saveProfileBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const settingsBtn = document.getElementById('settingsBtn');
 
 // ===== Riferimenti sezione post del profilo =====
 const profilePostsGrid = document.getElementById('profilePostsGrid');
@@ -45,10 +49,25 @@ const photoInput = document.getElementById('photoInput');
 const photoPreview = document.getElementById('photoPreview');
 const captionInput = document.getElementById('captionInput');
 
+// ===== Riferimenti modale commenti =====
+const commentsModal = document.getElementById('commentsModal');
+const closeCommentsBtn = document.getElementById('closeCommentsBtn');
+const commentsList = document.getElementById('commentsList');
+const commentForm = document.getElementById('commentForm');
+const commentInput = document.getElementById('commentInput');
+
 let currentUser = null;
 let currentLogoUrl = '';
+let currentUsername = '';
 let postsCacheProfile = new Map();
+let postsOrderList = [];
 let editingPostId = null;
+let activeCommentsPostId = null;
+let unsubscribeComments = null;
+
+settingsBtn.addEventListener('click', () => {
+  alert('Sezione Impostazioni in arrivo!');
+});
 
 // ===== Autenticazione e caricamento profilo =====
 onAuthStateChanged(auth, async (user) => {
@@ -62,19 +81,19 @@ onAuthStateChanged(auth, async (user) => {
   const userDoc = await getDoc(doc(db, 'users', user.uid));
   const data = userDoc.exists() ? userDoc.data() : {};
 
-  // Header
-  profileUsername.textContent = data.username ? `@${data.username}` : `@${user.email.split('@')[0]}`;
+  currentUsername = data.username || '';
+
+  profileUsername.textContent = currentUsername ? `@${currentUsername}` : `@${user.email.split('@')[0]}`;
   profileBio.textContent = data.bio || '';
   currentLogoUrl = data.logoUrl || '';
   updateAvatarDisplay(currentLogoUrl, currentLogo, logoPlaceholder);
 
-  // Statistiche follower/seguiti
   statFollowers.textContent = (data.followers || []).length;
   statFollowing.textContent = (data.following || []).length;
 
-  // Precompila form di modifica
-  displayNameInput.value = data.displayName || data.username || user.email.split('@')[0];
+  displayNameInput.value = data.displayName || currentUsername || user.email.split('@')[0];
   bioEditInput.value = data.bio || '';
+  usernameEditInput.value = currentUsername;
   updateAvatarDisplay(currentLogoUrl, editLogoPreview, editLogoPlaceholder);
 });
 
@@ -88,6 +107,28 @@ function updateAvatarDisplay(url, imgEl, placeholderEl) {
     placeholderEl.classList.remove('hidden');
   }
 }
+
+// ===== Controllo disponibilità username mentre si scrive =====
+let usernameCheckTimeout;
+usernameEditInput.addEventListener('input', () => {
+  clearTimeout(usernameCheckTimeout);
+  const value = usernameEditInput.value.trim().toLowerCase();
+  usernameEditHint.textContent = '';
+  usernameEditHint.className = 'field-hint';
+
+  if (value.length < 3 || value === currentUsername) return;
+
+  usernameCheckTimeout = setTimeout(async () => {
+    const docSnap = await getDoc(doc(db, 'usernames', value));
+    if (docSnap.exists()) {
+      usernameEditHint.textContent = 'Nome utente già in uso';
+      usernameEditHint.className = 'field-hint hint-error';
+    } else {
+      usernameEditHint.textContent = 'Disponibile ✓';
+      usernameEditHint.className = 'field-hint hint-ok';
+    }
+  }, 400);
+});
 
 // ===== Toggle form di modifica profilo =====
 editProfileToggleBtn.addEventListener('click', () => {
@@ -112,6 +153,18 @@ logoutBtn.addEventListener('click', async () => {
 profileForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   profileMsg.classList.add('hidden');
+
+  const newUsername = usernameEditInput.value.trim().toLowerCase();
+
+  if (newUsername !== currentUsername) {
+    const usernameDoc = await getDoc(doc(db, 'usernames', newUsername));
+    if (usernameDoc.exists()) {
+      profileMsg.textContent = 'Questo nome utente è già in uso.';
+      profileMsg.classList.remove('hidden');
+      return;
+    }
+  }
+
   saveProfileBtn.disabled = true;
   saveProfileBtn.textContent = 'Salvataggio...';
 
@@ -128,13 +181,23 @@ profileForm.addEventListener('submit', async (e) => {
 
     const bio = bioEditInput.value.trim();
 
+    if (newUsername !== currentUsername) {
+      if (currentUsername) {
+        await deleteDoc(doc(db, 'usernames', currentUsername)).catch(() => {});
+      }
+      await setDoc(doc(db, 'usernames', newUsername), { uid: currentUser.uid });
+    }
+
     await setDoc(doc(db, 'users', currentUser.uid), {
+      username: newUsername,
       displayName: displayNameInput.value.trim(),
       bio,
       logoUrl
     }, { merge: true });
 
+    currentUsername = newUsername;
     currentLogoUrl = logoUrl;
+    profileUsername.textContent = `@${newUsername}`;
     profileBio.textContent = bio;
     updateAvatarDisplay(logoUrl, currentLogo, logoPlaceholder);
 
@@ -219,7 +282,7 @@ postForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Lista post del profilo =====
+// ===== Lista post del profilo (con ordine personalizzabile) =====
 function startListeningToOwnPosts(uid) {
   const postsQuery = query(
     collection(db, 'posts'),
@@ -229,10 +292,9 @@ function startListeningToOwnPosts(uid) {
 
   profilePostsLoader.classList.remove('hidden');
 
-  onSnapshot(postsQuery, (snapshot) => {
+  onSnapshot(postsQuery, async (snapshot) => {
     profilePostsLoader.classList.add('hidden');
     postsCacheProfile.clear();
-
     statPosts.textContent = snapshot.size;
 
     if (snapshot.empty) {
@@ -240,42 +302,90 @@ function startListeningToOwnPosts(uid) {
       return;
     }
 
-    profilePostsGrid.innerHTML = snapshot.docs.map(docSnap => {
-      const post = docSnap.data();
-      const id = docSnap.id;
-      postsCacheProfile.set(id, post);
+    const fetchedIds = [];
+    snapshot.docs.forEach(docSnap => {
+      postsCacheProfile.set(docSnap.id, docSnap.data());
+      fetchedIds.push(docSnap.id);
+    });
 
-      return `
-        <article class="post-card">
-          <div class="post-header">
-            <span class="post-date">${formatDate(post.createdAt)}</span>
-            <div class="post-menu">
-              <button class="post-menu-btn" data-id="${id}">
-                <i data-lucide="more-vertical"></i>
-              </button>
-              <div class="post-menu-dropdown hidden" data-menu-for="${id}">
-                <button class="menu-item edit-post-btn" data-id="${id}">
-                  <i data-lucide="pencil"></i> Modifica
-                </button>
-                <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
-                  <i data-lucide="trash-2"></i> Elimina
-                </button>
-              </div>
-            </div>
-          </div>
-          <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
-          ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
-        </article>
-      `;
-    }).join('');
+    // Applica ordine personalizzato salvato, se presente
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    const savedOrder = userDoc.exists() ? (userDoc.data().postOrder || []) : [];
 
-    lucide.createIcons();
-    attachProfilePostListeners();
+    const ordered = savedOrder.filter(id => fetchedIds.includes(id));
+    const newOnes = fetchedIds.filter(id => !ordered.includes(id));
+    postsOrderList = [...newOnes, ...ordered];
+
+    renderProfilePosts();
   }, (error) => {
     profilePostsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
     profilePostsGrid.innerHTML = '<p style="color:#ef4444;">Errore nel caricamento dei post.</p>';
   });
+}
+
+function renderProfilePosts() {
+  profilePostsGrid.innerHTML = postsOrderList.map(id => {
+    const post = postsCacheProfile.get(id);
+    if (!post) return '';
+
+    const likes = post.likes || [];
+    const isLiked = currentUser && likes.includes(currentUser.uid);
+    const commentCount = post.commentCount || 0;
+
+    return `
+      <article class="post-card profile-post-card">
+        <div class="post-header">
+          ${currentLogoUrl
+            ? `<img src="${currentLogoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+            : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+          }
+          <div class="post-header-info">
+            <span class="post-author">${escapeHtml(currentUsername || 'Tu')}</span>
+            <span class="post-date">${formatDate(post.createdAt)}</span>
+          </div>
+          <div class="post-menu">
+            <button class="post-menu-btn" data-id="${id}">
+              <i data-lucide="more-vertical"></i>
+            </button>
+            <div class="post-menu-dropdown hidden" data-menu-for="${id}">
+              <button class="menu-item move-up-btn" data-id="${id}">
+                <i data-lucide="arrow-left"></i> Sposta prima
+              </button>
+              <button class="menu-item move-down-btn" data-id="${id}">
+                <i data-lucide="arrow-right"></i> Sposta dopo
+              </button>
+              <button class="menu-item edit-post-btn" data-id="${id}">
+                <i data-lucide="pencil"></i> Modifica
+              </button>
+              <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
+                <i data-lucide="trash-2"></i> Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+        <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
+        ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+        <div class="post-actions">
+          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
+            <i data-lucide="heart"></i>
+            <span>${likes.length}</span>
+          </button>
+          <button class="action-btn comment-btn" data-id="${id}">
+            <i data-lucide="message-circle"></i>
+            <span>${commentCount}</span>
+          </button>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  lucide.createIcons();
+  attachProfilePostListeners();
+}
+
+async function savePostOrder() {
+  await updateDoc(doc(db, 'users', currentUser.uid), { postOrder: postsOrderList }).catch(() => {});
 }
 
 function attachProfilePostListeners() {
@@ -286,6 +396,34 @@ function attachProfilePostListeners() {
       const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
       closeAllProfileMenus();
       dropdown.classList.toggle('hidden');
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .move-up-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      const id = btn.dataset.id;
+      const idx = postsOrderList.indexOf(id);
+      if (idx > 0) {
+        [postsOrderList[idx - 1], postsOrderList[idx]] = [postsOrderList[idx], postsOrderList[idx - 1]];
+        renderProfilePosts();
+        savePostOrder();
+      }
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .move-down-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      const id = btn.dataset.id;
+      const idx = postsOrderList.indexOf(id);
+      if (idx < postsOrderList.length - 1) {
+        [postsOrderList[idx + 1], postsOrderList[idx]] = [postsOrderList[idx], postsOrderList[idx + 1]];
+        renderProfilePosts();
+        savePostOrder();
+      }
     });
   });
 
@@ -309,11 +447,30 @@ function attachProfilePostListeners() {
       try {
         await deleteDoc(doc(db, 'posts', postId));
         if (photoPath) deleteObject(ref(storage, photoPath)).catch(() => {});
+        postsOrderList = postsOrderList.filter(id => id !== postId);
+        savePostOrder();
       } catch (error) {
         console.error(error);
         alert('Errore durante l\'eliminazione del post.');
       }
     });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .like-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.id;
+      const post = postsCacheProfile.get(postId);
+      const likes = post?.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
+
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => openComments(btn.dataset.id));
   });
 }
 
@@ -322,11 +479,74 @@ function closeAllProfileMenus() {
 }
 
 document.addEventListener('click', closeAllProfileMenus);
-document.getElementById('settingsBtn').addEventListener('click', () => {
-  alert('Sezione Impostazioni in arrivo!');
-});
-import { collection as nCollection, query as nQuery, where as nWhere, orderBy as nOrderBy, onSnapshot as nOnSnapshot, doc as nDoc, updateDoc as nUpdateDoc, limit as nLimit } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
+// ===== Commenti =====
+function openComments(postId) {
+  activeCommentsPostId = postId;
+  commentsModal.classList.remove('hidden');
+  commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
+
+  const commentsQuery = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc')
+  );
+
+  unsubscribeComments = onSnapshot(commentsQuery, (snapshot) => {
+    if (snapshot.empty) {
+      commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Nessun commento ancora. Scrivi il primo!</p>';
+      return;
+    }
+
+    commentsList.innerHTML = snapshot.docs.map(docSnap => {
+      const c = docSnap.data();
+      return `
+        <div class="comment-item">
+          <span class="comment-author">${escapeHtml(c.authorName || 'Utente')}</span>
+          <p class="comment-text">${escapeHtml(c.text || '')}</p>
+        </div>
+      `;
+    }).join('');
+
+    commentsList.scrollTop = commentsList.scrollHeight;
+  });
+}
+
+closeCommentsBtn.addEventListener('click', closeComments);
+commentsModal.addEventListener('click', (e) => { if (e.target === commentsModal) closeComments(); });
+
+function closeComments() {
+  commentsModal.classList.add('hidden');
+  if (unsubscribeComments) unsubscribeComments();
+  activeCommentsPostId = null;
+  commentInput.value = '';
+}
+
+commentForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!activeCommentsPostId || !currentUser) return;
+
+  const text = commentInput.value.trim();
+  if (!text) return;
+
+  try {
+    await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
+      uid: currentUser.uid,
+      authorName: currentUsername || 'Utente',
+      text,
+      createdAt: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, 'posts', activeCommentsPostId), {
+      commentCount: increment(1)
+    });
+
+    commentInput.value = '';
+  } catch (error) {
+    console.error('Errore nell\'invio del commento:', error);
+  }
+});
+
+// ===== Notifiche (invariato dal codice precedente) =====
 const notificationBtn = document.getElementById('notificationBtn');
 const notifBadgeDot = document.getElementById('notifBadgeDot');
 const notificationsPanel = document.getElementById('notificationsPanel');
@@ -337,14 +557,14 @@ let unreadNotifIds = [];
 onAuthStateChanged(auth, (user) => {
   if (!user) return;
 
-  const notifQuery = nQuery(
-    nCollection(db, 'notifications'),
-    nWhere('toUid', '==', user.uid),
-    nOrderBy('createdAt', 'desc'),
-    nLimit(30)
+  const notifQuery = query(
+    collection(db, 'notifications'),
+    where('toUid', '==', user.uid),
+    orderBy('createdAt', 'desc'),
+    limit(30)
   );
 
-  nOnSnapshot(notifQuery, (snapshot) => {
+  onSnapshot(notifQuery, (snapshot) => {
     unreadNotifIds = [];
 
     if (snapshot.empty) {
@@ -396,7 +616,7 @@ notificationBtn.addEventListener('click', async (e) => {
 
   if (!notificationsPanel.classList.contains('hidden') && unreadNotifIds.length > 0) {
     for (const id of unreadNotifIds) {
-      nUpdateDoc(nDoc(db, 'notifications', id), { read: true }).catch(() => {});
+      updateDoc(doc(db, 'notifications', id), { read: true }).catch(() => {});
     }
   }
 });

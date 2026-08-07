@@ -1342,3 +1342,26 @@ a.search-result-item {
   color: #334155;
   line-height: 1.4;
 }
+/* Griglia post profilo: thumbnail piccole affiancate */
+#profilePostsGrid.posts-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.profile-post-card .post-photo {
+  height: 220px;
+}
+
+.profile-post-card .post-caption {
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.profile-post-card .post-header {
+  padding: 8px 10px;
+}
+
+.profile-post-card .post-actions {
+  padding: 4px 10px 10px;
+  gap: 12px;
+}
