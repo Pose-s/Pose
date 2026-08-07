@@ -38,7 +38,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   currentUser = user;
-
+startListeningToOwnPosts(user.uid);
   const userDoc = await getDoc(doc(db, 'users', user.uid));
   const data = userDoc.exists() ? userDoc.data() : {};
 
@@ -135,3 +135,68 @@ profileForm.addEventListener('submit', async (e) => {
     saveProfileBtn.textContent = 'Salva modifiche';
   }
 });
+import { collection, query, where, orderBy, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { formatDate } from './utils.js';
+
+const profilePostsGrid = document.getElementById('profilePostsGrid');
+const profilePostsLoader = document.getElementById('profilePostsLoader');
+
+function startListeningToOwnPosts(uid) {
+  const postsQuery = query(
+    collection(db, 'posts'),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc')
+  );
+
+  profilePostsLoader.classList.remove('hidden');
+
+  onSnapshot(postsQuery, (snapshot) => {
+    profilePostsLoader.classList.add('hidden');
+
+    if (snapshot.empty) {
+      profilePostsGrid.innerHTML = '<p style="color:#94a3b8;">Non hai ancora pubblicato nessun post.</p>';
+      return;
+    }
+
+    profilePostsGrid.innerHTML = snapshot.docs.map(docSnap => {
+      const post = docSnap.data();
+      const id = docSnap.id;
+
+      return `
+        <article class="post-card">
+          <div class="post-header">
+            <span class="post-date">${formatDate(post.createdAt)}</span>
+            <button class="delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+          <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
+          ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+        </article>
+      `;
+    }).join('');
+
+    lucide.createIcons();
+    attachProfileDeleteListeners();
+  });
+}
+
+function attachProfileDeleteListeners() {
+  document.querySelectorAll('#profilePostsGrid .delete-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Vuoi eliminare questo post?')) return;
+
+      const postId = btn.dataset.id;
+      const photoPath = btn.dataset.photopath;
+
+      try {
+        await deleteDoc(doc(db, 'posts', postId));
+        if (photoPath) deleteObject(ref(storage, photoPath)).catch(() => {});
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione:', error);
+        alert('Errore durante l\'eliminazione del post.');
+      }
+    });
+  });
+}
