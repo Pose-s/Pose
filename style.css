@@ -1373,3 +1373,36 @@ a.search-result-item {
   padding: 4px 10px 10px;
   gap: 12px;
 }
+@media (max-width: 600px) {
+  .profile-page {
+    left: 0 !important;
+    margin: 0 auto;
+    padding: 0 16px;
+    max-width: 100%;
+  }
+
+  .profile-top-row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .profile-username-block {
+    order: 2;
+  }
+
+  .profile-avatar-block {
+    order: 1;
+  }
+
+  .profile-stats {
+    order: 3;
+    justify-content: center;
+    gap: 32px;
+  }
+
+  .profile-username {
+    font-size: 20px;
+  }
+}
