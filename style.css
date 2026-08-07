@@ -468,3 +468,163 @@ body {
   color: #334155;
   line-height: 1.5;
 }
+/* Autenticazione */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+}
+
+.auth-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.auth-box .form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.auth-error {
+  color: #ef4444;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.auth-success {
+  color: #16a34a;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.auth-toggle a {
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+/* Logout */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.logout-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.logout-btn i {
+  width: 18px;
+  height: 18px;
+}
+
+/* Profilo */
+.profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 420px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.profile-card .preview-circle {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 20px;
+}
+
+.profile-logo-placeholder-lg {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.profile-logo-placeholder-lg i {
+  width: 40px;
+  height: 40px;
+}
+
+.profile-card .form-group input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Post header aggiornato */
+.post-header-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.post-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.delete-post-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+}
+
+.delete-post-btn:hover {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
+
+.delete-post-btn i {
+  width: 18px;
+  height: 18px;
+}

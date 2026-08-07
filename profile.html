@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pose - Profilo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="logo">
+        <i data-lucide="zap" class="logo-icon"></i>
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="newspaper"></i>
+          <span>News</span>
+        </a>
+        <a href="home.html" class="nav-item">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </a>
+        <a href="profile.html" class="nav-item active">
+          <i data-lucide="user"></i>
+          <span>Profilo</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="logout-btn">
+          <i data-lucide="log-out"></i> Esci
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="home-header">
+        <h1>Il tuo profilo</h1>
+      </header>
+
+      <div class="profile-card">
+        <img id="currentLogo" class="preview-circle" alt="Logo profilo" />
+        <div class="profile-logo-placeholder-lg hidden" id="logoPlaceholder">
+          <i data-lucide="user"></i>
+        </div>
+
+        <form id="profileForm">
+          <div class="form-group">
+            <label for="displayNameInput">Nome visualizzato</label>
+            <input type="text" id="displayNameInput" required />
+          </div>
+          <div class="form-group">
+            <label for="newLogoInput">Cambia logo (immagine profilo)</label>
+            <input type="file" id="newLogoInput" accept="image/*" />
+          </div>
+          <p id="profileMsg" class="auth-error hidden"></p>
+          <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="profile.js"></script>
+</body>
+</html>
