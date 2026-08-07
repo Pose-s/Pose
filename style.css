@@ -974,8 +974,8 @@ body {
 }
 
 .profile-username {
-  font-size: 30px;
-  font-weight: 870;
+  font-size: 24px;
+  font-weight: 700;
   color: #0f172a;
 }
 
@@ -1005,18 +1005,18 @@ body {
 }
 
 .stat-number {
-  font-size: 30px;
-  font-weight: 870;
+  font-size: 16px;
+  font-weight: 700;
   color: #0f172a;
 }
 
 .stat-label {
-  font-size: 18px;
+  font-size: 13px;
   color: #64748b;
 }
 
 .profile-bio {
-  font-size: 18px;
+  font-size: 14px;
   color: #334155;
   line-height: 1.5;
   margin-bottom: 20px;
@@ -1196,14 +1196,15 @@ a.search-result-item {
 }
 
 .btn-compact {
-  padding: 8px 20px;
-  border-radius: 10px;
+  padding: 7px 16px;
+  border-radius: 8px;
   background-color: #f3e8ff;
   color: #7c3aed;
   border: none;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
+  width: auto;
 }
 
 .btn-compact:hover {
@@ -1229,8 +1230,8 @@ a.search-result-item {
 
 .notification-bell-btn {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
@@ -1241,8 +1242,8 @@ a.search-result-item {
 }
 
 .notif-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .notif-outline {
