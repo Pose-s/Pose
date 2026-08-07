@@ -667,3 +667,6 @@ body {
   width: 14px;
   height: 14px;
 }
+.profile-logo-placeholder-lg.hidden {
+  display: none !important;
+}
