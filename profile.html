@@ -123,5 +123,30 @@
 
   <script type="module" src="profile.js"></script>
   <script src="sidebar-toggle.js"></script>
+  <!-- Modale Modifica Post -->
+<div class="modal-overlay hidden" id="postModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Modifica post</h2>
+      <button class="modal-close" id="closeModalBtn">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <form id="postForm">
+      <div class="form-group">
+        <label for="photoInput">Foto del post</label>
+        <input type="file" id="photoInput" accept="image/*" />
+        <img id="photoPreview" class="preview-rect hidden" alt="Anteprima foto" />
+      </div>
+
+      <div class="form-group">
+        <label for="captionInput">Didascalia</label>
+        <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
+      </div>
+
+      <button type="submit" class="publish-btn" id="publishBtn">Salva modifiche</button>
+    </form>
+</div>
 </body>
 </html>

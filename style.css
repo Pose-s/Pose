@@ -571,8 +571,8 @@ body {
 }
 
 .profile-logo-placeholder-lg {
-  width: 90px;
-  height: 90px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   background-color: #f3e8ff;
   color: #7c3aed;
@@ -583,8 +583,8 @@ body {
 }
 
 .profile-logo-placeholder-lg i {
-  width: 40px;
-  height: 40px;
+  width: 80px;
+  height: 80px;
 }
 
 .profile-card .form-group input[type="text"] {
@@ -974,8 +974,8 @@ body {
 }
 
 .profile-username {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 50px;
+  font-weight: 1000;
   color: #0f172a;
 }
 
@@ -984,8 +984,8 @@ body {
 }
 
 .profile-avatar-lg {
-  width: 90px;
-  height: 90px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #f1f5f9;
@@ -1005,18 +1005,18 @@ body {
 }
 
 .stat-number {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 50px;
+  font-weight: 1000;
   color: #0f172a;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 30px;
   color: #64748b;
 }
 
 .profile-bio {
-  font-size: 14px;
+  font-size: 30px;
   color: #334155;
   line-height: 1.5;
   margin-bottom: 20px;
