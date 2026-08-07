@@ -55,10 +55,11 @@
     </main>
   </div>
 
+  <!-- Modale Crea/Modifica Post -->
   <div class="modal-overlay hidden" id="postModal">
     <div class="modal">
       <div class="modal-header">
-        <h2>Crea un nuovo post</h2>
+        <h2 id="postModalTitle">Crea un nuovo post</h2>
         <button class="modal-close" id="closeModalBtn">
           <i data-lucide="x"></i>
         </button>
@@ -67,7 +68,7 @@
       <form id="postForm">
         <div class="form-group">
           <label for="photoInput">Foto del post</label>
-          <input type="file" id="photoInput" accept="image/*" required />
+          <input type="file" id="photoInput" accept="image/*" />
           <img id="photoPreview" class="preview-rect hidden" alt="Anteprima foto" />
         </div>
 
@@ -77,6 +78,27 @@
         </div>
 
         <button type="submit" class="publish-btn" id="publishBtn">Pubblica</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale Commenti -->
+  <div class="modal-overlay hidden" id="commentsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Commenti</h2>
+        <button class="modal-close" id="closeCommentsBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="comments-list" id="commentsList"></div>
+
+      <form id="commentForm" class="comment-form">
+        <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
+        <button type="submit" class="comment-send-btn">
+          <i data-lucide="send"></i>
+        </button>
       </form>
     </div>
   </div>
