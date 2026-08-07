@@ -142,7 +142,7 @@ postForm.addEventListener('submit', async (e) => {
 
       await addDoc(collection(db, 'posts'), {
         uid: currentUser.uid,
-        authorName: currentProfile.displayName || currentUser.email.split('@')[0],
+        authorName: currentProfile.username || currentUser.email.split('@')[0],
         logoUrl: currentProfile.logoUrl || '',
         photoUrl,
         photoPath,
