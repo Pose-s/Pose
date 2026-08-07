@@ -2,7 +2,6 @@ import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml } from './utils.js';
 
 lucide.createIcons();
