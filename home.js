@@ -7,6 +7,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import {
@@ -85,27 +86,43 @@ function previewImage(input, previewEl) {
   reader.readAsDataURL(file);
 }
 
-// Converte un file in base64 (data URL)
-function fileToBase64(file) {
+// Comprime e ridimensiona un'immagine prima del caricamento
+function compressImage(file, maxWidth = 1080, quality = 0.75) {
   return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve(null);
-      return;
-    }
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// Carica un'immagine su Firebase Storage e restituisce l'URL pubblico
+// Carica un'immagine compressa su Firebase Storage e restituisce l'URL pubblico
 async function uploadImage(file, folder) {
   if (!file) return '';
-  const base64 = await fileToBase64(file);
-  const fileName = `${folder}/${Date.now()}_${file.name}`;
+  const compressedBase64 = await compressImage(file);
+  const fileName = `${folder}/${Date.now()}.jpg`;
   const storageRef = ref(storage, fileName);
-  await uploadString(storageRef, base64, 'data_url');
+  await uploadString(storageRef, compressedBase64, 'data_url');
   return await getDownloadURL(storageRef);
 }
 
@@ -142,8 +159,8 @@ postForm.addEventListener('submit', async (e) => {
   }
 });
 
-// Ascolto in tempo reale dei post (tutti gli utenti vedono gli stessi post)
-const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+// Ascolto in tempo reale dei post (limitato ai 30 più recenti per velocità)
+const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(30));
 
 postsLoader.classList.remove('hidden');
 
@@ -161,12 +178,12 @@ onSnapshot(postsQuery, (snapshot) => {
       <article class="post-card">
         <div class="post-header">
           ${post.logoUrl 
-            ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" />` 
+            ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />` 
             : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
           }
           <span class="post-date">${formatDate(post.createdAt)}</span>
         </div>
-        <img src="${post.photoUrl}" class="post-photo" alt="Post" />
+        <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
         ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
       </article>
     `;
