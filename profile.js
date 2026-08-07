@@ -626,3 +626,29 @@ document.addEventListener('click', (e) => {
     notificationsPanel.classList.add('hidden');
   }
 });
+import { collection as mCollection, query as mQuery, where as mWhere, onSnapshot as mOnSnapshot } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+const msgBadgeDot = document.getElementById('msgBadgeDot');
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) return;
+
+  const convQuery = mQuery(
+    mCollection(db, 'conversations'),
+    mWhere('participants', 'array-contains', user.uid)
+  );
+
+  mOnSnapshot(convQuery, (snapshot) => {
+    let totalUnread = 0;
+    snapshot.docs.forEach(docSnap => {
+      const conv = docSnap.data();
+      totalUnread += (conv.unread && conv.unread[user.uid]) || 0;
+    });
+
+    if (totalUnread > 0) {
+      msgBadgeDot.classList.remove('hidden');
+    } else {
+      msgBadgeDot.classList.add('hidden');
+    }
+  });
+});

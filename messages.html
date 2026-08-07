@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pose - Messaggi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="newspaper"></i>
+          <span>News</span>
+        </a>
+        <a href="home.html" class="nav-item">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+          <i data-lucide="user"></i>
+          <span>Profilo</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="logout-btn">
+          <i data-lucide="log-out"></i> Esci
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="messages-layout">
+
+        <div class="conversations-panel">
+          <div class="conversations-header">
+            <h2>Messaggi</h2>
+            <button class="new-message-btn" id="newMessageBtn">
+              <i data-lucide="square-pen"></i>
+            </button>
+          </div>
+          <div id="conversationsList"></div>
+        </div>
+
+        <div class="chat-panel" id="chatPanel">
+          <div class="chat-empty" id="chatEmpty">
+            <p>Seleziona una conversazione per iniziare</p>
+          </div>
+
+          <div class="chat-active hidden" id="chatActive">
+            <div class="chat-header">
+              <button class="chat-back-btn" id="chatBackBtn">
+                <i data-lucide="arrow-left"></i>
+              </button>
+              <img id="chatHeaderAvatar" class="chat-header-avatar hidden" alt="" />
+              <div class="chat-header-placeholder hidden" id="chatHeaderPlaceholder">
+                <i data-lucide="user"></i>
+              </div>
+              <span id="chatHeaderUsername"></span>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <form id="chatForm" class="chat-form">
+              <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+              <button type="submit" class="comment-send-btn">
+                <i data-lucide="send"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modale nuova conversazione -->
+  <div class="modal-overlay hidden" id="newMessageModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Nuovo messaggio</h2>
+        <button class="modal-close" id="closeNewMessageBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <p class="otp-info" id="mutualEmptyMsg">Puoi scrivere solo a chi ti segue e che segui anche tu.</p>
+      <div id="mutualFriendsList"></div>
+    </div>
+  </div>
+
+  <script type="module" src="messages.js"></script>
+  <script src="sidebar-toggle.js"></script>
+</body>
+</html>
