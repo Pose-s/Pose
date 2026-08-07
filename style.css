@@ -959,6 +959,9 @@ body {
 /* Nuovo layout profilo */
 .profile-page {
   max-width: 700px;
+  margin: 0 auto;
+  position: relative;
+  left: 30px;
 }
 
 .profile-top-row {
@@ -1193,6 +1196,7 @@ a.search-result-item {
   display: flex;
   gap: 10px;
   margin-bottom: 24px;
+  justify-content: center;
 }
 
 .btn-compact {
@@ -1209,11 +1213,6 @@ a.search-result-item {
 
 .btn-compact:hover {
   background-color: #e9d5ff;
-}
-
-.btn-compact-secondary {
-  background-color: #f1f5f9;
-  color: #64748b;
 }
 
 .btn-compact-secondary:hover {
