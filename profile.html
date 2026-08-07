@@ -46,25 +46,27 @@
 
     <main class="main-content">
       <div class="profile-page">
-<div class="profile-header-bar">
-  <button type="button" class="notification-bell-btn" id="notificationBtn">
-    <svg viewBox="0 0 48 48" class="notif-icon">
-      <path class="notif-liquid-fill" d="M10 16 L38 16 L24 34 Z" />
-      <ellipse class="notif-olive-fill" cx="27" cy="21" rx="3.2" ry="4.2" transform="rotate(25 27 21)" />
-      <path class="notif-outline" d="M24 14 C24 9 19 5 14 7 C9 9 8 14 8 16 C8 19 12 23 24 34 C36 23 40 19 40 16 C40 14 39 9 34 7 C29 5 24 9 24 14 Z" />
-      <line class="notif-outline" x1="10" y1="16" x2="38" y2="16" />
-      <ellipse class="notif-outline notif-olive-outline" cx="27" cy="21" rx="3.2" ry="4.2" transform="rotate(25 27 21)" />
-      <line class="notif-outline" x1="24" y1="34" x2="24" y2="42" />
-      <ellipse class="notif-outline" cx="24" cy="44" rx="9" ry="2" />
-    </svg>
-    <span class="notif-badge-dot hidden" id="notifBadgeDot"></span>
-  </button>
 
-  <div class="notifications-panel hidden" id="notificationsPanel">
-    <h3>Notifiche</h3>
-    <div id="notificationsList"></div>
-  </div>
-</div>
+        <div class="profile-header-bar">
+          <button type="button" class="notification-bell-btn" id="notificationBtn">
+            <svg viewBox="0 0 48 48" class="notif-icon">
+              <path class="notif-liquid-fill" d="M10 16 L38 16 L24 34 Z" />
+              <ellipse class="notif-olive-fill" cx="27" cy="21" rx="3.2" ry="4.2" transform="rotate(25 27 21)" />
+              <path class="notif-outline" d="M24 14 C24 9 19 5 14 7 C9 9 8 14 8 16 C8 19 12 23 24 34 C36 23 40 19 40 16 C40 14 39 9 34 7 C29 5 24 9 24 14 Z" />
+              <line class="notif-outline" x1="10" y1="16" x2="38" y2="16" />
+              <ellipse class="notif-outline notif-olive-outline" cx="27" cy="21" rx="3.2" ry="4.2" transform="rotate(25 27 21)" />
+              <line class="notif-outline" x1="24" y1="34" x2="24" y2="42" />
+              <ellipse class="notif-outline" cx="24" cy="44" rx="9" ry="2" />
+            </svg>
+            <span class="notif-badge-dot hidden" id="notifBadgeDot"></span>
+          </button>
+
+          <div class="notifications-panel hidden" id="notificationsPanel">
+            <h3>Notifiche</h3>
+            <div id="notificationsList"></div>
+          </div>
+        </div>
+
         <div class="profile-top-row">
           <div class="profile-username-block">
             <span class="profile-username" id="profileUsername">@nomeutente</span>
@@ -94,16 +96,11 @@
         </div>
 
         <p class="profile-bio" id="profileBio"></p>
-<div class="profile-action-row"></div>
-        <button type="button" class="edit-profile-btn" id="editProfileToggleBtn">
+
+        <div class="profile-action-row">
+          <button type="button" class="btn-compact" id="editProfileToggleBtn">Modifica profilo</button>
           <button type="button" class="btn-compact" id="settingsBtn">Impostazioni</button>
-</div>
-          Modifica profilo
-        </button>
-        <button type="button" class="btn-compact" id="settingsBtn">
-    Impostazioni
-  </button>
-</div>
+        </div>
 
         <!-- Form di modifica, nascosto finché non si clicca il pulsante sopra -->
         <div class="profile-card hidden" id="editProfileCard">
@@ -120,77 +117,4 @@
 
           <form id="profileForm">
             <div class="form-group">
-  <label for="usernameEditInput">Nome utente</label>
-  <input type="text" id="usernameEditInput" required pattern="[a-zA-Z0-9_]{3,20}" />
-  <span class="field-hint" id="usernameEditHint"></span>
-</div>
-            <div class="form-group">
-              <label for="displayNameInput">Nome visualizzato</label>
-              <input type="text" id="displayNameInput" required />
-            </div>
-            <div class="form-group">
-              <label for="bioEditInput">Bio</label>
-              <textarea id="bioEditInput" placeholder="Parlaci un po' di te..."></textarea>
-            </div>
-            <p id="profileMsg" class="auth-error hidden"></p>
-            <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
-          </form>
-        </div>
-
-        <!-- Post dell'utente -->
-        <div class="profile-posts-section">
-          <div id="profilePostsLoader" class="loader hidden">
-            <div class="spinner"></div>
-          </div>
-          <div class="posts-grid" id="profilePostsGrid"></div>
-        </div>
-
-      </div>
-    </main>
-  </div>
-
-  <script type="module" src="profile.js"></script>
-  <script src="sidebar-toggle.js"></script>
-  <!-- Modale Modifica Post -->
-<div class="modal-overlay hidden" id="postModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Modifica post</h2>
-      <button class="modal-close" id="closeModalBtn">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-
-    <form id="postForm">
-      <div class="form-group">
-        <label for="photoInput">Foto del post</label>
-        <input type="file" id="photoInput" accept="image/*" />
-        <img id="photoPreview" class="preview-rect hidden" alt="Anteprima foto" />
-      </div>
-
-      <div class="form-group">
-        <label for="captionInput">Didascalia</label>
-        <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
-      </div>
-
-      <button type="submit" class="publish-btn" id="publishBtn">Salva modifiche</button>
-    </form>
-</div>
-<div class="modal-overlay hidden" id="commentsModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Commenti</h2>
-      <button class="modal-close" id="closeCommentsBtn">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-    <div class="comments-list" id="commentsList"></div>
-    <form id="commentForm" class="comment-form">
-      <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
-      <button type="submit" class="comment-send-btn">
-        <i data-lucide="send"></i>
-      </button>
-    </form>
-  </div>
-</body>
-</html>
+              <label for="usernameEditInput">Nome
