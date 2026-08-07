@@ -31,7 +31,7 @@ body {
   gap: 10px;
   font-size: 24px;
   font-weight: 700;
-  color: #7c3aed;
+  color: #0f172a;
   margin-bottom: 32px;
   padding-left: 8px;
 }
@@ -825,4 +825,10 @@ body {
 .comment-send-btn i {
   width: 18px;
   height: 18px;
+}
+.logo-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
 }
