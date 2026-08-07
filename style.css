@@ -1180,3 +1180,11 @@ body {
     width: 200px;
   }
 }
+a.search-result-item {
+  text-decoration: none;
+  color: inherit;
+}
+.following-btn {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
