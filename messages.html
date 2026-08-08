@@ -74,12 +74,41 @@
               <span id="chatHeaderUsername"></span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
-            <form id="chatForm" class="chat-form">
-              <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
-              <button type="submit" class="comment-send-btn">
-                <i data-lucide="send"></i>
-              </button>
-            </form>
+            <div class="sticker-picker hidden" id="stickerPicker">
+  <button type="button" class="sticker-option">😀</button>
+  <button type="button" class="sticker-option">❤️</button>
+  <button type="button" class="sticker-option">😂</button>
+  <button type="button" class="sticker-option">👍</button>
+  <button type="button" class="sticker-option">🔥</button>
+  <button type="button" class="sticker-option">🎉</button>
+  <button type="button" class="sticker-option">😢</button>
+  <button type="button" class="sticker-option">😮</button>
+</div>
+
+<form id="chatForm" class="chat-form">
+  <div class="chat-form-left">
+    <button type="button" class="chat-icon-btn" id="voiceBtn">
+      <i data-lucide="mic"></i>
+    </button>
+    <button type="button" class="chat-icon-btn" id="photoLeftBtn">
+      <i data-lucide="image"></i>
+    </button>
+    <button type="button" class="chat-icon-btn" id="stickerBtn">
+      <i data-lucide="smile"></i>
+    </button>
+  </div>
+
+  <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+
+  <button type="button" class="chat-icon-btn chat-photo-mobile-btn" id="photoRightBtn">
+    <i data-lucide="camera"></i>
+  </button>
+  <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
+
+  <button type="submit" class="comment-send-btn">
+    <i data-lucide="send"></i>
+  </button>
+</form>
           </div>
         </div>
 

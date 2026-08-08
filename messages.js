@@ -1,10 +1,11 @@
-import { auth, db } from './firebase-config.js';
+import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy,
   onSnapshot, addDoc, serverTimestamp, increment
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
-import { escapeHtml } from './utils.js';
+import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { escapeHtml, compressImage } from './utils.js';
 
 const logoutBtn = document.getElementById('logoutBtn');
 const conversationsList = document.getElementById('conversationsList');
@@ -24,13 +25,25 @@ const chatMessages = document.getElementById('chatMessages');
 const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 
+const voiceBtn = document.getElementById('voiceBtn');
+const photoLeftBtn = document.getElementById('photoLeftBtn');
+const photoRightBtn = document.getElementById('photoRightBtn');
+const chatPhotoInput = document.getElementById('chatPhotoInput');
+const stickerBtn = document.getElementById('stickerBtn');
+const stickerPicker = document.getElementById('stickerPicker');
+
 lucide.createIcons();
 
 let currentUser = null;
 let currentProfile = {};
 let activeConversationId = null;
 let activeOtherUid = null;
+let otherAvatarUrl = '';
 let unsubscribeMessages = null;
+
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
 
 logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
@@ -172,10 +185,11 @@ async function openChat(convId, otherUid) {
 
   const otherDoc = await getDoc(doc(db, 'users', otherUid));
   const otherData = otherDoc.exists() ? otherDoc.data() : {};
+  otherAvatarUrl = otherData.logoUrl || '';
 
   chatHeaderUsername.textContent = `@${otherData.username || 'utente'}`;
-  if (otherData.logoUrl) {
-    chatHeaderAvatar.src = otherData.logoUrl;
+  if (otherAvatarUrl) {
+    chatHeaderAvatar.src = otherAvatarUrl;
     chatHeaderAvatar.classList.remove('hidden');
     chatHeaderPlaceholder.classList.add('hidden');
   } else {
@@ -183,7 +197,6 @@ async function openChat(convId, otherUid) {
     chatHeaderPlaceholder.classList.remove('hidden');
   }
 
-  // Azzera non letti per me
   updateDoc(doc(db, 'conversations', convId), {
     [`unread.${currentUser.uid}`]: 0
   }).catch(() => {});
@@ -199,20 +212,45 @@ async function openChat(convId, otherUid) {
     chatMessages.innerHTML = snapshot.docs.map(docSnap => {
       const m = docSnap.data();
       const isMine = m.from === currentUser.uid;
-      return `<div class="chat-bubble ${isMine ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`;
+
+      const avatarHtml = !isMine
+        ? (otherAvatarUrl
+            ? `<img src="${otherAvatarUrl}" class="chat-avatar" alt="" />`
+            : `<div class="chat-avatar-placeholder"><i data-lucide="user"></i></div>`)
+        : '';
+
+      let contentHtml;
+      if (m.type === 'photo') {
+        contentHtml = `<img src="${m.photoUrl}" class="chat-photo-msg" alt="Foto" />`;
+      } else if (m.type === 'audio') {
+        contentHtml = `<audio controls src="${m.audioUrl}" class="chat-audio-msg"></audio>`;
+      } else if (m.type === 'sticker') {
+        contentHtml = `<span class="chat-sticker-msg">${m.sticker}</span>`;
+      } else {
+        contentHtml = escapeHtml(m.text || '');
+      }
+
+      return `
+        <div class="chat-row ${isMine ? 'mine' : 'theirs'}">
+          ${avatarHtml}
+          <div class="chat-bubble ${isMine ? 'mine' : 'theirs'} ${m.type ? 'chat-bubble-' + m.type : ''}">${contentHtml}</div>
+        </div>
+      `;
     }).join('');
 
+    lucide.createIcons();
     chatMessages.scrollTop = chatMessages.scrollHeight;
   });
 }
 
 chatBackBtn.addEventListener('click', () => {
-    document.getElementById('chatPanel').classList.remove('mobile-active');
   chatActive.classList.add('hidden');
   chatEmpty.classList.remove('hidden');
+  document.getElementById('chatPanel').classList.remove('mobile-active');
   if (unsubscribeMessages) unsubscribeMessages();
 });
 
+// ===== Invio testo =====
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!activeConversationId) return;
@@ -221,20 +259,111 @@ chatForm.addEventListener('submit', async (e) => {
   if (!text) return;
 
   chatInput.value = '';
+  await sendMessage({ type: 'text', text }, text);
+});
+
+// ===== Invio foto (sinistra e destra mobile) =====
+photoLeftBtn.addEventListener('click', () => chatPhotoInput.click());
+photoRightBtn.addEventListener('click', () => chatPhotoInput.click());
+
+chatPhotoInput.addEventListener('change', async () => {
+  const file = chatPhotoInput.files[0];
+  if (!file || !activeConversationId) return;
+
+  try {
+    const compressed = await compressImage(file, 800, 0.75);
+    const photoPath = `chat_photos/${activeConversationId}/${Date.now()}.jpg`;
+    const photoRef = ref(storage, photoPath);
+    await uploadString(photoRef, compressed, 'data_url');
+    const photoUrl = await getDownloadURL(photoRef);
+
+    await sendMessage({ type: 'photo', photoUrl }, '📷 Foto');
+  } catch (error) {
+    console.error('Errore invio foto:', error);
+  } finally {
+    chatPhotoInput.value = '';
+  }
+});
+
+// ===== Sticker =====
+stickerBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  stickerPicker.classList.toggle('hidden');
+});
+
+document.querySelectorAll('.sticker-option').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const sticker = btn.textContent;
+    stickerPicker.classList.add('hidden');
+    await sendMessage({ type: 'sticker', sticker }, sticker);
+  });
+});
+
+document.addEventListener('click', (e) => {
+  if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) {
+    stickerPicker.classList.add('hidden');
+  }
+});
+
+// ===== Messaggio vocale =====
+voiceBtn.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const audioPath = `chat_audio/${activeConversationId}/${Date.now()}.webm`;
+            const audioRef = ref(storage, audioPath);
+            await uploadString(audioRef, reader.result, 'data_url');
+            const audioUrl = await getDownloadURL(audioRef);
+            await sendMessage({ type: 'audio', audioUrl }, '🎤 Messaggio vocale');
+          } catch (error) {
+            console.error('Errore invio vocale:', error);
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      voiceBtn.classList.add('recording');
+    } catch (error) {
+      console.error('Microfono non disponibile:', error);
+      alert('Non riesco ad accedere al microfono. Controlla i permessi del browser.');
+    }
+  } else {
+    mediaRecorder.stop();
+    isRecording = false;
+    voiceBtn.classList.remove('recording');
+  }
+});
+
+// ===== Funzione comune di invio =====
+async function sendMessage(messageData, previewText) {
+  if (!activeConversationId) return;
 
   try {
     await addDoc(collection(db, 'conversations', activeConversationId, 'messages'), {
       from: currentUser.uid,
-      text,
+      ...messageData,
       createdAt: serverTimestamp()
     });
 
     await updateDoc(doc(db, 'conversations', activeConversationId), {
-      lastMessage: text,
+      lastMessage: previewText,
       lastMessageAt: serverTimestamp(),
       [`unread.${activeOtherUid}`]: increment(1)
     });
   } catch (error) {
     console.error('Errore invio messaggio:', error);
   }
-});
+}
