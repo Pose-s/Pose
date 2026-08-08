@@ -2606,3 +2606,6 @@ a.search-result-item {
 .story-nav-right {
   right: 0;
 }
+.story-viewer.hidden {
+  display: none !important;
+}
