@@ -365,9 +365,10 @@ const ownerData = ownerDoc.exists() ? ownerDoc.data() : {};
       return `
         <article class="post-card">
           <div class="post-header">
-  ${data && data.logoUrl
-    ? `<img src="${data.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-    : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+  ${ownerData && ownerData.logoUrl
+  ? `<img src="${ownerData.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+  : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+}
   }
   <div class="post-header-info">
     <a href="user.html?u=${encodeURIComponent(viewedUsername)}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(viewedUsername)}</a>
