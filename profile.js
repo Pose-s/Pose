@@ -308,9 +308,17 @@ function renderMediaCarousel(mediaItems, postId) {
     ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
     : '';
 
+  const arrows = mediaItems.length > 1
+    ? `
+      <button type="button" class="carousel-arrow carousel-arrow-left" data-carousel-nav="prev"><i data-lucide="chevron-left"></i></button>
+      <button type="button" class="carousel-arrow carousel-arrow-right" data-carousel-nav="next"><i data-lucide="chevron-right"></i></button>
+    `
+    : '';
+
   return `
     <div class="carousel-container" data-carousel-id="${postId}">
       <div class="carousel-track">${slides}</div>
+      ${arrows}
       ${dots}
     </div>
   `;
@@ -320,12 +328,36 @@ function attachCarouselListeners() {
   document.querySelectorAll('.carousel-container').forEach(container => {
     const track = container.querySelector('.carousel-track');
     const dots = container.querySelectorAll('.carousel-dot');
-    if (dots.length === 0) return;
 
-    track.addEventListener('scroll', () => {
-      const idx = Math.round(track.scrollLeft / track.clientWidth);
-      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-    });
+    if (dots.length > 0) {
+      track.addEventListener('scroll', () => {
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      });
+    }
+
+    const prevBtn = container.querySelector('[data-carousel-nav="prev"]');
+    const nextBtn = container.querySelector('[data-carousel-nav="next"]');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+      });
+    }
+
+    track.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        track.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
   });
 }
 
