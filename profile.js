@@ -50,6 +50,8 @@ const closeCommentsBtn = document.getElementById('closeCommentsBtn');
 const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentInput = document.getElementById('commentInput');
+const commentsPostMedia = document.getElementById('commentsPostMedia');
+const commentsPostCaption = document.getElementById('commentsPostCaption');
 
 const shareModal = document.getElementById('shareModal');
 const closeShareBtn = document.getElementById('closeShareBtn');
@@ -71,6 +73,10 @@ let allShareFriends = [];
 settingsBtn.addEventListener('click', () => {
   window.location.href = 'settings.html';
 });
+
+function conversationIdFor(uidA, uidB) {
+  return [uidA, uidB].sort().join('_');
+}
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -380,7 +386,7 @@ function renderProfilePosts() {
             : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
           }
           <div class="post-header-info">
-            <span class="post-author">${escapeHtml(currentUsername || 'Tu')}</span>
+            <a href="profile.html" class="post-author" onclick="event.stopPropagation()">${escapeHtml(currentUsername || 'Tu')}</a>
             <span class="post-date">${formatDate(post.createdAt)}</span>
           </div>
           <div class="post-menu">
@@ -409,7 +415,9 @@ function renderProfilePosts() {
             </div>
           </div>
         </div>
-        ${renderMediaCarousel(getPostMedia(post), id)}
+        <div class="post-media-clickable" data-id="${id}">
+          ${renderMediaCarousel(getPostMedia(post), id)}
+        </div>
         ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
         <div class="post-actions">
           <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
@@ -438,6 +446,10 @@ async function savePostOrder() {
 }
 
 function attachProfilePostListeners() {
+  document.querySelectorAll('#profilePostsGrid .post-media-clickable').forEach(el => {
+    el.addEventListener('click', () => openComments(el.dataset.id));
+  });
+
   document.querySelectorAll('#profilePostsGrid .post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -484,6 +496,22 @@ function attachProfilePostListeners() {
     });
   });
 
+  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      alert('Funzione "Pubblica nelle storie" in arrivo!');
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .repost-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      alert('Funzione "Reposta" in arrivo!');
+    });
+  });
+
   document.querySelectorAll('#profilePostsGrid .delete-post-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -505,24 +533,9 @@ function attachProfilePostListeners() {
     });
   });
 
-  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllProfileMenus();
-      alert('Funzione "Pubblica nelle storie" in arrivo!');
-    });
-  });
-
-  document.querySelectorAll('#profilePostsGrid .repost-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllProfileMenus();
-      alert('Funzione "Reposta" in arrivo!');
-    });
-  });
-
   document.querySelectorAll('#profilePostsGrid .like-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const postId = btn.dataset.id;
       const post = postsCacheProfile.get(postId);
       const likes = post?.likes || [];
@@ -535,11 +548,17 @@ function attachProfilePostListeners() {
   });
 
   document.querySelectorAll('#profilePostsGrid .comment-btn').forEach(btn => {
-    btn.addEventListener('click', () => openComments(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openComments(btn.dataset.id);
+    });
   });
 
   document.querySelectorAll('#profilePostsGrid .share-btn').forEach(btn => {
-    btn.addEventListener('click', () => openShareModal(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShareModal(btn.dataset.id);
+    });
   });
 }
 
@@ -549,10 +568,24 @@ function closeAllProfileMenus() {
 
 document.addEventListener('click', closeAllProfileMenus);
 
-// ===== Commenti =====
+// ===== Dettaglio post + Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
+
+  const post = postsCacheProfile.get(postId);
+  if (post) {
+    commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
+    if (post.caption) {
+      commentsPostCaption.textContent = post.caption;
+      commentsPostCaption.classList.remove('hidden');
+    } else {
+      commentsPostCaption.classList.add('hidden');
+    }
+    lucide.createIcons();
+    attachCarouselListeners();
+  }
+
   commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
 
   const commentsQuery = query(
@@ -615,11 +648,118 @@ commentForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Invia post nei messaggi =====
-function conversationIdFor(uidA, uidB) {
-  return [uidA, uidB].sort().join('_');
-}
+// ===== Notifiche =====
+const notificationBtn = document.getElementById('notificationBtn');
+const notifBadgeDot = document.getElementById('notifBadgeDot');
+const notificationsPanel = document.getElementById('notificationsPanel');
+const notificationsList = document.getElementById('notificationsList');
+const msgBadgeDot = document.getElementById('msgBadgeDot');
+const messagesBtn = document.getElementById('messagesBtn');
 
+let unreadNotifIds = [];
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) return;
+
+  const notifQuery = query(
+    collection(db, 'notifications'),
+    where('toUid', '==', user.uid),
+    orderBy('createdAt', 'desc'),
+    limit(30)
+  );
+
+  onSnapshot(notifQuery, (snapshot) => {
+    unreadNotifIds = [];
+
+    if (snapshot.empty) {
+      notificationsList.innerHTML = '<p class="search-empty">Nessuna notifica per ora.</p>';
+      notifBadgeDot.classList.add('hidden');
+      notificationBtn.classList.remove('has-notifications');
+      return;
+    }
+
+    let hasUnread = false;
+
+    notificationsList.innerHTML = snapshot.docs.map(docSnap => {
+      const n = docSnap.data();
+      if (!n.read) {
+        hasUnread = true;
+        unreadNotifIds.push(docSnap.id);
+      }
+
+      let text;
+      if (n.type === 'like') {
+        text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like a un tuo post`;
+      } else if (n.type === 'story_like') {
+        text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like alla tua storia`;
+      } else if (n.type === 'story_comment') {
+        text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
+      } else {
+        text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
+      }
+
+      return `
+        <div class="notification-item ${n.read ? '' : 'unread'}">
+          ${n.fromLogoUrl
+            ? `<img src="${n.fromLogoUrl}" class="notification-avatar" alt="" />`
+            : `<div class="notification-avatar-placeholder"><i data-lucide="user"></i></div>`
+          }
+          <span class="notification-text">${text}</span>
+        </div>
+      `;
+    }).join('');
+
+    lucide.createIcons();
+
+    if (hasUnread) {
+      notifBadgeDot.classList.remove('hidden');
+      notificationBtn.classList.add('has-notifications');
+    } else {
+      notifBadgeDot.classList.add('hidden');
+      notificationBtn.classList.remove('has-notifications');
+    }
+  });
+
+  const convQuery = query(
+    collection(db, 'conversations'),
+    where('participants', 'array-contains', user.uid)
+  );
+
+  onSnapshot(convQuery, (snapshot) => {
+    let totalUnread = 0;
+    snapshot.docs.forEach(docSnap => {
+      const conv = docSnap.data();
+      totalUnread += (conv.unread && conv.unread[user.uid]) || 0;
+    });
+
+    if (totalUnread > 0) {
+      msgBadgeDot.classList.remove('hidden');
+      messagesBtn.classList.add('has-notifications');
+    } else {
+      msgBadgeDot.classList.add('hidden');
+      messagesBtn.classList.remove('has-notifications');
+    }
+  });
+});
+
+notificationBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  notificationsPanel.classList.toggle('hidden');
+
+  if (!notificationsPanel.classList.contains('hidden') && unreadNotifIds.length > 0) {
+    for (const id of unreadNotifIds) {
+      updateDoc(doc(db, 'notifications', id), { read: true }).catch(() => {});
+    }
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!notificationsPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
+    notificationsPanel.classList.add('hidden');
+  }
+});
+
+// ===== Invia post nei messaggi =====
 async function openShareModal(postId) {
   sharingPostId = postId;
   shareModal.classList.remove('hidden');
@@ -679,10 +819,9 @@ closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden')
 shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
 
 async function sendPostToChat(otherUid, postId) {
-  const postDoc = await getDoc(doc(db, 'posts', postId));
-  if (!postDoc.exists()) return;
-  const post = postDoc.data();
-  const media = (post.media && post.media.length > 0) ? post.media : (post.photoUrl ? [{ url: post.photoUrl }] : []);
+  const post = postsCacheProfile.get(postId);
+  if (!post) return;
+  const media = getPostMedia(post);
 
   const convId = conversationIdFor(currentUser.uid, otherUid);
   const convRef = doc(db, 'conversations', convId);
@@ -703,7 +842,7 @@ async function sendPostToChat(otherUid, postId) {
     postId,
     postPhotoUrl: media[0]?.url || '',
     postCaption: post.caption || '',
-    postAuthor: post.authorName || '',
+    postAuthor: currentUsername || '',
     createdAt: serverTimestamp()
   });
 

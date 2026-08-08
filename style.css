@@ -2916,3 +2916,21 @@ a.search-result-item {
   background: none !important;
   padding: 0 !important;
 }
+a.post-author {
+  text-decoration: none;
+  cursor: pointer;
+}
+a.post-author:hover {
+  text-decoration: underline;
+}
+.modal-post-detail {
+  max-width: 500px;
+}
+
+#commentsPostMedia .post-photo {
+  max-height: 400px;
+}
+
+#commentsPostCaption {
+  padding: 0 4px 12px;
+}

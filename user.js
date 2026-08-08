@@ -13,6 +13,8 @@ const closeCommentsBtn = document.getElementById('closeCommentsBtn');
 const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentInput = document.getElementById('commentInput');
+const commentsPostMedia = document.getElementById('commentsPostMedia');
+const commentsPostCaption = document.getElementById('commentsPostCaption');
 
 const userOptionsBtn = document.getElementById('userOptionsBtn');
 const userOptionsDropdown = document.getElementById('userOptionsDropdown');
@@ -347,7 +349,9 @@ function startListeningToUserPosts() {
               </div>
             </div>
           </div>
-          ${renderMediaCarousel(getPostMedia(post), id)}
+          <div class="post-media-clickable" data-id="${id}">
+            ${renderMediaCarousel(getPostMedia(post), id)}
+          </div>
           ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
           <div class="post-actions">
             <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
@@ -373,6 +377,10 @@ function startListeningToUserPosts() {
 }
 
 function attachPostActionListeners() {
+  document.querySelectorAll('#userPostsGrid .post-media-clickable').forEach(el => {
+    el.addEventListener('click', () => openComments(el.dataset.id));
+  });
+
   document.querySelectorAll('#userPostsGrid .post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -400,7 +408,8 @@ function attachPostActionListeners() {
   });
 
   document.querySelectorAll('#userPostsGrid .like-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const postId = btn.dataset.id;
       const postRef = doc(db, 'posts', postId);
       const postDoc = await getDoc(postRef);
@@ -428,11 +437,17 @@ function attachPostActionListeners() {
   });
 
   document.querySelectorAll('#userPostsGrid .comment-btn').forEach(btn => {
-    btn.addEventListener('click', () => openComments(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openComments(btn.dataset.id);
+    });
   });
 
   document.querySelectorAll('#userPostsGrid .share-btn').forEach(btn => {
-    btn.addEventListener('click', () => openShareModal(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShareModal(btn.dataset.id);
+    });
   });
 }
 
@@ -442,10 +457,24 @@ function closeAllPostMenus() {
 
 document.addEventListener('click', closeAllPostMenus);
 
-// ===== Commenti =====
+// ===== Dettaglio post + Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
+
+  const post = postsCacheUser.get(postId);
+  if (post) {
+    commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
+    if (post.caption) {
+      commentsPostCaption.textContent = post.caption;
+      commentsPostCaption.classList.remove('hidden');
+    } else {
+      commentsPostCaption.classList.add('hidden');
+    }
+    lucide.createIcons();
+    attachCarouselListeners();
+  }
+
   commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
 
   const commentsQuery = query(
