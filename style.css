@@ -2138,3 +2138,6 @@ a.search-result-item {
   z-index: 600;
   transform: translate(-50%, -50%);
 }
+.camera-modal.hidden {
+  display: none !important;
+}
