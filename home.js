@@ -542,17 +542,17 @@ function renderStoriesBar(myUid) {
 
   // Cerchio "Tua storia"
   html += `
-    <div class="story-circle-wrap">
-      <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
-        ${myGroup && myGroup.stories[0].logoUrl
-          ? `<img src="${myGroup.stories[0].logoUrl}" class="story-avatar-img" alt="" />`
-          : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
-        }
-        ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
-      </button>
-      <span class="story-username-label">La tua storia</span>
-    </div>
-  `;
+  <div class="story-circle-wrap">
+    <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
+      ${currentProfile.logoUrl
+        ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
+        : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+      }
+      ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
+    </button>
+    <span class="story-username-label">La tua storia</span>
+  </div>
+`;
 
   others.forEach((group, idx) => {
     const seen = allSeen(group, myUid);
