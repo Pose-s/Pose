@@ -55,6 +55,8 @@
     <i data-lucide="plus"></i>
   </button>
 </header>
+<div class="stories-bar" id="storiesBar"></div>
+<input type="file" id="storyPhotoInput" accept="image/*" class="hidden" />
 
       <div id="postsLoader" class="loader hidden">
         <div class="spinner"></div>
@@ -130,5 +132,23 @@
     banner.remove();
   });
 })();
+<!-- Visualizzatore Storie -->
+<div class="story-viewer hidden" id="storyViewer">
+  <div class="story-progress-bar" id="storyProgressBar"></div>
+  <div class="story-viewer-header">
+    <img id="storyViewerAvatar" class="story-viewer-avatar hidden" alt="" />
+    <div class="story-viewer-placeholder hidden" id="storyViewerPlaceholder">
+      <i data-lucide="user"></i>
+    </div>
+    <span id="storyViewerUsername"></span>
+    <span class="story-viewer-time" id="storyViewerTime"></span>
+    <button type="button" class="story-viewer-close" id="storyViewerClose">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <img id="storyViewerImage" class="story-viewer-image" alt="Storia" />
+  <div class="story-nav-zone story-nav-left" id="storyNavLeft"></div>
+  <div class="story-nav-zone story-nav-right" id="storyNavRight"></div>
+</div>
 </body>
 </html>

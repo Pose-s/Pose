@@ -461,3 +461,258 @@ document.addEventListener('click', (e) => {
     searchResults.classList.add('hidden');
   }
 });
+import { collection as sCollection, addDoc as sAddDoc, query as sQuery, where as sWhere, orderBy as sOrderBy, onSnapshot as sOnSnapshot, doc as sDoc, updateDoc as sUpdateDoc, arrayUnion as sArrayUnion, serverTimestamp as sServerTimestamp, getDoc as sGetDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { ref as sRef, uploadString as sUploadString, getDownloadURL as sGetDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+
+const storiesBar = document.getElementById('storiesBar');
+const storyPhotoInput = document.getElementById('storyPhotoInput');
+
+const storyViewer = document.getElementById('storyViewer');
+const storyProgressBar = document.getElementById('storyProgressBar');
+const storyViewerAvatar = document.getElementById('storyViewerAvatar');
+const storyViewerPlaceholder = document.getElementById('storyViewerPlaceholder');
+const storyViewerUsername = document.getElementById('storyViewerUsername');
+const storyViewerTime = document.getElementById('storyViewerTime');
+const storyViewerImage = document.getElementById('storyViewerImage');
+const storyViewerClose = document.getElementById('storyViewerClose');
+const storyNavLeft = document.getElementById('storyNavLeft');
+const storyNavRight = document.getElementById('storyNavRight');
+
+let groupedStories = [];
+let currentStoryGroupIndex = 0;
+let currentStoryIndex = 0;
+let storyTimer = null;
+const STORY_DURATION = 5000;
+
+// Ascolto storie attive (ultime 24h) di me stesso + chi seguo
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+
+  const myDoc = await sGetDoc(sDoc(db, 'users', user.uid));
+  const myData = myDoc.exists() ? myDoc.data() : {};
+  const following = myData.following || [];
+  const relevantUids = [user.uid, ...following];
+
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const storiesQuery = sQuery(
+    sCollection(db, 'stories'),
+    sWhere('uid', 'in', relevantUids.slice(0, 30)), // limite Firestore: max 30 valori in "in"
+    sOrderBy('createdAt', 'desc')
+  );
+
+  sOnSnapshot(storiesQuery, (snapshot) => {
+    const active = snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(s => {
+        const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
+        return created > cutoff;
+      });
+
+    // Raggruppa per utente
+    const groups = {};
+    active.forEach(story => {
+      if (!groups[story.uid]) {
+        groups[story.uid] = {
+          uid: story.uid,
+          username: story.username,
+          logoUrl: story.logoUrl,
+          stories: []
+        };
+      }
+      groups[story.uid].stories.push(story);
+    });
+
+    // Ordina: le tue prime, poi gli altri per storia più recente
+    groupedStories = Object.values(groups).sort((a, b) => {
+      if (a.uid === user.uid) return -1;
+      if (b.uid === user.uid) return 1;
+      return 0;
+    });
+
+    renderStoriesBar(user.uid);
+  });
+});
+
+function renderStoriesBar(myUid) {
+  const myGroup = groupedStories.find(g => g.uid === myUid);
+  const others = groupedStories.filter(g => g.uid !== myUid);
+
+  let html = '';
+
+  // Cerchio "Tua storia"
+  html += `
+    <div class="story-circle-wrap">
+      <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
+        ${myGroup && myGroup.stories[0].logoUrl
+          ? `<img src="${myGroup.stories[0].logoUrl}" class="story-avatar-img" alt="" />`
+          : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+        }
+        ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
+      </button>
+      <span class="story-username-label">La tua storia</span>
+    </div>
+  `;
+
+  others.forEach((group, idx) => {
+    const seen = allSeen(group, myUid);
+    html += `
+      <div class="story-circle-wrap">
+        <button type="button" class="story-circle ${seen ? 'seen' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
+          ${group.logoUrl
+            ? `<img src="${group.logoUrl}" class="story-avatar-img" alt="" />`
+            : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+          }
+        </button>
+        <span class="story-username-label">${escapeHtml(group.username)}</span>
+      </div>
+    `;
+  });
+
+  storiesBar.innerHTML = html;
+  lucide.createIcons();
+
+  const myCircleBtn = document.getElementById('myStoryCircle');
+  myCircleBtn.addEventListener('click', () => {
+    if (myGroup) {
+      openStoryViewer(groupedStories.indexOf(myGroup));
+    } else {
+      storyPhotoInput.click();
+    }
+  });
+
+  document.querySelectorAll('.story-circle[data-group-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openStoryViewer(parseInt(btn.dataset.groupIdx));
+    });
+  });
+}
+
+function allSeen(group, myUid) {
+  return group.stories.every(s => (s.viewedBy || []).includes(myUid));
+}
+
+// Caricamento nuova storia
+storyPhotoInput.addEventListener('change', async () => {
+  const file = storyPhotoInput.files[0];
+  if (!file || !currentUser) return;
+
+  try {
+    const compressed = await compressImage(file, 1080, 0.8);
+    const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
+    const storyRef = sRef(storage, storyPath);
+    await sUploadString(storyRef, compressed, 'data_url');
+    const mediaUrl = await sGetDownloadURL(storyRef);
+
+    await sAddDoc(sCollection(db, 'stories'), {
+      uid: currentUser.uid,
+      username: currentProfile.username || currentUser.email.split('@')[0],
+      logoUrl: currentProfile.logoUrl || '',
+      mediaUrl,
+      viewedBy: [],
+      createdAt: sServerTimestamp()
+    });
+  } catch (error) {
+    console.error('Errore caricamento storia:', error);
+  } finally {
+    storyPhotoInput.value = '';
+  }
+});
+
+// ===== Visualizzatore storie =====
+function openStoryViewer(groupIdx) {
+  currentStoryGroupIndex = groupIdx;
+  currentStoryIndex = 0;
+  storyViewer.classList.remove('hidden');
+  showCurrentStory();
+}
+
+function showCurrentStory() {
+  const group = groupedStories[currentStoryGroupIndex];
+  if (!group) { closeStoryViewer(); return; }
+
+  const story = group.stories[currentStoryIndex];
+  if (!story) {
+    // Passa al gruppo successivo
+    if (currentStoryGroupIndex < groupedStories.length - 1) {
+      currentStoryGroupIndex++;
+      currentStoryIndex = 0;
+      showCurrentStory();
+    } else {
+      closeStoryViewer();
+    }
+    return;
+  }
+
+  storyViewerUsername.textContent = `@${group.username}`;
+  storyViewerImage.src = story.mediaUrl;
+
+  if (group.logoUrl) {
+    storyViewerAvatar.src = group.logoUrl;
+    storyViewerAvatar.classList.remove('hidden');
+    storyViewerPlaceholder.classList.add('hidden');
+  } else {
+    storyViewerAvatar.classList.add('hidden');
+    storyViewerPlaceholder.classList.remove('hidden');
+  }
+
+  const created = story.createdAt?.toDate ? story.createdAt.toDate() : new Date();
+  const hoursAgo = Math.max(0, Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60)));
+  storyViewerTime.textContent = hoursAgo < 1 ? 'Ora' : `${hoursAgo}h fa`;
+
+  renderProgressBars(group.stories.length, currentStoryIndex);
+
+  // Segna come vista
+  if (currentUser && !(story.viewedBy || []).includes(currentUser.uid)) {
+    sUpdateDoc(sDoc(db, 'stories', story.id), {
+      viewedBy: sArrayUnion(currentUser.uid)
+    }).catch(() => {});
+  }
+
+  startStoryTimer();
+}
+
+function renderProgressBars(count, activeIdx) {
+  storyProgressBar.innerHTML = Array.from({ length: count }, (_, i) => `
+    <div class="story-progress-segment">
+      <div class="story-progress-fill ${i < activeIdx ? 'filled' : ''} ${i === activeIdx ? 'active' : ''}"></div>
+    </div>
+  `).join('');
+}
+
+function startStoryTimer() {
+  clearTimeout(storyTimer);
+  const activeFill = storyProgressBar.querySelector('.story-progress-fill.active');
+  if (activeFill) {
+    activeFill.style.animation = 'none';
+    void activeFill.offsetWidth;
+    activeFill.style.animation = `story-fill ${STORY_DURATION}ms linear forwards`;
+  }
+  storyTimer = setTimeout(nextStory, STORY_DURATION);
+}
+
+function nextStory() {
+  currentStoryIndex++;
+  showCurrentStory();
+}
+
+function prevStory() {
+  if (currentStoryIndex > 0) {
+    currentStoryIndex--;
+    showCurrentStory();
+  } else if (currentStoryGroupIndex > 0) {
+    currentStoryGroupIndex--;
+    const prevGroup = groupedStories[currentStoryGroupIndex];
+    currentStoryIndex = prevGroup.stories.length - 1;
+    showCurrentStory();
+  }
+}
+
+function closeStoryViewer() {
+  clearTimeout(storyTimer);
+  storyViewer.classList.add('hidden');
+}
+
+storyViewerClose.addEventListener('click', closeStoryViewer);
+storyNavRight.addEventListener('click', nextStory);
+storyNavLeft.addEventListener('click', prevStory);
