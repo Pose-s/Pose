@@ -14,15 +14,16 @@
 <body>
 
   <div class="app-container">
-     <button class="menu-toggle-btn" id="menuToggleBtn">
-    <i data-lucide="menu"></i>
-  </button>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <aside class="sidebar">
       <div class="logo">
-  <img src="logo.png.png" class="logo-img" alt="Pose" />
-  <span>Pose</span>
-</div>
+        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <span>Pose</span>
+      </div>
       <nav class="sidebar-nav">
         <a href="index.html" class="nav-item">
           <i data-lucide="newspaper"></i>
@@ -46,17 +47,18 @@
 
     <main class="main-content">
       <header class="home-header">
-  <div class="search-bar-container" id="searchBarContainer">
-    <i data-lucide="search" class="search-icon"></i>
-    <input type="text" id="searchInput" class="search-input" placeholder="Cerca..." autocomplete="off" />
-    <div class="search-results hidden" id="searchResults"></div>
-  </div>
-  <button class="add-post-btn" id="addPostBtn">
-    <i data-lucide="plus"></i>
-  </button>
-</header>
-<div class="stories-bar" id="storiesBar"></div>
-<input type="file" id="storyPhotoInput" accept="image/*" class="hidden" />
+        <div class="search-bar-container" id="searchBarContainer">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="searchInput" class="search-input" placeholder="Cerca..." autocomplete="off" />
+          <div class="search-results hidden" id="searchResults"></div>
+        </div>
+        <button class="add-post-btn" id="addPostBtn">
+          <i data-lucide="plus"></i>
+        </button>
+      </header>
+
+      <div class="stories-bar" id="storiesBar"></div>
+      <input type="file" id="storyPhotoInput" accept="image/*" class="hidden" />
 
       <div id="postsLoader" class="loader hidden">
         <div class="spinner"></div>
@@ -93,7 +95,7 @@
     </div>
   </div>
 
-  <!-- Modale Commenti -->
+  <!-- Modale Commenti Post -->
   <div class="modal-overlay hidden" id="commentsModal">
     <div class="modal">
       <div class="modal-header">
@@ -114,41 +116,62 @@
     </div>
   </div>
 
+  <!-- Visualizzatore Storie -->
+  <div class="story-viewer hidden" id="storyViewer">
+    <div class="story-progress-bar" id="storyProgressBar"></div>
+    <div class="story-viewer-header">
+      <img id="storyViewerAvatar" class="story-viewer-avatar hidden" alt="" />
+      <div class="story-viewer-placeholder hidden" id="storyViewerPlaceholder">
+        <i data-lucide="user"></i>
+      </div>
+      <span id="storyViewerUsername"></span>
+      <span class="story-viewer-time" id="storyViewerTime"></span>
+      <button type="button" class="story-viewer-close" id="storyViewerClose">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <img id="storyViewerImage" class="story-viewer-image" alt="Storia">
+    <div class="story-nav-zone story-nav-left" id="storyNavLeft"></div>
+    <div class="story-nav-zone story-nav-right" id="storyNavRight"></div>
+
+    <!-- Barra proprietario: vede chi ha guardato -->
+    <div class="story-bottom-bar" id="storyOwnerBar">
+      <button type="button" class="story-viewers-btn" id="storyViewersBtn">
+        <i data-lucide="eye"></i>
+        <span id="storyViewersCount">0</span>
+      </button>
+    </div>
+
+    <!-- Barra visitatore: like e commento -->
+    <div class="story-bottom-bar hidden" id="storyViewerBar">
+      <button type="button" class="story-like-btn" id="storyLikeBtn">
+        <i data-lucide="heart"></i>
+      </button>
+      <input type="text" id="storyCommentInput" placeholder="Invia un messaggio..." autocomplete="off" />
+      <button type="button" class="story-comment-send-btn" id="storyCommentSendBtn">
+        <i data-lucide="send"></i>
+      </button>
+    </div>
+
+    <!-- Pannello visualizzazioni (solo proprietario) -->
+    <div class="story-viewers-panel hidden" id="storyViewersPanel">
+      <div class="story-viewers-header">
+        <h3>Visualizzazioni</h3>
+        <button type="button" id="closeViewersPanelBtn"><i data-lucide="x"></i></button>
+      </div>
+      <input type="text" id="viewersSearchInput" placeholder="Cerca..." class="search-input-modal" />
+      <div class="story-viewers-tabs">
+        <button type="button" class="story-viewers-tab active" data-tab="views">Visualizzazioni</button>
+        <button type="button" class="story-viewers-tab" data-tab="comments">Commenti</button>
+      </div>
+      <div id="storyViewersList"></div>
+      <div id="storyCommentsOwnerList" class="hidden"></div>
+    </div>
+  </div>
+
   <script type="module" src="home.js"></script>
   <script src="sidebar-toggle.js"></script>
-  (function() {
-  if (localStorage.getItem('pose_cookie_consent')) return;
-
-  const banner = document.createElement('div');
-  banner.className = 'cookie-banner';
-  banner.innerHTML = `
-    <p>Questo sito utilizza cookie tecnici necessari al funzionamento (login, sessione). Continuando la navigazione accetti il loro utilizzo. <a href="privacy.html">Privacy Policy</a></p>
-    <button id="cookieAcceptBtn">Ho capito</button>
-  `;
-  document.body.appendChild(banner);
-
-  document.getElementById('cookieAcceptBtn').addEventListener('click', () => {
-    localStorage.setItem('pose_cookie_consent', 'true');
-    banner.remove();
-  });
-})();
-<!-- Visualizzatore Storie -->
-<div class="story-viewer hidden" id="storyViewer">
-  <div class="story-progress-bar" id="storyProgressBar"></div>
-  <div class="story-viewer-header">
-    <img id="storyViewerAvatar" class="story-viewer-avatar hidden" alt="" />
-    <div class="story-viewer-placeholder hidden" id="storyViewerPlaceholder">
-      <i data-lucide="user"></i>
-    </div>
-    <span id="storyViewerUsername"></span>
-    <span class="story-viewer-time" id="storyViewerTime"></span>
-    <button type="button" class="story-viewer-close" id="storyViewerClose">
-      <i data-lucide="x"></i>
-    </button>
-  </div>
-  <img id="storyViewerImage" class="story-viewer-image" alt="Storia" />
-  <div class="story-nav-zone story-nav-left" id="storyNavLeft"></div>
-  <div class="story-nav-zone story-nav-right" id="storyNavRight"></div>
-</div>
+  <script src="cookie-banner.js"></script>
 </body>
 </html>

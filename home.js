@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/fireba
 import { onAuthStateChanged, signOut, getAuth } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit,
-  serverTimestamp, doc, getDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, where, getDocs
+  serverTimestamp, doc, getDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove,
+  where, getDocs, increment
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
@@ -59,6 +60,20 @@ const storyViewerClose = document.getElementById('storyViewerClose');
 const storyNavLeft = document.getElementById('storyNavLeft');
 const storyNavRight = document.getElementById('storyNavRight');
 
+const storyOwnerBar = document.getElementById('storyOwnerBar');
+const storyViewersBtn = document.getElementById('storyViewersBtn');
+const storyViewersCount = document.getElementById('storyViewersCount');
+const storyViewerBar = document.getElementById('storyViewerBar');
+const storyLikeBtn = document.getElementById('storyLikeBtn');
+const storyCommentInput = document.getElementById('storyCommentInput');
+const storyCommentSendBtn = document.getElementById('storyCommentSendBtn');
+
+const storyViewersPanel = document.getElementById('storyViewersPanel');
+const closeViewersPanelBtn = document.getElementById('closeViewersPanelBtn');
+const viewersSearchInput = document.getElementById('viewersSearchInput');
+const storyViewersList = document.getElementById('storyViewersList');
+const storyCommentsOwnerList = document.getElementById('storyCommentsOwnerList');
+
 lucide.createIcons();
 
 let currentUser = null;
@@ -73,7 +88,11 @@ let groupedStories = [];
 let currentStoryGroupIndex = 0;
 let currentStoryIndex = 0;
 let storyTimer = null;
+let isStoryPaused = false;
 const STORY_DURATION = 5000;
+
+let allViewersCache = [];
+let unsubscribeStoryComments = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -359,7 +378,7 @@ function closeAllMenus() {
 
 document.addEventListener('click', closeAllMenus);
 
-// ===== Commenti =====
+// ===== Commenti sui post =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
@@ -425,7 +444,7 @@ commentForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Ricerca utenti (con filtro utenti bloccati) =====
+// ===== Ricerca utenti (con filtro bloccati) =====
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   const term = searchInput.value.trim().toLowerCase();
@@ -526,6 +545,11 @@ function startListeningToStories(myUid) {
       });
 
       renderStoriesBar(myUid);
+
+      // Se il visualizzatore è aperto, aggiorna dati in tempo reale (es. contatore visualizzazioni)
+      if (!storyViewer.classList.contains('hidden')) {
+        refreshCurrentStoryLiveData();
+      }
     });
   });
 }
@@ -604,6 +628,7 @@ storyPhotoInput.addEventListener('change', async () => {
       logoUrl: currentProfile.logoUrl || '',
       mediaUrl,
       viewedBy: [],
+      likes: [],
       createdAt: serverTimestamp()
     });
   } catch (error) {
@@ -620,11 +645,18 @@ function openStoryViewer(groupIdx) {
   showCurrentStory();
 }
 
-function showCurrentStory() {
+function getCurrentStoryData() {
   const group = groupedStories[currentStoryGroupIndex];
-  if (!group) { closeStoryViewer(); return; }
-
+  if (!group) return null;
   const story = group.stories[currentStoryIndex];
+  return { group, story };
+}
+
+function showCurrentStory() {
+  const data = getCurrentStoryData();
+  if (!data) { closeStoryViewer(); return; }
+
+  const { group, story } = data;
   if (!story) {
     if (currentStoryGroupIndex < groupedStories.length - 1) {
       currentStoryGroupIndex++;
@@ -658,13 +690,37 @@ function showCurrentStory() {
 
   renderProgressBars(group.stories.length, currentStoryIndex);
 
-  if (currentUser && !(story.viewedBy || []).includes(currentUser.uid)) {
-    updateDoc(doc(db, 'stories', story.id), {
-      viewedBy: arrayUnion(currentUser.uid)
-    }).catch(() => {});
+  const isOwner = group.uid === currentUser.uid;
+
+  if (isOwner) {
+    storyOwnerBar.classList.remove('hidden');
+    storyViewerBar.classList.add('hidden');
+    storyViewersCount.textContent = (story.viewedBy || []).length;
+  } else {
+    storyOwnerBar.classList.add('hidden');
+    storyViewerBar.classList.remove('hidden');
+    const likes = story.likes || [];
+    const isLiked = likes.includes(currentUser.uid);
+    storyLikeBtn.classList.toggle('liked', isLiked);
+
+    if (!(story.viewedBy || []).includes(currentUser.uid)) {
+      updateDoc(doc(db, 'stories', story.id), {
+        viewedBy: arrayUnion(currentUser.uid)
+      }).catch(() => {});
+    }
   }
 
   startStoryTimer();
+}
+
+function refreshCurrentStoryLiveData() {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const { group, story } = data;
+  const isOwner = group.uid === currentUser.uid;
+  if (isOwner) {
+    storyViewersCount.textContent = (story.viewedBy || []).length;
+  }
 }
 
 function renderProgressBars(count, activeIdx) {
@@ -677,6 +733,7 @@ function renderProgressBars(count, activeIdx) {
 
 function startStoryTimer() {
   clearTimeout(storyTimer);
+  isStoryPaused = false;
   const activeFill = storyProgressBar.querySelector('.story-progress-fill.active');
   if (activeFill) {
     activeFill.style.animation = 'none';
@@ -684,6 +741,13 @@ function startStoryTimer() {
     activeFill.style.animation = `story-fill ${STORY_DURATION}ms linear forwards`;
   }
   storyTimer = setTimeout(nextStory, STORY_DURATION);
+}
+
+function pauseStoryTimer() {
+  clearTimeout(storyTimer);
+  isStoryPaused = true;
+  const activeFill = storyProgressBar.querySelector('.story-progress-fill.active');
+  if (activeFill) activeFill.style.animationPlayState = 'paused';
 }
 
 function nextStory() {
@@ -706,8 +770,185 @@ function prevStory() {
 function closeStoryViewer() {
   clearTimeout(storyTimer);
   storyViewer.classList.add('hidden');
+  storyViewersPanel.classList.add('hidden');
+  if (unsubscribeStoryComments) unsubscribeStoryComments();
 }
 
 storyViewerClose.addEventListener('click', closeStoryViewer);
 storyNavRight.addEventListener('click', nextStory);
 storyNavLeft.addEventListener('click', prevStory);
+
+// ===== Like sulla storia (solo per chi non è proprietario) =====
+storyLikeBtn.addEventListener('click', async () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const { group, story } = data;
+
+  const likes = story.likes || [];
+  const isLiked = likes.includes(currentUser.uid);
+
+  try {
+    await updateDoc(doc(db, 'stories', story.id), {
+      likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+    });
+    storyLikeBtn.classList.toggle('liked', !isLiked);
+
+    if (!isLiked) {
+      await addDoc(collection(db, 'notifications'), {
+        toUid: group.uid,
+        fromUid: currentUser.uid,
+        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+        fromLogoUrl: currentProfile.logoUrl || '',
+        type: 'story_like',
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error('Errore like storia:', error);
+  }
+});
+
+// ===== Commento alla storia (solo per chi non è proprietario) =====
+async function sendStoryComment() {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const { group, story } = data;
+
+  const text = storyCommentInput.value.trim();
+  if (!text) return;
+
+  storyCommentInput.value = '';
+
+  try {
+    await addDoc(collection(db, 'stories', story.id, 'comments'), {
+      uid: currentUser.uid,
+      authorName: currentProfile.username || currentProfile.displayName || 'Utente',
+      logoUrl: currentProfile.logoUrl || '',
+      text,
+      createdAt: serverTimestamp()
+    });
+
+    await addDoc(collection(db, 'notifications'), {
+      toUid: group.uid,
+      fromUid: currentUser.uid,
+      fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+      fromLogoUrl: currentProfile.logoUrl || '',
+      type: 'story_comment',
+      read: false,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Errore commento storia:', error);
+  }
+}
+
+storyCommentSendBtn.addEventListener('click', sendStoryComment);
+storyCommentInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendStoryComment(); }
+});
+storyCommentInput.addEventListener('focus', pauseStoryTimer);
+storyCommentInput.addEventListener('blur', () => { if (!isStoryPaused) startStoryTimer(); });
+
+// ===== Pannello visualizzazioni (solo proprietario) =====
+storyViewersBtn.addEventListener('click', async () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+
+  pauseStoryTimer();
+  storyViewersPanel.classList.remove('hidden');
+  viewersSearchInput.value = '';
+  switchViewersTab('views');
+
+  await loadViewersList(data.story);
+  loadStoryCommentsForOwner(data.story.id);
+});
+
+closeViewersPanelBtn.addEventListener('click', () => {
+  storyViewersPanel.classList.add('hidden');
+  if (unsubscribeStoryComments) unsubscribeStoryComments();
+  startStoryTimer();
+});
+
+document.querySelectorAll('.story-viewers-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchViewersTab(tab.dataset.tab));
+});
+
+function switchViewersTab(tabName) {
+  document.querySelectorAll('.story-viewers-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+  storyViewersList.classList.toggle('hidden', tabName !== 'views');
+  storyCommentsOwnerList.classList.toggle('hidden', tabName !== 'comments');
+}
+
+async function loadViewersList(story) {
+  const viewedBy = story.viewedBy || [];
+
+  if (viewedBy.length === 0) {
+    allViewersCache = [];
+    storyViewersList.innerHTML = '<p class="search-empty">Nessuna visualizzazione ancora.</p>';
+    return;
+  }
+
+  const likes = story.likes || [];
+
+  allViewersCache = await Promise.all(viewedBy.map(async (uid) => {
+    const d = await getDoc(doc(db, 'users', uid));
+    return { uid, data: d.exists() ? d.data() : {}, liked: likes.includes(uid) };
+  }));
+
+  renderViewersList(allViewersCache);
+}
+
+function renderViewersList(viewers) {
+  if (viewers.length === 0) {
+    storyViewersList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
+    return;
+  }
+
+  storyViewersList.innerHTML = viewers.map(v => `
+    <div class="conversation-item">
+      ${v.data.logoUrl
+        ? `<img src="${v.data.logoUrl}" class="conversation-avatar" alt="" />`
+        : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`
+      }
+      <div class="conversation-info">
+        <span class="conversation-username">@${escapeHtml(v.data.username || 'utente')}</span>
+      </div>
+      ${v.liked ? `<i data-lucide="heart" class="viewer-liked-icon"></i>` : ''}
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+viewersSearchInput.addEventListener('input', () => {
+  const term = viewersSearchInput.value.trim().toLowerCase();
+  if (!term) {
+    renderViewersList(allViewersCache);
+    return;
+  }
+  const filtered = allViewersCache.filter(v => (v.data.username || '').toLowerCase().includes(term));
+  renderViewersList(filtered);
+});
+
+function loadStoryCommentsForOwner(storyId) {
+  if (unsubscribeStoryComments) unsubscribeStoryComments();
+
+  const q = query(collection(db, 'stories', storyId, 'comments'), orderBy('createdAt', 'asc'));
+
+  unsubscribeStoryComments = onSnapshot(q, (snapshot) => {
+    if (snapshot.empty) {
+      storyCommentsOwnerList.innerHTML = '<p class="search-empty">Nessun commento ancora.</p>';
+      return;
+    }
+
+    storyCommentsOwnerList.innerHTML = snapshot.docs.map(docSnap => {
+      const c = docSnap.data();
+      return `
+        <div class="comment-item">
+          <span class="comment-author">${escapeHtml(c.authorName || 'Utente')}</span>
+          <p class="comment-text">${escapeHtml(c.text || '')}</p>
+        </div>
+      `;
+    }).join('');
+  });
+}

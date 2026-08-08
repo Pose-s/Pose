@@ -2609,3 +2609,163 @@ a.search-result-item {
 .story-viewer.hidden {
   display: none !important;
 }
+.story-viewer-placeholder.hidden,
+.story-viewer-avatar.hidden {
+  display: none !important;
+}
+/* Barra inferiore visualizzatore storie */
+.story-bottom-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.story-viewers-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.story-viewers-btn i {
+  width: 18px;
+  height: 18px;
+}
+
+.story-like-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.story-like-btn.liked {
+  color: #ef4444;
+}
+
+.story-like-btn.liked i {
+  fill: #ef4444;
+}
+
+#storyCommentInput {
+  flex: 1;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 9999px;
+  padding: 10px 16px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+#storyCommentInput::placeholder {
+  color: rgba(255,255,255,0.7);
+}
+
+.story-comment-send-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #7c3aed;
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Pannello visualizzazioni storia */
+.story-viewers-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+  z-index: 20;
+  max-height: 70%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.story-viewers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.story-viewers-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.story-viewers-header button {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.story-viewers-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.story-viewers-tab {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.story-viewers-tab.active {
+  background-color: #7c3aed;
+  color: #ffffff;
+}
+
+#storyViewersList,
+#storyCommentsOwnerList {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.viewer-liked-icon {
+  width: 16px;
+  height: 16px;
+  color: #ef4444;
+  fill: #ef4444;
+}
+
+.story-bottom-bar.hidden,
+.story-viewers-panel.hidden {
+  display: none !important;
+}
