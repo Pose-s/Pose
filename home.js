@@ -740,13 +740,19 @@ function startListeningToStories(myUid) {
     const following = myData.following || [];
     const relevantUids = [myUid, ...following];
 
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const now = new Date();
+const fallbackCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const storiesQuery = query(
-      collection(db, 'stories'),
-      where('uid', 'in', relevantUids.slice(0, 30)),
-      orderBy('createdAt', 'desc')
-    );
+const active = snapshot.docs
+  .map(d => ({ id: d.id, ...d.data() }))
+  .filter(s => {
+    if (s.expiresAt) {
+      const expires = s.expiresAt.toDate ? s.expiresAt.toDate() : new Date(s.expiresAt);
+      return expires > now;
+    }
+    const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
+    return created > fallbackCutoff;
+  });
 
     onSnapshot(storiesQuery, (snapshot) => {
       const active = snapshot.docs
@@ -791,17 +797,22 @@ function renderStoriesBar(myUid) {
   let html = '';
 
   html += `
-    <div class="story-circle-wrap">
+  <div class="story-circle-wrap">
+    <div class="story-circle-outer">
       <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
         ${currentProfile.logoUrl
           ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
           : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
         }
-        ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
       </button>
-      <span class="story-username-label">La tua storia</span>
+      <button type="button" class="story-add-btn" id="addStoryBtn">
+        <i data-lucide="plus"></i>
+      </button>
     </div>
-  `;
+    <span class="story-username-label">La tua storia</span>
+  </div>
+`;
+
 
   others.forEach((group) => {
     const seen = allSeen(group, myUid);
@@ -822,13 +833,19 @@ function renderStoriesBar(myUid) {
   lucide.createIcons();
 
   const myCircleBtn = document.getElementById('myStoryCircle');
-  myCircleBtn.addEventListener('click', () => {
-    if (myGroup) {
-      openStoryViewer(groupedStories.indexOf(myGroup));
-    } else {
-      storyPhotoInput.click();
-    }
-  });
+myCircleBtn.addEventListener('click', () => {
+  if (myGroup) {
+    openStoryViewer(groupedStories.indexOf(myGroup));
+  } else {
+    storyPhotoInput.click();
+  }
+});
+
+const addStoryBtn = document.getElementById('addStoryBtn');
+addStoryBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  storyPhotoInput.click();
+});
 
   document.querySelectorAll('.story-circle[data-group-idx]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -852,6 +869,9 @@ storyPhotoInput.addEventListener('change', async () => {
     await uploadString(storyRef, compressed, 'data_url');
     const mediaUrl = await getDownloadURL(storyRef);
 
+    const durationHours = parseInt(currentProfile.storyDuration || '24');
+    const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
     await addDoc(collection(db, 'stories'), {
       uid: currentUser.uid,
       username: currentProfile.username || currentUser.email.split('@')[0],
@@ -859,6 +879,7 @@ storyPhotoInput.addEventListener('change', async () => {
       mediaUrl,
       viewedBy: [],
       likes: [],
+      expiresAt,
       createdAt: serverTimestamp()
     });
   } catch (error) {

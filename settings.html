@@ -126,5 +126,19 @@
   <script type="module" src="settings.js"></script>
   <script src="sidebar-toggle.js"></script>
   <script src="theme.js"></script>
+  <section class="settings-section">
+  <h2>Storie</h2>
+  <div class="form-group">
+    <label for="storyDurationSelect">Durata di visualizzazione</label>
+    <select id="storyDurationSelect" class="report-select">
+      <option value="3">3 ore</option>
+      <option value="12">12 ore</option>
+      <option value="24">24 ore</option>
+      <option value="48">48 ore</option>
+    </select>
+  </div>
+  <p id="storyDurationMsg" class="auth-error hidden"></p>
+  <button type="button" class="btn-compact" id="saveStoryDurationBtn">Salva</button>
+</section>
 </body>
 </html>

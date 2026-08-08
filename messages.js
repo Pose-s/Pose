@@ -269,7 +269,9 @@ async function openChat(convId, otherUid) {
       } else if (m.type === 'audio') {
         contentHtml = `<audio controls src="${m.audioUrl}" class="chat-audio-msg"></audio>`;
       } else if (m.type === 'sticker') {
-        contentHtml = `
+  contentHtml = `<span class="chat-sticker-msg">${m.sticker}</span>`;
+} else if (m.type === 'shared_post') {
+  contentHtml = `
     <div class="shared-post-card">
       ${m.postPhotoUrl ? `<img src="${m.postPhotoUrl}" class="shared-post-img" alt="" />` : ''}
       <div class="shared-post-info">
@@ -278,9 +280,9 @@ async function openChat(convId, otherUid) {
       </div>
     </div>
   `;
-      } else {
-        contentHtml = escapeHtml(m.text || '');
-      }
+} else {
+  contentHtml = escapeHtml(m.text || '');
+}
 
       const replyHtml = m.replyTo
         ? `<div class="chat-reply-quote">${escapeHtml(m.replyTo)}</div>`

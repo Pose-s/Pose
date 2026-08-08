@@ -154,3 +154,33 @@ cookieSettingsBtn.addEventListener('click', () => {
   localStorage.removeItem('pose_cookie_consent');
   alert('Le preferenze sui cookie sono state reimpostate. Ricarica la pagina per rivedere il banner.');
 });
+const storyDurationSelect = document.getElementById('storyDurationSelect');
+const saveStoryDurationBtn = document.getElementById('saveStoryDurationBtn');
+const storyDurationMsg = document.getElementById('storyDurationMsg');
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+  const data = userDoc.exists() ? userDoc.data() : {};
+  storyDurationSelect.value = data.storyDuration || '24';
+});
+
+saveStoryDurationBtn.addEventListener('click', async () => {
+  if (!currentUser) return;
+  saveStoryDurationBtn.disabled = true;
+
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      storyDuration: storyDurationSelect.value
+    });
+    storyDurationMsg.textContent = 'Durata storie aggiornata!';
+    storyDurationMsg.classList.remove('hidden', 'auth-error');
+    storyDurationMsg.classList.add('auth-success');
+  } catch (error) {
+    console.error(error);
+    storyDurationMsg.textContent = 'Errore durante il salvataggio.';
+    storyDurationMsg.classList.remove('hidden');
+  } finally {
+    saveStoryDurationBtn.disabled = false;
+  }
+});
