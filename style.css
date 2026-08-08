@@ -1998,3 +1998,143 @@ a.search-result-item {
     border-radius: 20px 20px 0 0;
   }
 }
+/* FIX: le barre reply/recording devono restare nascoste finché non attivate */
+.reply-preview.hidden,
+.recording-bar.hidden {
+  display: none !important;
+}
+
+/* Fotocamera interna */
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-video,
+.camera-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.camera-top-bar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+.camera-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.camera-icon-btn.active {
+  background: #7c3aed;
+}
+
+.camera-bottom-bar {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.camera-capture-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 4px solid #ffffff;
+  background: transparent;
+  cursor: pointer;
+}
+
+.camera-edit-toolbar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.camera-color-swatches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255,255,255,0.1);
+  padding: 6px;
+  border-radius: 20px;
+}
+
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.color-swatch.active {
+  border-color: #ffffff;
+}
+
+.camera-edit-bottom {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+
+.camera-discard-btn,
+.camera-send-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.camera-discard-btn {
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+
+.camera-send-btn {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.camera-text-input {
+  position: fixed;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: inherit;
+  z-index: 600;
+  transform: translate(-50%, -50%);
+}

@@ -120,7 +120,6 @@
                 <i data-lucide="camera"></i>
               </button>
               <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
-              <input type="file" id="chatCameraInput" accept="image/*" capture="environment" class="hidden" />
 
               <button type="submit" class="comment-send-btn">
                 <i data-lucide="send"></i>
@@ -146,6 +145,41 @@
       <p class="otp-info" id="mutualEmptyMsg">Puoi scrivere solo a chi ti segue e che segui anche tu.</p>
       <div id="mutualFriendsList"></div>
     </div>
+  </div>
+
+  <!-- Fotocamera interna -->
+  <div class="camera-modal hidden" id="cameraModal">
+    <video id="cameraVideo" autoplay playsinline class="camera-video"></video>
+    <canvas id="cameraCanvas" class="camera-canvas hidden"></canvas>
+
+    <div class="camera-top-bar">
+      <button type="button" class="camera-icon-btn" id="cameraCloseBtn"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="camera-bottom-bar" id="cameraCaptureBar">
+      <button type="button" class="camera-capture-btn" id="cameraCaptureBtn"></button>
+    </div>
+
+    <div class="camera-edit-toolbar hidden" id="cameraEditToolbar">
+      <button type="button" class="camera-icon-btn" id="drawToolBtn"><i data-lucide="pencil"></i></button>
+      <button type="button" class="camera-icon-btn" id="textToolBtn"><i data-lucide="type"></i></button>
+      <div class="camera-color-swatches" id="colorSwatches">
+        <button type="button" class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></button>
+        <button type="button" class="color-swatch" style="background:#ef4444" data-color="#ef4444"></button>
+        <button type="button" class="color-swatch" style="background:#22c55e" data-color="#22c55e"></button>
+        <button type="button" class="color-swatch" style="background:#3b82f6" data-color="#3b82f6"></button>
+        <button type="button" class="color-swatch" style="background:#eab308" data-color="#eab308"></button>
+        <button type="button" class="color-swatch" style="background:#7c3aed" data-color="#7c3aed"></button>
+      </div>
+      <button type="button" class="camera-icon-btn" id="undoEditBtn"><i data-lucide="undo-2"></i></button>
+    </div>
+
+    <div class="camera-edit-bottom hidden" id="cameraEditBottom">
+      <button type="button" class="camera-discard-btn" id="cameraDiscardBtn"><i data-lucide="trash-2"></i></button>
+      <button type="button" class="camera-send-btn" id="cameraSendBtn"><i data-lucide="send"></i></button>
+    </div>
+
+    <input type="text" id="cameraTextInput" class="camera-text-input hidden" placeholder="Scrivi..." />
   </div>
 
   <script type="module" src="messages.js"></script>
