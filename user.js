@@ -331,7 +331,7 @@ async function toggleFollow() {
   }
 }
 
-function startListeningToUserPosts() {
+async function startListeningToUserPosts() {
   const postsQuery = query(
     collection(db, 'posts'),
     where('uid', '==', viewedUid),
