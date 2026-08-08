@@ -740,26 +740,25 @@ function startListeningToStories(myUid) {
     const following = myData.following || [];
     const relevantUids = [myUid, ...following];
 
-    const now = new Date();
-const fallbackCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-const active = snapshot.docs
-  .map(d => ({ id: d.id, ...d.data() }))
-  .filter(s => {
-    if (s.expiresAt) {
-      const expires = s.expiresAt.toDate ? s.expiresAt.toDate() : new Date(s.expiresAt);
-      return expires > now;
-    }
-    const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
-    return created > fallbackCutoff;
-  });
+    const storiesQuery = query(
+      collection(db, 'stories'),
+      where('uid', 'in', relevantUids.slice(0, 30)),
+      orderBy('createdAt', 'desc')
+    );
 
     onSnapshot(storiesQuery, (snapshot) => {
+      const now = new Date();
+      const fallbackCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       const active = snapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(s => {
+          if (s.expiresAt) {
+            const expires = s.expiresAt.toDate ? s.expiresAt.toDate() : new Date(s.expiresAt);
+            return expires > now;
+          }
           const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
-          return created > cutoff;
+          return created > fallbackCutoff;
         });
 
       const groups = {};
