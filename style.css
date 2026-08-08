@@ -2403,3 +2403,12 @@ a.search-result-item {
   justify-content: flex-end;
   margin-bottom: 8px;
 }
+.report-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+  background-color: #ffffff;
+}

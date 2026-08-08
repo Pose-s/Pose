@@ -17,6 +17,14 @@ const commentInput = document.getElementById('commentInput');
 const userOptionsBtn = document.getElementById('userOptionsBtn');
 const userOptionsDropdown = document.getElementById('userOptionsDropdown');
 const blockToggleBtn = document.getElementById('blockToggleBtn');
+const reportBtn = document.getElementById('reportBtn');
+const reportModal = document.getElementById('reportModal');
+const closeReportBtn = document.getElementById('closeReportBtn');
+const reportForm = document.getElementById('reportForm');
+const reportReasonSelect = document.getElementById('reportReasonSelect');
+const reportDetailsInput = document.getElementById('reportDetailsInput');
+const reportMsg = document.getElementById('reportMsg');
+const reportSubmitBtn = document.getElementById('reportSubmitBtn');
 
 lucide.createIcons();
 
@@ -391,5 +399,46 @@ commentForm.addEventListener('submit', async (e) => {
     commentInput.value = '';
   } catch (error) {
     console.error('Errore nell\'invio del commento:', error);
+  }
+});
+reportBtn.addEventListener('click', () => {
+  userOptionsDropdown.classList.add('hidden');
+  reportModal.classList.remove('hidden');
+  reportForm.reset();
+  reportMsg.classList.add('hidden');
+});
+
+closeReportBtn.addEventListener('click', () => reportModal.classList.add('hidden'));
+reportModal.addEventListener('click', (e) => { if (e.target === reportModal) reportModal.classList.add('hidden'); });
+
+reportForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  reportMsg.classList.add('hidden');
+  reportSubmitBtn.disabled = true;
+  reportSubmitBtn.textContent = 'Invio in corso...';
+
+  try {
+    await addDoc(collection(db, 'reports'), {
+      reportedUid: viewedUid,
+      reportedUsername: viewedUsername,
+      reporterUid: currentUser.uid,
+      reason: reportReasonSelect.value,
+      details: reportDetailsInput.value.trim(),
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+
+    reportMsg.textContent = 'Segnalazione inviata. Grazie per averci avvisato.';
+    reportMsg.classList.remove('hidden', 'auth-error');
+    reportMsg.classList.add('auth-success');
+
+    setTimeout(() => reportModal.classList.add('hidden'), 1500);
+  } catch (error) {
+    console.error('Errore invio segnalazione:', error);
+    reportMsg.textContent = 'Errore durante l\'invio. Riprova.';
+    reportMsg.classList.remove('hidden');
+  } finally {
+    reportSubmitBtn.disabled = false;
+    reportSubmitBtn.textContent = 'Invia segnalazione';
   }
 });
