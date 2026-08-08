@@ -583,9 +583,16 @@ onAuthStateChanged(auth, (user) => {
         unreadNotifIds.push(docSnap.id);
       }
 
-      const text = n.type === 'like'
-        ? `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like a un tuo post`
-        : `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
+      let text;
+if (n.type === 'like') {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like a un tuo post`;
+} else if (n.type === 'story_like') {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like alla tua storia`;
+} else if (n.type === 'story_comment') {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
+} else {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
+}
 
       return `
         <div class="notification-item ${n.read ? '' : 'unread'}">
