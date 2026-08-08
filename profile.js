@@ -66,7 +66,7 @@ let activeCommentsPostId = null;
 let unsubscribeComments = null;
 
 settingsBtn.addEventListener('click', () => {
-  alert('Sezione Impostazioni in arrivo!');
+  window.location.href = 'settings.html';
 });
 
 // ===== Autenticazione e caricamento profilo =====
