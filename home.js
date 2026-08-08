@@ -74,6 +74,12 @@ const viewersSearchInput = document.getElementById('viewersSearchInput');
 const storyViewersList = document.getElementById('storyViewersList');
 const storyCommentsOwnerList = document.getElementById('storyCommentsOwnerList');
 
+const shareModal = document.getElementById('shareModal');
+const closeShareBtn = document.getElementById('closeShareBtn');
+const shareSearchInput = document.getElementById('shareSearchInput');
+const shareEmptyMsg = document.getElementById('shareEmptyMsg');
+const shareFriendsList = document.getElementById('shareFriendsList');
+
 lucide.createIcons();
 
 let currentUser = null;
@@ -97,6 +103,9 @@ const STORY_DURATION = 5000;
 let allViewersCache = [];
 let unsubscribeStoryComments = null;
 
+let sharingPostId = null;
+let allShareFriends = [];
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = 'login.html';
@@ -115,6 +124,10 @@ logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
   window.location.href = 'login.html';
 });
+
+function conversationIdFor(uidA, uidB) {
+  return [uidA, uidB].sort().join('_');
+}
 
 // ===== Modale Crea/Modifica Post =====
 addPostBtn.addEventListener('click', () => openCreateModal());
@@ -163,12 +176,10 @@ function getPostMedia(post) {
 
 photoInput.addEventListener('change', () => {
   const files = Array.from(photoInput.files);
-
   files.forEach(file => {
     if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
     pendingNewFiles.push(file);
   });
-
   photoInput.value = '';
   renderMediaPreview();
 });
@@ -347,29 +358,30 @@ function startListeningToPosts() {
               <span class="post-author">${escapeHtml(post.authorName || 'Utente')}</span>
               <span class="post-date">${formatDate(post.createdAt)}</span>
             </div>
-           <div class="post-menu">
-  <button class="post-menu-btn" data-id="${id}">
-    <i data-lucide="more-vertical"></i>
-  </button>
-  <div class="post-menu-dropdown hidden" data-menu-for="${id}">
-    ${isOwner ? `
-      <button class="menu-item edit-post-btn" data-id="${id}">
-        <i data-lucide="pencil"></i> Modifica
-      </button>
-    ` : ''}
-    <button class="menu-item repost-story-btn" data-id="${id}">
-      <i data-lucide="clapperboard"></i> Pubblica nelle storie
-    </button>
-    <button class="menu-item repost-btn" data-id="${id}">
-      <i data-lucide="repeat"></i> Reposta
-    </button>
-    ${isOwner ? `
-      <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
-        <i data-lucide="trash-2"></i> Elimina
-      </button>
-    ` : ''}
-  </div>
-</div>
+            <div class="post-menu">
+              <button class="post-menu-btn" data-id="${id}">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="post-menu-dropdown hidden" data-menu-for="${id}">
+                ${isOwner ? `
+                  <button class="menu-item edit-post-btn" data-id="${id}">
+                    <i data-lucide="pencil"></i> Modifica
+                  </button>
+                ` : ''}
+                <button class="menu-item repost-story-btn" data-id="${id}">
+                  <i data-lucide="clapperboard"></i> Pubblica nelle storie
+                </button>
+                <button class="menu-item repost-btn" data-id="${id}">
+                  <i data-lucide="repeat"></i> Reposta
+                </button>
+                ${isOwner ? `
+                  <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
+                    <i data-lucide="trash-2"></i> Elimina
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
           ${renderMediaCarousel(getPostMedia(post), id)}
           ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
           <div class="post-actions">
@@ -382,8 +394,8 @@ function startListeningToPosts() {
               <span>${commentCount}</span>
             </button>
             <button class="action-btn share-btn" data-id="${id}">
-    <i data-lucide="send"></i>
-  </button>
+              <i data-lucide="send"></i>
+            </button>
           </div>
         </article>
       `;
@@ -452,6 +464,22 @@ function attachPostListeners() {
     });
   });
 
+  document.querySelectorAll('.repost-story-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      alert('Funzione "Pubblica nelle storie" in arrivo!');
+    });
+  });
+
+  document.querySelectorAll('.repost-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      alert('Funzione "Reposta" in arrivo!');
+    });
+  });
+
   document.querySelectorAll('.delete-post-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -505,26 +533,20 @@ function attachPostListeners() {
     });
   });
 
-  document.querySelectorAll('.comment-btn')
+  document.querySelectorAll('.comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => openComments(btn.dataset.id));
+  });
+
   document.querySelectorAll('.share-btn').forEach(btn => {
-  btn.addEventListener('click', () => openShareModal(btn.dataset.id));
-});
-
-document.querySelectorAll('.repost-story-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeAllMenus();
-    alert('Funzione "Pubblica nelle storie" in arrivo!');
+    btn.addEventListener('click', () => openShareModal(btn.dataset.id));
   });
-});
+}
 
-document.querySelectorAll('.repost-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeAllMenus();
-    alert('Funzione "Reposta" in arrivo!');
-  });
-});
+function closeAllMenus() {
+  document.querySelectorAll('.post-menu-dropdown').forEach(d => d.classList.add('hidden'));
+}
+
+document.addEventListener('click', closeAllMenus);
 
 // ===== Commenti sui post =====
 function openComments(postId) {
@@ -1096,18 +1118,8 @@ function loadStoryCommentsForOwner(storyId) {
     }).join('');
   });
 }
-const shareModal = document.getElementById('shareModal');
-const closeShareBtn = document.getElementById('closeShareBtn');
-const shareSearchInput = document.getElementById('shareSearchInput');
-const shareEmptyMsg = document.getElementById('shareEmptyMsg');
-const shareFriendsList = document.getElementById('shareFriendsList');
-let sharingPostId = null;
-let allShareFriends = [];
 
-function conversationIdFor(uidA, uidB) {
-  return [uidA, uidB].sort().join('_');
-}
-
+// ===== Invia post nei messaggi =====
 async function openShareModal(postId) {
   sharingPostId = postId;
   shareModal.classList.remove('hidden');
@@ -1170,7 +1182,7 @@ async function sendPostToChat(otherUid, postId) {
   const postDoc = await getDoc(doc(db, 'posts', postId));
   if (!postDoc.exists()) return;
   const post = postDoc.data();
-  const media = (post.media && post.media.length > 0) ? post.media : (post.photoUrl ? [{ url: post.photoUrl }] : []);
+  const media = getPostMedia(post);
 
   const convId = conversationIdFor(currentUser.uid, otherUid);
   const convRef = doc(db, 'conversations', convId);
