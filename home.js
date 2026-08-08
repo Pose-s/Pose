@@ -1,14 +1,27 @@
-import { auth, db, storage } from './firebase-config.js';
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { onAuthStateChanged, signOut, getAuth } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
-  collection, addDoc, onSnapshot, query, orderBy, limit,
-  serverTimestamp, doc, getDoc, deleteDoc, updateDoc,
-  arrayUnion, arrayRemove, increment
+  getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit,
+  serverTimestamp, doc, getDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, where, getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
-import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 
-// Riferimenti DOM
+const firebaseConfig = {
+  apiKey: "AIzaSyD5nn41jQU8Vk_ujlTO5t4r125zyq4p1z0",
+  authDomain: "pose-s.firebaseapp.com",
+  projectId: "pose-s",
+  storageBucket: "pose-s.firebasestorage.app",
+  messagingSenderId: "293624221790",
+  appId: "1:293624221790:web:873913cf322c08610464cf",
+  measurementId: "G-J836C70BTW"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app, 'default');
+const storage = getStorage(app);
+
 const addPostBtn = document.getElementById('addPostBtn');
 const postModal = document.getElementById('postModal');
 const postModalTitle = document.getElementById('postModalTitle');
@@ -28,16 +41,20 @@ const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentInput = document.getElementById('commentInput');
 
+const searchBarContainer = document.getElementById('searchBarContainer');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
 lucide.createIcons();
 
 let currentUser = null;
-let currentProfile = { displayName: '', logoUrl: '' };
+let currentProfile = { displayName: '', logoUrl: '', username: '' };
 let postsCache = new Map();
 let editingPostId = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
+let searchTimeout;
 
-// Protezione pagina: serve login
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = 'login.html';
@@ -71,21 +88,6 @@ function openCreateModal() {
   postModal.classList.remove('hidden');
 }
 
-function openEditModal(postId) {
-  const post = postsCache.get(postId);
-  if (!post) return;
-
-  editingPostId = postId;
-  postModalTitle.textContent = 'Modifica post';
-  publishBtn.textContent = 'Salva modifiche';
-  photoInput.required = false;
-  photoInput.value = '';
-  captionInput.value = post.caption || '';
-  photoPreview.src = post.photoUrl;
-  photoPreview.classList.remove('hidden');
-  postModal.classList.remove('hidden');
-}
-
 function closeModal() {
   postModal.classList.add('hidden');
   postForm.reset();
@@ -103,6 +105,21 @@ photoInput.addEventListener('change', () => {
   };
   reader.readAsDataURL(file);
 });
+
+function openEditModal(postId) {
+  const post = postsCache.get(postId);
+  if (!post) return;
+
+  editingPostId = postId;
+  postModalTitle.textContent = 'Modifica post';
+  publishBtn.textContent = 'Salva modifiche';
+  photoInput.required = false;
+  photoInput.value = '';
+  captionInput.value = post.caption || '';
+  photoPreview.src = post.photoUrl;
+  photoPreview.classList.remove('hidden');
+  postModal.classList.remove('hidden');
+}
 
 postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -242,7 +259,6 @@ function startListeningToPosts() {
 }
 
 function attachPostListeners() {
-  // Menu tre puntini
   document.querySelectorAll('.post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -253,7 +269,6 @@ function attachPostListeners() {
     });
   });
 
-  // Modifica
   document.querySelectorAll('.edit-post-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -262,7 +277,6 @@ function attachPostListeners() {
     });
   });
 
-  // Elimina
   document.querySelectorAll('.delete-post-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -282,39 +296,37 @@ function attachPostListeners() {
     });
   });
 
-  // Like
   document.querySelectorAll('.like-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    if (!currentUser) return;
-    const postId = btn.dataset.id;
-    const post = postsCache.get(postId);
-    const likes = post?.likes || [];
-    const isLiked = likes.includes(currentUser.uid);
+    btn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const postId = btn.dataset.id;
+      const post = postsCache.get(postId);
+      const likes = post?.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
 
-    try {
-      await updateDoc(doc(db, 'posts', postId), {
-        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-      });
-
-      if (!isLiked && post.uid !== currentUser.uid) {
-        await addDoc(collection(db, 'notifications'), {
-          toUid: post.uid,
-          fromUid: currentUser.uid,
-          fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
-          fromLogoUrl: currentProfile.logoUrl || '',
-          type: 'like',
-          postId,
-          read: false,
-          createdAt: serverTimestamp()
+      try {
+        await updateDoc(doc(db, 'posts', postId), {
+          likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
         });
-      }
-    } catch (error) {
-      console.error('Errore like:', error);
-    }
-  });
-});
 
-  // Commenti
+        if (!isLiked && post.uid !== currentUser.uid) {
+          await addDoc(collection(db, 'notifications'), {
+            toUid: post.uid,
+            fromUid: currentUser.uid,
+            fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+            fromLogoUrl: currentProfile.logoUrl || '',
+            type: 'like',
+            postId,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error('Errore like:', error);
+      }
+    });
+  });
+
   document.querySelectorAll('.comment-btn').forEach(btn => {
     btn.addEventListener('click', () => openComments(btn.dataset.id));
   });
@@ -377,7 +389,7 @@ commentForm.addEventListener('submit', async (e) => {
   try {
     await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
       uid: currentUser.uid,
-      authorName: currentProfile.displayName || currentUser.email.split('@')[0],
+      authorName: currentProfile.username || currentUser.email.split('@')[0],
       text,
       createdAt: serverTimestamp()
     });
@@ -391,14 +403,8 @@ commentForm.addEventListener('submit', async (e) => {
     console.error('Errore nell\'invio del commento:', error);
   }
 });
-import { collection as fsCollection, query as fsQuery, where as fsWhere, limit as fsLimit, getDocs as fsGetDocs } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
-const searchBarContainer = document.getElementById('searchBarContainer');
-const searchInput = document.getElementById('searchInput');
-const searchResults = document.getElementById('searchResults');
-
-let searchTimeout;
-
+// ===== Ricerca utenti (con filtro utenti bloccati) =====
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   const term = searchInput.value.trim().toLowerCase();
@@ -411,19 +417,24 @@ searchInput.addEventListener('input', () => {
 
   searchTimeout = setTimeout(async () => {
     try {
-      const usersQuery = fsQuery(
-        fsCollection(db, 'users'),
-        fsWhere('username', '>=', term),
-        fsWhere('username', '<=', term + '\uf8ff'),
-        fsLimit(8)
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('username', '>=', term),
+        where('username', '<=', term + '\uf8ff'),
+        limit(8)
       );
 
-      const snapshot = await fsGetDocs(usersQuery);
+      const snapshot = await getDocs(usersQuery);
 
-      if (snapshot.empty) {
+      const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const myBlocked = (myDoc.exists() ? myDoc.data().blockedUsers : []) || [];
+
+      const filteredDocs = snapshot.docs.filter(d => !myBlocked.includes(d.id));
+
+      if (filteredDocs.length === 0) {
         searchResults.innerHTML = '<p class="search-empty">Nessun utente trovato</p>';
       } else {
-        searchResults.innerHTML = snapshot.docs.map(docSnap => {
+        searchResults.innerHTML = filteredDocs.map(docSnap => {
           const u = docSnap.data();
           return `
             <a href="user.html?u=${encodeURIComponent(u.username)}" class="search-result-item">
@@ -445,7 +456,6 @@ searchInput.addEventListener('input', () => {
   }, 300);
 });
 
-// Chiudi risultati cliccando fuori
 document.addEventListener('click', (e) => {
   if (!searchBarContainer.contains(e.target)) {
     searchResults.classList.add('hidden');

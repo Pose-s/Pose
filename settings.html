@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <script src="theme.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pose - Impostazioni</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="newspaper"></i>
+          <span>News</span>
+        </a>
+        <a href="home.html" class="nav-item">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+          <i data-lucide="user"></i>
+          <span>Profilo</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="logout-btn">
+          <i data-lucide="log-out"></i> Esci
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="settings-page">
+        <h1>Impostazioni</h1>
+
+        <!-- Tema -->
+        <section class="settings-section">
+          <h2>Aspetto</h2>
+          <div class="settings-row">
+            <span>Tema scuro</span>
+            <label class="theme-switch">
+              <input type="checkbox" id="themeToggle" />
+              <span class="theme-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Account -->
+        <section class="settings-section">
+          <h2>Gestione account</h2>
+          <p class="settings-current">Email attuale: <strong id="currentEmailDisplay">-</strong></p>
+
+          <form id="changeEmailForm" class="settings-form">
+            <div class="form-group">
+              <label for="newEmailInput">Nuova email</label>
+              <input type="email" id="newEmailInput" required />
+            </div>
+            <div class="form-group">
+              <label for="emailCurrentPasswordInput">Password attuale (per conferma)</label>
+              <input type="password" id="emailCurrentPasswordInput" required />
+            </div>
+            <p id="emailMsg" class="auth-error hidden"></p>
+            <button type="submit" class="btn-compact">Cambia email</button>
+          </form>
+
+          <form id="changePasswordForm" class="settings-form">
+            <div class="form-group">
+              <label for="currentPasswordInput">Password attuale</label>
+              <input type="password" id="currentPasswordInput" required />
+            </div>
+            <div class="form-group">
+              <label for="newPasswordInput">Nuova password</label>
+              <input type="password" id="newPasswordInput" required minlength="6" />
+            </div>
+            <p id="passwordMsg" class="auth-error hidden"></p>
+            <button type="submit" class="btn-compact">Cambia password</button>
+          </form>
+
+          <a href="profile.html" class="settings-link">Modifica bio, foto e username →</a>
+        </section>
+
+        <!-- Utenti bloccati -->
+        <section class="settings-section">
+          <h2>Utenti bloccati</h2>
+          <div id="blockedUsersList">
+            <p class="search-empty">Caricamento...</p>
+          </div>
+        </section>
+
+        <!-- Legali -->
+        <section class="settings-section">
+          <h2>Legali e Privacy</h2>
+          <div class="settings-links-list">
+            <a href="privacy.html" class="settings-link">Privacy Policy</a>
+            <a href="terms.html" class="settings-link">Termini di Servizio</a>
+            <button type="button" class="settings-link settings-link-btn" id="cookieSettingsBtn">Gestione Cookie</button>
+          </div>
+        </section>
+
+        <!-- Login/Logout -->
+        <section class="settings-section">
+          <h2>Sessione</h2>
+          <button type="button" class="btn-compact btn-danger" id="settingsLogoutBtn">Esci dall'account</button>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+  <script src="sidebar-toggle.js"></script>
+  <script src="theme.js"></script>
+</body>
+</html>

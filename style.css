@@ -2141,3 +2141,260 @@ a.search-result-item {
 .camera-modal.hidden {
   display: none !important;
 }
+/* Pagina Impostazioni */
+.settings-page {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.settings-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 24px;
+}
+
+.settings-section {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #f1f5f9;
+}
+
+.settings-section h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #334155;
+}
+
+.settings-current {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.settings-form {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.settings-form:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-form .form-group input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.settings-link {
+  display: block;
+  font-size: 14px;
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 10px;
+}
+
+.settings-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-link-btn {
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-danger {
+  background-color: #fef2f2 !important;
+  color: #ef4444 !important;
+}
+
+/* Toggle tema */
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #e2e8f0;
+  border-radius: 9999px;
+  transition: 0.2s;
+}
+
+.theme-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.theme-switch input:checked + .theme-slider {
+  background-color: #7c3aed;
+}
+
+.theme-switch input:checked + .theme-slider::before {
+  transform: translateX(20px);
+}
+
+/* Pagine legali */
+.legal-page {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 0 24px;
+  font-family: 'Inter', sans-serif;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.legal-page h1 {
+  font-size: 28px;
+  color: #0f172a;
+  margin: 16px 0;
+}
+
+.legal-page h2 {
+  font-size: 18px;
+  color: #0f172a;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.legal-disclaimer {
+  margin-top: 32px;
+  padding: 14px;
+  background-color: #fef3c7;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
+}
+
+/* Cookie banner */
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  flex-wrap: wrap;
+}
+
+.cookie-banner p {
+  font-size: 13px;
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.cookie-banner a {
+  color: #c4b5fd;
+}
+
+.cookie-banner button {
+  background-color: #7c3aed;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ===== TEMA SCURO ===== */
+[data-theme="dark"] body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .post-card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .settings-section,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .category-btn,
+[data-theme="dark"] .conversations-panel,
+[data-theme="dark"] .chat-panel,
+[data-theme="dark"] .news-card,
+[data-theme="dark"] .auth-box {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .logo,
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .profile-username,
+[data-theme="dark"] .settings-page h1,
+[data-theme="dark"] .news-title,
+[data-theme="dark"] .stat-number,
+[data-theme="dark"] .post-author,
+[data-theme="dark"] h2 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .nav-item,
+[data-theme="dark"] .post-caption,
+[data-theme="dark"] .profile-bio,
+[data-theme="dark"] .settings-row,
+[data-theme="dark"] .stat-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group textarea,
+[data-theme="dark"] .settings-form input,
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .chat-form input {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .main-content {
+  background-color: #0f172a;
+}

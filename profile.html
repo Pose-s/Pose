@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
+  <script src="theme.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pose - Profilo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -206,5 +207,21 @@
 
   <script type="module" src="profile.js"></script>
   <script src="sidebar-toggle.js"></script>
+  (function() {
+  if (localStorage.getItem('pose_cookie_consent')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'cookie-banner';
+  banner.innerHTML = `
+    <p>Questo sito utilizza cookie tecnici necessari al funzionamento (login, sessione). Continuando la navigazione accetti il loro utilizzo. <a href="privacy.html">Privacy Policy</a></p>
+    <button id="cookieAcceptBtn">Ho capito</button>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('cookieAcceptBtn').addEventListener('click', () => {
+    localStorage.setItem('pose_cookie_consent', 'true');
+    banner.remove();
+  });
+})();
 </body>
 </html>
