@@ -1655,3 +1655,10 @@ a.search-result-item {
     display: block;
   }
 }
+.messages-btn.has-notifications .notif-olive-fill {
+  fill: #22c55e;
+}
+
+.messages-btn.has-notifications .notif-liquid-fill {
+  fill: #d946ef;
+}

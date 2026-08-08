@@ -644,11 +644,14 @@ onAuthStateChanged(auth, (user) => {
       const conv = docSnap.data();
       totalUnread += (conv.unread && conv.unread[user.uid]) || 0;
     });
+const messagesBtn = document.getElementById('messagesBtn');
 
-    if (totalUnread > 0) {
-      msgBadgeDot.classList.remove('hidden');
-    } else {
-      msgBadgeDot.classList.add('hidden');
-    }
+if (totalUnread > 0) {
+  msgBadgeDot.classList.remove('hidden');
+  messagesBtn.classList.add('has-notifications');
+} else {
+  msgBadgeDot.classList.add('hidden');
+  messagesBtn.classList.remove('has-notifications');
+}
   });
 });
