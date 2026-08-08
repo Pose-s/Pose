@@ -14,6 +14,7 @@ const newMessageModal = document.getElementById('newMessageModal');
 const closeNewMessageBtn = document.getElementById('closeNewMessageBtn');
 const mutualFriendsList = document.getElementById('mutualFriendsList');
 const mutualEmptyMsg = document.getElementById('mutualEmptyMsg');
+const mutualSearchInput = document.getElementById('mutualSearchInput');
 
 const chatEmpty = document.getElementById('chatEmpty');
 const chatActive = document.getElementById('chatActive');
@@ -29,8 +30,21 @@ const voiceBtn = document.getElementById('voiceBtn');
 const photoLeftBtn = document.getElementById('photoLeftBtn');
 const photoRightBtn = document.getElementById('photoRightBtn');
 const chatPhotoInput = document.getElementById('chatPhotoInput');
+const chatCameraInput = document.getElementById('chatCameraInput');
+
 const stickerBtn = document.getElementById('stickerBtn');
-const stickerPicker = document.getElementById('stickerPicker');
+const stickerPanel = document.getElementById('stickerPanel');
+const stickerSearchInput = document.getElementById('stickerSearchInput');
+const stickerTabs = document.getElementById('stickerTabs');
+const stickerGrid = document.getElementById('stickerGrid');
+
+const replyPreview = document.getElementById('replyPreview');
+const replyPreviewText = document.getElementById('replyPreviewText');
+const replyPreviewClose = document.getElementById('replyPreviewClose');
+
+const recordingBar = document.getElementById('recordingBar');
+const recordingTime = document.getElementById('recordingTime');
+const recordingHint = document.getElementById('recordingHint');
 
 lucide.createIcons();
 
@@ -40,10 +54,17 @@ let activeConversationId = null;
 let activeOtherUid = null;
 let otherAvatarUrl = '';
 let unsubscribeMessages = null;
+let allMutualUsers = [];
+let replyingToMessage = null;
 
+// ===== Registrazione vocale =====
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
+let isLocked = false;
+let recordStartY = 0;
+let recordTimerInterval = null;
+let recordSeconds = 0;
 
 logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
@@ -113,27 +134,42 @@ function startListeningToConversations() {
   });
 }
 
-// ===== Nuovo messaggio: lista follow reciproci =====
+// ===== Nuovo messaggio: ricerca tra follow reciproci (dati sempre aggiornati) =====
 newMessageBtn.addEventListener('click', async () => {
   newMessageModal.classList.remove('hidden');
+  mutualSearchInput.value = '';
   mutualFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
 
-  const following = currentProfile.following || [];
-  const followers = currentProfile.followers || [];
+  const freshDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const freshData = freshDoc.exists() ? freshDoc.data() : {};
+  currentProfile = freshData;
+
+  const following = freshData.following || [];
+  const followers = freshData.followers || [];
   const mutualIds = following.filter(id => followers.includes(id));
 
   if (mutualIds.length === 0) {
     mutualFriendsList.innerHTML = '';
     mutualEmptyMsg.classList.remove('hidden');
+    allMutualUsers = [];
     return;
   }
 
   mutualEmptyMsg.classList.add('hidden');
 
-  const users = await Promise.all(mutualIds.map(async (uid) => {
+  allMutualUsers = await Promise.all(mutualIds.map(async (uid) => {
     const d = await getDoc(doc(db, 'users', uid));
     return { uid, data: d.exists() ? d.data() : {} };
   }));
+
+  renderMutualList(allMutualUsers);
+});
+
+function renderMutualList(users) {
+  if (users.length === 0) {
+    mutualFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
+    return;
+  }
 
   mutualFriendsList.innerHTML = users.map(u => `
     <div class="conversation-item" data-uid="${u.uid}">
@@ -169,6 +205,16 @@ newMessageBtn.addEventListener('click', async () => {
       openChat(convId, otherUid);
     });
   });
+}
+
+mutualSearchInput.addEventListener('input', () => {
+  const term = mutualSearchInput.value.trim().toLowerCase();
+  if (!term) {
+    renderMutualList(allMutualUsers);
+    return;
+  }
+  const filtered = allMutualUsers.filter(u => (u.data.username || '').toLowerCase().includes(term));
+  renderMutualList(filtered);
 });
 
 closeNewMessageBtn.addEventListener('click', () => newMessageModal.classList.add('hidden'));
@@ -178,6 +224,8 @@ newMessageModal.addEventListener('click', (e) => { if (e.target === newMessageMo
 async function openChat(convId, otherUid) {
   activeConversationId = convId;
   activeOtherUid = otherUid;
+  replyingToMessage = null;
+  replyPreview.classList.add('hidden');
 
   chatEmpty.classList.add('hidden');
   chatActive.classList.remove('hidden');
@@ -211,6 +259,7 @@ async function openChat(convId, otherUid) {
   unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
     chatMessages.innerHTML = snapshot.docs.map(docSnap => {
       const m = docSnap.data();
+      const id = docSnap.id;
       const isMine = m.from === currentUser.uid;
 
       const avatarHtml = !isMine
@@ -230,17 +279,32 @@ async function openChat(convId, otherUid) {
         contentHtml = escapeHtml(m.text || '');
       }
 
+      const replyHtml = m.replyTo
+        ? `<div class="chat-reply-quote">${escapeHtml(m.replyTo)}</div>`
+        : '';
+
       return `
-        <div class="chat-row ${isMine ? 'mine' : 'theirs'}">
+        <div class="chat-row ${isMine ? 'mine' : 'theirs'}" data-msgid="${id}" data-preview="${escapeHtml(previewFor(m))}">
           ${avatarHtml}
-          <div class="chat-bubble ${isMine ? 'mine' : 'theirs'} ${m.type ? 'chat-bubble-' + m.type : ''}">${contentHtml}</div>
+          <div class="chat-bubble ${isMine ? 'mine' : 'theirs'} ${m.type ? 'chat-bubble-' + m.type : ''}">
+            ${replyHtml}
+            ${contentHtml}
+          </div>
         </div>
       `;
     }).join('');
 
     lucide.createIcons();
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    attachSwipeToReply();
   });
+}
+
+function previewFor(m) {
+  if (m.type === 'photo') return '📷 Foto';
+  if (m.type === 'audio') return '🎤 Vocale';
+  if (m.type === 'sticker') return m.sticker;
+  return m.text || '';
 }
 
 chatBackBtn.addEventListener('click', () => {
@@ -248,6 +312,50 @@ chatBackBtn.addEventListener('click', () => {
   chatEmpty.classList.remove('hidden');
   document.getElementById('chatPanel').classList.remove('mobile-active');
   if (unsubscribeMessages) unsubscribeMessages();
+});
+
+// ===== Swipe a destra per rispondere =====
+function attachSwipeToReply() {
+  document.querySelectorAll('.chat-row').forEach(row => {
+    let startX = 0;
+    let currentX = 0;
+    let dragging = false;
+
+    const onStart = (x) => { startX = x; dragging = true; };
+    const onMove = (x) => {
+      if (!dragging) return;
+      currentX = x - startX;
+      if (currentX > 0 && currentX < 80) {
+        row.style.transform = `translateX(${currentX}px)`;
+      }
+    };
+    const onEnd = () => {
+      if (!dragging) return;
+      dragging = false;
+      if (currentX > 45) {
+        replyingToMessage = row.dataset.preview;
+        replyPreviewText.textContent = replyingToMessage;
+        replyPreview.classList.remove('hidden');
+        chatInput.focus();
+      }
+      row.style.transform = '';
+      currentX = 0;
+    };
+
+    row.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX));
+    row.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX));
+    row.addEventListener('touchend', onEnd);
+
+    row.addEventListener('mousedown', (e) => onStart(e.clientX));
+    row.addEventListener('mousemove', (e) => onMove(e.clientX));
+    row.addEventListener('mouseup', onEnd);
+    row.addEventListener('mouseleave', () => { if (dragging) onEnd(); });
+  });
+}
+
+replyPreviewClose.addEventListener('click', () => {
+  replyingToMessage = null;
+  replyPreview.classList.add('hidden');
 });
 
 // ===== Invio testo =====
@@ -262,12 +370,15 @@ chatForm.addEventListener('submit', async (e) => {
   await sendMessage({ type: 'text', text }, text);
 });
 
-// ===== Invio foto (sinistra e destra mobile) =====
+// ===== Invio foto: galleria (sinistra) e fotocamera diretta (destra, mobile) =====
 photoLeftBtn.addEventListener('click', () => chatPhotoInput.click());
-photoRightBtn.addEventListener('click', () => chatPhotoInput.click());
+photoRightBtn.addEventListener('click', () => chatCameraInput.click());
 
-chatPhotoInput.addEventListener('change', async () => {
-  const file = chatPhotoInput.files[0];
+chatPhotoInput.addEventListener('change', () => handlePhotoUpload(chatPhotoInput));
+chatCameraInput.addEventListener('change', () => handlePhotoUpload(chatCameraInput));
+
+async function handlePhotoUpload(inputEl) {
+  const file = inputEl.files[0];
   if (!file || !activeConversationId) return;
 
   try {
@@ -281,80 +392,211 @@ chatPhotoInput.addEventListener('change', async () => {
   } catch (error) {
     console.error('Errore invio foto:', error);
   } finally {
-    chatPhotoInput.value = '';
+    inputEl.value = '';
+  }
+}
+
+// ===== Sticker: pannello con categorie e ricerca =====
+const STICKER_CATEGORIES = [
+  { id: 'popolari', label: 'Popolari', icon: 'star', items: ['😀','😂','😍','😎','🥳','😢','😮','👍','❤️','🔥','🙌','💯','😅','🤔','😴','🥰'] },
+  { id: 'cuori', label: 'Cuori', icon: 'heart', items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💘','💝','💔'] },
+  { id: 'animali', label: 'Animali', icon: 'paw-print', items: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🦄'] },
+  { id: 'cibo', label: 'Cibo', icon: 'pizza', items: ['🍕','🍔','🍟','🌭','🍿','🍩','🍪','🍰','🧁','🍦','🍫','🍭','🍎','🍓','🍉','☕'] },
+  { id: 'feste', label: 'Feste', icon: 'party-popper', items: ['🎉','🎊','🎈','🎁','🎂','✨','🥳','🎆','🎇','🪅','🎵','🎶','🍾','🥂','🎇','🌟'] },
+  { id: 'reazioni', label: 'Reazioni', icon: 'smile-plus', items: ['👏','🙏','💪','🤝','👌','✌️','🤞','🫶','😱','😳','🙄','😤','😭','🤩','😇','🫠'] }
+];
+
+let activeStickerCategory = 'popolari';
+
+function renderStickerTabs() {
+  stickerTabs.innerHTML = STICKER_CATEGORIES.map(cat => `
+    <button type="button" class="sticker-tab ${cat.id === activeStickerCategory ? 'active' : ''}" data-cat="${cat.id}">
+      <i data-lucide="${cat.icon}"></i>
+    </button>
+  `).join('');
+  lucide.createIcons();
+
+  document.querySelectorAll('.sticker-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeStickerCategory = tab.dataset.cat;
+      stickerSearchInput.value = '';
+      renderStickerTabs();
+      renderStickerGrid(getCategoryItems(activeStickerCategory));
+    });
+  });
+}
+
+function getCategoryItems(catId) {
+  const cat = STICKER_CATEGORIES.find(c => c.id === catId);
+  return cat ? cat.items : [];
+}
+
+function renderStickerGrid(items) {
+  if (items.length === 0) {
+    stickerGrid.innerHTML = '<p class="search-empty">Nessuno sticker trovato.</p>';
+    return;
+  }
+  stickerGrid.innerHTML = items.map(emoji => `
+    <button type="button" class="sticker-grid-item">${emoji}</button>
+  `).join('');
+
+  document.querySelectorAll('.sticker-grid-item').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const sticker = btn.textContent;
+      stickerPanel.classList.add('hidden');
+      await sendMessage({ type: 'sticker', sticker }, sticker);
+    });
+  });
+}
+
+stickerBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  stickerPanel.classList.toggle('hidden');
+  if (!stickerPanel.classList.contains('hidden')) {
+    renderStickerTabs();
+    renderStickerGrid(getCategoryItems(activeStickerCategory));
   }
 });
 
-// ===== Sticker =====
-stickerBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  stickerPicker.classList.toggle('hidden');
-});
-
-document.querySelectorAll('.sticker-option').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const sticker = btn.textContent;
-    stickerPicker.classList.add('hidden');
-    await sendMessage({ type: 'sticker', sticker }, sticker);
-  });
+stickerSearchInput.addEventListener('input', () => {
+  const term = stickerSearchInput.value.trim().toLowerCase();
+  if (!term) {
+    renderStickerGrid(getCategoryItems(activeStickerCategory));
+    return;
+  }
+  const matchingCategories = STICKER_CATEGORIES.filter(cat => cat.label.toLowerCase().includes(term));
+  const items = matchingCategories.flatMap(cat => cat.items);
+  renderStickerGrid([...new Set(items)]);
 });
 
 document.addEventListener('click', (e) => {
-  if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) {
-    stickerPicker.classList.add('hidden');
+  if (!stickerPanel.contains(e.target) && e.target !== stickerBtn && !stickerBtn.contains(e.target)) {
+    stickerPanel.classList.add('hidden');
   }
 });
 
-// ===== Messaggio vocale =====
-voiceBtn.addEventListener('click', async () => {
-  if (!isRecording) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
+// ===== Messaggio vocale: tieni premuto, scorri su per bloccare =====
+function getSupportedMimeType() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+  if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+  if (MediaRecorder.isTypeSupported('audio/aac')) return 'audio/aac';
+  return '';
+}
 
-      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
+async function startRecording() {
+  if (isRecording) return;
 
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            const audioPath = `chat_audio/${activeConversationId}/${Date.now()}.webm`;
-            const audioRef = ref(storage, audioPath);
-            await uploadString(audioRef, reader.result, 'data_url');
-            const audioUrl = await getDownloadURL(audioRef);
-            await sendMessage({ type: 'audio', audioUrl }, '🎤 Messaggio vocale');
-          } catch (error) {
-            console.error('Errore invio vocale:', error);
-          }
-        };
-        reader.readAsDataURL(audioBlob);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = getSupportedMimeType();
+
+    mediaRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    audioChunks = [];
+    isLocked = false;
+
+    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+      clearInterval(recordTimerInterval);
+      recordingBar.classList.add('hidden');
+      voiceBtn.classList.remove('recording');
+
+      if (audioChunks.length === 0 || recordSeconds < 1) return;
+
+      const finalType = mediaRecorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(audioChunks, { type: finalType });
+      const ext = finalType.includes('mp4') ? 'm4a' : 'webm';
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const audioPath = `chat_audio/${activeConversationId}/${Date.now()}.${ext}`;
+          const audioRef = ref(storage, audioPath);
+          await uploadString(audioRef, reader.result, 'data_url');
+          const audioUrl = await getDownloadURL(audioRef);
+          await sendMessage({ type: 'audio', audioUrl }, '🎤 Messaggio vocale');
+        } catch (error) {
+          console.error('Errore invio vocale:', error);
+        }
       };
+      reader.readAsDataURL(audioBlob);
+    };
 
-      mediaRecorder.start();
-      isRecording = true;
-      voiceBtn.classList.add('recording');
-    } catch (error) {
-      console.error('Microfono non disponibile:', error);
-      alert('Non riesco ad accedere al microfono. Controlla i permessi del browser.');
-    }
-  } else {
-    mediaRecorder.stop();
-    isRecording = false;
-    voiceBtn.classList.remove('recording');
+    mediaRecorder.start();
+    isRecording = true;
+    recordSeconds = 0;
+    recordingBar.classList.remove('hidden');
+    voiceBtn.classList.add('recording');
+    recordingHint.textContent = '▲ Scorri per bloccare';
+
+    recordTimerInterval = setInterval(() => {
+      recordSeconds++;
+      const mm = Math.floor(recordSeconds / 60);
+      const ss = String(recordSeconds % 60).padStart(2, '0');
+      recordingTime.textContent = `${mm}:${ss}`;
+    }, 1000);
+  } catch (error) {
+    console.error('Microfono non disponibile:', error);
+    alert('Non riesco ad accedere al microfono. Controlla i permessi del browser (su iPhone: Impostazioni > Safari > Microfono).');
   }
+}
+
+function stopRecording() {
+  if (!isRecording || !mediaRecorder) return;
+  isRecording = false;
+  mediaRecorder.stop();
+}
+
+voiceBtn.addEventListener('mousedown', (e) => {
+  recordStartY = e.clientY;
+  startRecording();
+});
+voiceBtn.addEventListener('touchstart', (e) => {
+  recordStartY = e.touches[0].clientY;
+  startRecording();
+}, { passive: true });
+
+document.addEventListener('mousemove', (e) => checkLockGesture(e.clientY));
+document.addEventListener('touchmove', (e) => {
+  if (isRecording && e.touches[0]) checkLockGesture(e.touches[0].clientY);
+});
+
+function checkLockGesture(currentY) {
+  if (!isRecording || isLocked) return;
+  const delta = recordStartY - currentY;
+  if (delta > 60) {
+    isLocked = true;
+    recordingHint.textContent = '🔒 Bloccato — tocca per fermare';
+  }
+}
+
+voiceBtn.addEventListener('mouseup', () => { if (!isLocked) stopRecording(); });
+voiceBtn.addEventListener('mouseleave', () => { if (!isLocked && isRecording) stopRecording(); });
+voiceBtn.addEventListener('touchend', () => { if (!isLocked) stopRecording(); });
+
+recordingBar.addEventListener('click', () => {
+  if (isLocked) stopRecording();
 });
 
 // ===== Funzione comune di invio =====
 async function sendMessage(messageData, previewText) {
   if (!activeConversationId) return;
 
+  const payload = { ...messageData };
+  if (replyingToMessage) {
+    payload.replyTo = replyingToMessage;
+    replyingToMessage = null;
+    replyPreview.classList.add('hidden');
+  }
+
   try {
     await addDoc(collection(db, 'conversations', activeConversationId, 'messages'), {
       from: currentUser.uid,
-      ...messageData,
+      ...payload,
       createdAt: serverTimestamp()
     });
 

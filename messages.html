@@ -73,42 +73,59 @@
               </div>
               <span id="chatHeaderUsername"></span>
             </div>
+
             <div class="chat-messages" id="chatMessages"></div>
-            <div class="sticker-picker hidden" id="stickerPicker">
-  <button type="button" class="sticker-option">😀</button>
-  <button type="button" class="sticker-option">❤️</button>
-  <button type="button" class="sticker-option">😂</button>
-  <button type="button" class="sticker-option">👍</button>
-  <button type="button" class="sticker-option">🔥</button>
-  <button type="button" class="sticker-option">🎉</button>
-  <button type="button" class="sticker-option">😢</button>
-  <button type="button" class="sticker-option">😮</button>
-</div>
 
-<form id="chatForm" class="chat-form">
-  <div class="chat-form-left">
-    <button type="button" class="chat-icon-btn" id="voiceBtn">
-      <i data-lucide="mic"></i>
-    </button>
-    <button type="button" class="chat-icon-btn" id="photoLeftBtn">
-      <i data-lucide="image"></i>
-    </button>
-    <button type="button" class="chat-icon-btn" id="stickerBtn">
-      <i data-lucide="smile"></i>
-    </button>
-  </div>
+            <div class="reply-preview hidden" id="replyPreview">
+              <div class="reply-preview-content">
+                <span class="reply-preview-label">Rispondi a</span>
+                <span class="reply-preview-text" id="replyPreviewText"></span>
+              </div>
+              <button type="button" class="reply-preview-close" id="replyPreviewClose">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
 
-  <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+            <div class="recording-bar hidden" id="recordingBar">
+              <span class="recording-dot"></span>
+              <span id="recordingTime">0:00</span>
+              <span class="recording-hint" id="recordingHint">▲ Scorri per bloccare</span>
+            </div>
 
-  <button type="button" class="chat-icon-btn chat-photo-mobile-btn" id="photoRightBtn">
-    <i data-lucide="camera"></i>
-  </button>
-  <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
+            <div class="sticker-panel hidden" id="stickerPanel">
+              <div class="sticker-panel-search">
+                <i data-lucide="search"></i>
+                <input type="text" id="stickerSearchInput" placeholder="Cerca sticker..." autocomplete="off" />
+              </div>
+              <div class="sticker-panel-tabs" id="stickerTabs"></div>
+              <div class="sticker-panel-grid" id="stickerGrid"></div>
+            </div>
 
-  <button type="submit" class="comment-send-btn">
-    <i data-lucide="send"></i>
-  </button>
-</form>
+            <form id="chatForm" class="chat-form">
+              <div class="chat-form-left">
+                <button type="button" class="chat-icon-btn" id="voiceBtn">
+                  <i data-lucide="mic"></i>
+                </button>
+                <button type="button" class="chat-icon-btn" id="photoLeftBtn">
+                  <i data-lucide="image"></i>
+                </button>
+                <button type="button" class="chat-icon-btn" id="stickerBtn">
+                  <i data-lucide="smile"></i>
+                </button>
+              </div>
+
+              <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+
+              <button type="button" class="chat-icon-btn chat-photo-mobile-btn" id="photoRightBtn">
+                <i data-lucide="camera"></i>
+              </button>
+              <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
+              <input type="file" id="chatCameraInput" accept="image/*" capture="environment" class="hidden" />
+
+              <button type="submit" class="comment-send-btn">
+                <i data-lucide="send"></i>
+              </button>
+            </form>
           </div>
         </div>
 
@@ -125,6 +142,7 @@
           <i data-lucide="x"></i>
         </button>
       </div>
+      <input type="text" id="mutualSearchInput" placeholder="Cerca..." class="search-input-modal" />
       <p class="otp-info" id="mutualEmptyMsg">Puoi scrivere solo a chi ti segue e che segui anche tu.</p>
       <div id="mutualFriendsList"></div>
     </div>

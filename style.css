@@ -1801,3 +1801,200 @@ a.search-result-item {
     display: flex;
   }
 }
+/* Ricerca nel modale nuovo messaggio */
+.search-input-modal {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/* Anteprima risposta */
+.reply-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f5f3ff;
+  border-top: 1px solid #f1f5f9;
+}
+
+.reply-preview-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reply-preview-label {
+  font-size: 11px;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.reply-preview-text {
+  font-size: 13px;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.reply-preview-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.chat-reply-quote {
+  font-size: 12px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-left: 3px solid #7c3aed;
+  background-color: rgba(255,255,255,0.25);
+  border-radius: 6px;
+  opacity: 0.9;
+}
+
+/* Barra registrazione vocale */
+.recording-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background-color: #fef2f2;
+  border-top: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  animation: pulse-record 1s infinite;
+}
+
+.recording-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Swipe reply */
+.chat-row {
+  transition: transform 0.15s ease;
+  touch-action: pan-y;
+}
+/* Pannello sticker stile TikTok */
+.sticker-panel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+}
+
+.chat-form {
+  position: relative;
+}
+
+.sticker-panel-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #94a3b8;
+}
+
+.sticker-panel-search i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sticker-panel-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.sticker-panel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  overflow-x: auto;
+}
+
+.sticker-tab {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sticker-tab i {
+  width: 20px;
+  height: 20px;
+}
+
+.sticker-tab.active {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
+.sticker-panel-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 12px;
+}
+
+.sticker-grid-item {
+  font-size: 34px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 10px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sticker-grid-item:hover {
+  background-color: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .sticker-panel {
+    position: fixed;
+    height: 45vh;
+    border-radius: 20px 20px 0 0;
+  }
+}
