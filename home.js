@@ -45,6 +45,20 @@ const searchBarContainer = document.getElementById('searchBarContainer');
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 
+const storiesBar = document.getElementById('storiesBar');
+const storyPhotoInput = document.getElementById('storyPhotoInput');
+
+const storyViewer = document.getElementById('storyViewer');
+const storyProgressBar = document.getElementById('storyProgressBar');
+const storyViewerAvatar = document.getElementById('storyViewerAvatar');
+const storyViewerPlaceholder = document.getElementById('storyViewerPlaceholder');
+const storyViewerUsername = document.getElementById('storyViewerUsername');
+const storyViewerTime = document.getElementById('storyViewerTime');
+const storyViewerImage = document.getElementById('storyViewerImage');
+const storyViewerClose = document.getElementById('storyViewerClose');
+const storyNavLeft = document.getElementById('storyNavLeft');
+const storyNavRight = document.getElementById('storyNavRight');
+
 lucide.createIcons();
 
 let currentUser = null;
@@ -54,6 +68,12 @@ let editingPostId = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
 let searchTimeout;
+
+let groupedStories = [];
+let currentStoryGroupIndex = 0;
+let currentStoryIndex = 0;
+let storyTimer = null;
+const STORY_DURATION = 5000;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -66,6 +86,7 @@ onAuthStateChanged(auth, async (user) => {
   if (userDoc.exists()) currentProfile = userDoc.data();
 
   startListeningToPosts();
+  startListeningToStories(user.uid);
 });
 
 logoutBtn.addEventListener('click', async () => {
@@ -461,78 +482,53 @@ document.addEventListener('click', (e) => {
     searchResults.classList.add('hidden');
   }
 });
-import { collection as sCollection, addDoc as sAddDoc, query as sQuery, where as sWhere, orderBy as sOrderBy, onSnapshot as sOnSnapshot, doc as sDoc, updateDoc as sUpdateDoc, arrayUnion as sArrayUnion, serverTimestamp as sServerTimestamp, getDoc as sGetDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
-import { ref as sRef, uploadString as sUploadString, getDownloadURL as sGetDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
-const storiesBar = document.getElementById('storiesBar');
-const storyPhotoInput = document.getElementById('storyPhotoInput');
+// ===== Storie =====
+function startListeningToStories(myUid) {
+  getDoc(doc(db, 'users', myUid)).then(myDoc => {
+    const myData = myDoc.exists() ? myDoc.data() : {};
+    const following = myData.following || [];
+    const relevantUids = [myUid, ...following];
 
-const storyViewer = document.getElementById('storyViewer');
-const storyProgressBar = document.getElementById('storyProgressBar');
-const storyViewerAvatar = document.getElementById('storyViewerAvatar');
-const storyViewerPlaceholder = document.getElementById('storyViewerPlaceholder');
-const storyViewerUsername = document.getElementById('storyViewerUsername');
-const storyViewerTime = document.getElementById('storyViewerTime');
-const storyViewerImage = document.getElementById('storyViewerImage');
-const storyViewerClose = document.getElementById('storyViewerClose');
-const storyNavLeft = document.getElementById('storyNavLeft');
-const storyNavRight = document.getElementById('storyNavRight');
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-let groupedStories = [];
-let currentStoryGroupIndex = 0;
-let currentStoryIndex = 0;
-let storyTimer = null;
-const STORY_DURATION = 5000;
+    const storiesQuery = query(
+      collection(db, 'stories'),
+      where('uid', 'in', relevantUids.slice(0, 30)),
+      orderBy('createdAt', 'desc')
+    );
 
-// Ascolto storie attive (ultime 24h) di me stesso + chi seguo
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
+    onSnapshot(storiesQuery, (snapshot) => {
+      const active = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => {
+          const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
+          return created > cutoff;
+        });
 
-  const myDoc = await sGetDoc(sDoc(db, 'users', user.uid));
-  const myData = myDoc.exists() ? myDoc.data() : {};
-  const following = myData.following || [];
-  const relevantUids = [user.uid, ...following];
-
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-  const storiesQuery = sQuery(
-    sCollection(db, 'stories'),
-    sWhere('uid', 'in', relevantUids.slice(0, 30)), // limite Firestore: max 30 valori in "in"
-    sOrderBy('createdAt', 'desc')
-  );
-
-  sOnSnapshot(storiesQuery, (snapshot) => {
-    const active = snapshot.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(s => {
-        const created = s.createdAt?.toDate ? s.createdAt.toDate() : new Date();
-        return created > cutoff;
+      const groups = {};
+      active.forEach(story => {
+        if (!groups[story.uid]) {
+          groups[story.uid] = {
+            uid: story.uid,
+            username: story.username,
+            logoUrl: story.logoUrl,
+            stories: []
+          };
+        }
+        groups[story.uid].stories.push(story);
       });
 
-    // Raggruppa per utente
-    const groups = {};
-    active.forEach(story => {
-      if (!groups[story.uid]) {
-        groups[story.uid] = {
-          uid: story.uid,
-          username: story.username,
-          logoUrl: story.logoUrl,
-          stories: []
-        };
-      }
-      groups[story.uid].stories.push(story);
-    });
+      groupedStories = Object.values(groups).sort((a, b) => {
+        if (a.uid === myUid) return -1;
+        if (b.uid === myUid) return 1;
+        return 0;
+      });
 
-    // Ordina: le tue prime, poi gli altri per storia più recente
-    groupedStories = Object.values(groups).sort((a, b) => {
-      if (a.uid === user.uid) return -1;
-      if (b.uid === user.uid) return 1;
-      return 0;
+      renderStoriesBar(myUid);
     });
-
-    renderStoriesBar(user.uid);
   });
-});
+}
 
 function renderStoriesBar(myUid) {
   const myGroup = groupedStories.find(g => g.uid === myUid);
@@ -540,21 +536,20 @@ function renderStoriesBar(myUid) {
 
   let html = '';
 
-  // Cerchio "Tua storia"
   html += `
-  <div class="story-circle-wrap">
-    <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
-      ${currentProfile.logoUrl
-        ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
-        : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
-      }
-      ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
-    </button>
-    <span class="story-username-label">La tua storia</span>
-  </div>
-`;
+    <div class="story-circle-wrap">
+      <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
+        ${currentProfile.logoUrl
+          ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
+          : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+        }
+        ${!myGroup ? `<span class="story-add-badge">+</span>` : ''}
+      </button>
+      <span class="story-username-label">La tua storia</span>
+    </div>
+  `;
 
-  others.forEach((group, idx) => {
+  others.forEach((group) => {
     const seen = allSeen(group, myUid);
     html += `
       <div class="story-circle-wrap">
@@ -592,7 +587,6 @@ function allSeen(group, myUid) {
   return group.stories.every(s => (s.viewedBy || []).includes(myUid));
 }
 
-// Caricamento nuova storia
 storyPhotoInput.addEventListener('change', async () => {
   const file = storyPhotoInput.files[0];
   if (!file || !currentUser) return;
@@ -600,17 +594,17 @@ storyPhotoInput.addEventListener('change', async () => {
   try {
     const compressed = await compressImage(file, 1080, 0.8);
     const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
-    const storyRef = sRef(storage, storyPath);
-    await sUploadString(storyRef, compressed, 'data_url');
-    const mediaUrl = await sGetDownloadURL(storyRef);
+    const storyRef = ref(storage, storyPath);
+    await uploadString(storyRef, compressed, 'data_url');
+    const mediaUrl = await getDownloadURL(storyRef);
 
-    await sAddDoc(sCollection(db, 'stories'), {
+    await addDoc(collection(db, 'stories'), {
       uid: currentUser.uid,
       username: currentProfile.username || currentUser.email.split('@')[0],
       logoUrl: currentProfile.logoUrl || '',
       mediaUrl,
       viewedBy: [],
-      createdAt: sServerTimestamp()
+      createdAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Errore caricamento storia:', error);
@@ -619,7 +613,6 @@ storyPhotoInput.addEventListener('change', async () => {
   }
 });
 
-// ===== Visualizzatore storie =====
 function openStoryViewer(groupIdx) {
   currentStoryGroupIndex = groupIdx;
   currentStoryIndex = 0;
@@ -633,7 +626,6 @@ function showCurrentStory() {
 
   const story = group.stories[currentStoryIndex];
   if (!story) {
-    // Passa al gruppo successivo
     if (currentStoryGroupIndex < groupedStories.length - 1) {
       currentStoryGroupIndex++;
       currentStoryIndex = 0;
@@ -647,8 +639,12 @@ function showCurrentStory() {
   storyViewerUsername.textContent = `@${group.username}`;
   storyViewerImage.src = story.mediaUrl;
 
-  if (group.logoUrl) {
-    storyViewerAvatar.src = group.logoUrl;
+  const avatarToShow = group.uid === currentUser.uid
+    ? (currentProfile.logoUrl || group.logoUrl)
+    : group.logoUrl;
+
+  if (avatarToShow) {
+    storyViewerAvatar.src = avatarToShow;
     storyViewerAvatar.classList.remove('hidden');
     storyViewerPlaceholder.classList.add('hidden');
   } else {
@@ -662,10 +658,9 @@ function showCurrentStory() {
 
   renderProgressBars(group.stories.length, currentStoryIndex);
 
-  // Segna come vista
   if (currentUser && !(story.viewedBy || []).includes(currentUser.uid)) {
-    sUpdateDoc(sDoc(db, 'stories', story.id), {
-      viewedBy: sArrayUnion(currentUser.uid)
+    updateDoc(doc(db, 'stories', story.id), {
+      viewedBy: arrayUnion(currentUser.uid)
     }).catch(() => {});
   }
 
