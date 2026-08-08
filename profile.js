@@ -364,7 +364,11 @@ function renderProfilePosts() {
             </div>
           </div>
         </div>
-        <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
+        ${(post.media && post.media.length > 0 ? post.media : [{type:'photo', url: post.photoUrl}]).map(m =>
+  m.type === 'video'
+    ? `<video src="${m.url}" class="post-photo" controls></video>`
+    : `<img src="${m.url}" class="post-photo" alt="Post" loading="lazy" />`
+).join('')}
         ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
         <div class="post-actions">
           <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">

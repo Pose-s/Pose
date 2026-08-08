@@ -5,7 +5,7 @@ import {
   serverTimestamp, doc, getDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove,
   where, getDocs, increment
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { getStorage, ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 
 const firebaseConfig = {
@@ -30,7 +30,7 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 const postForm = document.getElementById('postForm');
 const publishBtn = document.getElementById('publishBtn');
 const photoInput = document.getElementById('photoInput');
-const photoPreview = document.getElementById('photoPreview');
+const mediaPreviewStrip = document.getElementById('mediaPreviewStrip');
 const captionInput = document.getElementById('captionInput');
 const postsGrid = document.getElementById('postsGrid');
 const postsLoader = document.getElementById('postsLoader');
@@ -84,6 +84,9 @@ let activeCommentsPostId = null;
 let unsubscribeComments = null;
 let searchTimeout;
 
+let pendingNewFiles = [];
+let existingEditMedia = [];
+
 let groupedStories = [];
 let currentStoryGroupIndex = 0;
 let currentStoryIndex = 0;
@@ -120,89 +123,176 @@ postModal.addEventListener('click', (e) => { if (e.target === postModal) closeMo
 
 function openCreateModal() {
   editingPostId = null;
+  pendingNewFiles = [];
+  existingEditMedia = [];
   postModalTitle.textContent = 'Crea un nuovo post';
   publishBtn.textContent = 'Pubblica';
-  photoInput.required = true;
   postForm.reset();
-  photoPreview.classList.add('hidden');
+  renderMediaPreview();
   postModal.classList.remove('hidden');
 }
 
 function closeModal() {
   postModal.classList.add('hidden');
   postForm.reset();
-  photoPreview.classList.add('hidden');
+  pendingNewFiles = [];
+  existingEditMedia = [];
+  renderMediaPreview();
   editingPostId = null;
 }
-
-photoInput.addEventListener('change', () => {
-  const file = photoInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    photoPreview.src = e.target.result;
-    photoPreview.classList.remove('hidden');
-  };
-  reader.readAsDataURL(file);
-});
 
 function openEditModal(postId) {
   const post = postsCache.get(postId);
   if (!post) return;
 
   editingPostId = postId;
+  pendingNewFiles = [];
+  existingEditMedia = getPostMedia(post).map(m => ({ ...m }));
   postModalTitle.textContent = 'Modifica post';
   publishBtn.textContent = 'Salva modifiche';
-  photoInput.required = false;
-  photoInput.value = '';
   captionInput.value = post.caption || '';
-  photoPreview.src = post.photoUrl;
-  photoPreview.classList.remove('hidden');
+  renderMediaPreview();
   postModal.classList.remove('hidden');
+}
+
+function getPostMedia(post) {
+  if (post.media && post.media.length > 0) return post.media;
+  if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
+  return [];
+}
+
+photoInput.addEventListener('change', () => {
+  const files = Array.from(photoInput.files);
+
+  files.forEach(file => {
+    if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
+    pendingNewFiles.push(file);
+  });
+
+  photoInput.value = '';
+  renderMediaPreview();
+});
+
+function renderMediaPreview() {
+  const existingHtml = existingEditMedia.map((m, idx) => `
+    <div class="media-thumb" data-existing-idx="${idx}">
+      ${m.type === 'video'
+        ? `<video src="${m.url}" class="media-thumb-content"></video>`
+        : `<img src="${m.url}" class="media-thumb-content" alt="" />`
+      }
+      <button type="button" class="media-thumb-remove" data-existing-idx="${idx}"><i data-lucide="x"></i></button>
+      <div class="media-thumb-move">
+        <button type="button" class="media-move-btn" data-dir="up" data-existing-idx="${idx}"><i data-lucide="chevron-left"></i></button>
+        <button type="button" class="media-move-btn" data-dir="down" data-existing-idx="${idx}"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  const newHtml = pendingNewFiles.map((file, idx) => {
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video');
+    return `
+      <div class="media-thumb media-thumb-new">
+        ${isVideo
+          ? `<video src="${url}" class="media-thumb-content"></video>`
+          : `<img src="${url}" class="media-thumb-content" alt="" />`
+        }
+        <button type="button" class="media-thumb-remove" data-new-idx="${idx}"><i data-lucide="x"></i></button>
+      </div>
+    `;
+  }).join('');
+
+  mediaPreviewStrip.innerHTML = existingHtml + newHtml;
+  lucide.createIcons();
+
+  mediaPreviewStrip.querySelectorAll('.media-thumb-remove[data-existing-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      existingEditMedia.splice(parseInt(btn.dataset.existingIdx), 1);
+      renderMediaPreview();
+    });
+  });
+
+  mediaPreviewStrip.querySelectorAll('.media-thumb-remove[data-new-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingNewFiles.splice(parseInt(btn.dataset.newIdx), 1);
+      renderMediaPreview();
+    });
+  });
+
+  mediaPreviewStrip.querySelectorAll('.media-move-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.existingIdx);
+      const dir = btn.dataset.dir;
+      const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= existingEditMedia.length) return;
+      [existingEditMedia[idx], existingEditMedia[targetIdx]] = [existingEditMedia[targetIdx], existingEditMedia[idx]];
+      renderMediaPreview();
+    });
+  });
+}
+
+async function uploadSingleMedia(file) {
+  const isVideo = file.type.startsWith('video');
+
+  if (isVideo) {
+    const videoPath = `videos/${currentUser.uid}_${Date.now()}_${Math.random().toString(36).slice(2)}.mp4`;
+    const videoRef = ref(storage, videoPath);
+    await uploadBytes(videoRef, file);
+    const url = await getDownloadURL(videoRef);
+    return { type: 'video', url, path: videoPath };
+  } else {
+    const compressed = await compressImage(file);
+    const photoPath = `photos/${currentUser.uid}_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+    const photoRef = ref(storage, photoPath);
+    await uploadString(photoRef, compressed, 'data_url');
+    const url = await getDownloadURL(photoRef);
+    return { type: 'photo', url, path: photoPath };
+  }
 }
 
 postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser) return;
 
-  const photoFile = photoInput.files[0];
-  if (!editingPostId && !photoFile) return;
+  const totalMedia = existingEditMedia.length + pendingNewFiles.length;
+  if (totalMedia === 0) {
+    alert('Aggiungi almeno una foto o un video.');
+    return;
+  }
 
   publishBtn.disabled = true;
   publishBtn.textContent = editingPostId ? 'Salvataggio...' : 'Pubblicazione in corso...';
 
   try {
+    const uploadedNew = [];
+    for (const file of pendingNewFiles) {
+      uploadedNew.push(await uploadSingleMedia(file));
+    }
+
+    const finalMedia = [...existingEditMedia, ...uploadedNew];
+
     if (editingPostId) {
-      const updateData = { caption: captionInput.value.trim() };
+      const oldPost = postsCache.get(editingPostId);
+      const oldMedia = getPostMedia(oldPost);
+      const removedMedia = oldMedia.filter(om => !finalMedia.some(fm => fm.path === om.path));
+      removedMedia.forEach(m => {
+        if (m.path) deleteObject(ref(storage, m.path)).catch(() => {});
+      });
 
-      if (photoFile) {
-        const compressed = await compressImage(photoFile);
-        const photoPath = `photos/${currentUser.uid}_${Date.now()}.jpg`;
-        const photoRef = ref(storage, photoPath);
-        await uploadString(photoRef, compressed, 'data_url');
-        updateData.photoUrl = await getDownloadURL(photoRef);
-        updateData.photoPath = photoPath;
-
-        const oldPost = postsCache.get(editingPostId);
-        if (oldPost?.photoPath) {
-          deleteObject(ref(storage, oldPost.photoPath)).catch(() => {});
-        }
-      }
-
-      await updateDoc(doc(db, 'posts', editingPostId), updateData);
+      await updateDoc(doc(db, 'posts', editingPostId), {
+        caption: captionInput.value.trim(),
+        media: finalMedia,
+        photoUrl: finalMedia[0]?.url || '',
+        photoPath: finalMedia[0]?.path || ''
+      });
     } else {
-      const compressed = await compressImage(photoFile);
-      const photoPath = `photos/${currentUser.uid}_${Date.now()}.jpg`;
-      const photoRef = ref(storage, photoPath);
-      await uploadString(photoRef, compressed, 'data_url');
-      const photoUrl = await getDownloadURL(photoRef);
-
       await addDoc(collection(db, 'posts'), {
         uid: currentUser.uid,
         authorName: currentProfile.username || currentUser.email.split('@')[0],
         logoUrl: currentProfile.logoUrl || '',
-        photoUrl,
-        photoPath,
+        media: finalMedia,
+        photoUrl: finalMedia[0]?.url || '',
+        photoPath: finalMedia[0]?.path || '',
         caption: captionInput.value.trim(),
         likes: [],
         commentCount: 0,
@@ -273,7 +363,7 @@ function startListeningToPosts() {
               </div>
             ` : ''}
           </div>
-          <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
+          ${renderMediaCarousel(getPostMedia(post), id)}
           ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
           <div class="post-actions">
             <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
@@ -291,10 +381,45 @@ function startListeningToPosts() {
 
     lucide.createIcons();
     attachPostListeners();
+    attachCarouselListeners();
   }, (error) => {
     postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
     postsGrid.innerHTML = '<p style="color:#ef4444;">Errore nel caricamento dei post.</p>';
+  });
+}
+
+function renderMediaCarousel(mediaItems, postId) {
+  if (mediaItems.length === 0) return '';
+
+  const slides = mediaItems.map(m =>
+    m.type === 'video'
+      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
+      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
+  ).join('');
+
+  const dots = mediaItems.length > 1
+    ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="carousel-container" data-carousel-id="${postId}">
+      <div class="carousel-track">${slides}</div>
+      ${dots}
+    </div>
+  `;
+}
+
+function attachCarouselListeners() {
+  document.querySelectorAll('.carousel-container').forEach(container => {
+    const track = container.querySelector('.carousel-track');
+    const dots = container.querySelectorAll('.carousel-dot');
+    if (dots.length === 0) return;
+
+    track.addEventListener('scroll', () => {
+      const idx = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    });
   });
 }
 
@@ -324,11 +449,14 @@ function attachPostListeners() {
       if (!confirm('Vuoi eliminare questo post?')) return;
 
       const postId = btn.dataset.id;
-      const photoPath = btn.dataset.photopath;
+      const post = postsCache.get(postId);
+      const mediaList = getPostMedia(post);
 
       try {
         await deleteDoc(doc(db, 'posts', postId));
-        if (photoPath) deleteObject(ref(storage, photoPath)).catch(() => {});
+        mediaList.forEach(m => {
+          if (m.path) deleteObject(ref(storage, m.path)).catch(() => {});
+        });
       } catch (error) {
         console.error('Errore durante l\'eliminazione:', error);
         alert('Errore durante l\'eliminazione del post.');
@@ -546,7 +674,6 @@ function startListeningToStories(myUid) {
 
       renderStoriesBar(myUid);
 
-      // Se il visualizzatore è aperto, aggiorna dati in tempo reale (es. contatore visualizzazioni)
       if (!storyViewer.classList.contains('hidden')) {
         refreshCurrentStoryLiveData();
       }
@@ -778,7 +905,6 @@ storyViewerClose.addEventListener('click', closeStoryViewer);
 storyNavRight.addEventListener('click', nextStory);
 storyNavLeft.addEventListener('click', prevStory);
 
-// ===== Like sulla storia (solo per chi non è proprietario) =====
 storyLikeBtn.addEventListener('click', async () => {
   const data = getCurrentStoryData();
   if (!data || !data.story) return;
@@ -809,7 +935,6 @@ storyLikeBtn.addEventListener('click', async () => {
   }
 });
 
-// ===== Commento alla storia (solo per chi non è proprietario) =====
 async function sendStoryComment() {
   const data = getCurrentStoryData();
   if (!data || !data.story) return;
@@ -850,7 +975,6 @@ storyCommentInput.addEventListener('keydown', (e) => {
 storyCommentInput.addEventListener('focus', pauseStoryTimer);
 storyCommentInput.addEventListener('blur', () => { if (!isStoryPaused) startStoryTimer(); });
 
-// ===== Pannello visualizzazioni (solo proprietario) =====
 storyViewersBtn.addEventListener('click', async () => {
   const data = getCurrentStoryData();
   if (!data || !data.story) return;
