@@ -269,7 +269,15 @@ async function openChat(convId, otherUid) {
       } else if (m.type === 'audio') {
         contentHtml = `<audio controls src="${m.audioUrl}" class="chat-audio-msg"></audio>`;
       } else if (m.type === 'sticker') {
-        contentHtml = `<span class="chat-sticker-msg">${m.sticker}</span>`;
+        contentHtml = `
+    <div class="shared-post-card">
+      ${m.postPhotoUrl ? `<img src="${m.postPhotoUrl}" class="shared-post-img" alt="" />` : ''}
+      <div class="shared-post-info">
+        <span class="shared-post-author">@${escapeHtml(m.postAuthor || '')}</span>
+        ${m.postCaption ? `<p class="shared-post-caption">${escapeHtml(m.postCaption)}</p>` : ''}
+      </div>
+    </div>
+  `;
       } else {
         contentHtml = escapeHtml(m.text || '');
       }

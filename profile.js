@@ -10,7 +10,6 @@ import { compressImage, escapeHtml, formatDate } from './utils.js';
 
 lucide.createIcons();
 
-// ===== Riferimenti header profilo =====
 const profileUsername = document.getElementById('profileUsername');
 const currentLogo = document.getElementById('currentLogo');
 const logoPlaceholder = document.getElementById('logoPlaceholder');
@@ -19,7 +18,6 @@ const statFollowers = document.getElementById('statFollowers');
 const statFollowing = document.getElementById('statFollowing');
 const profileBio = document.getElementById('profileBio');
 
-// ===== Riferimenti form modifica profilo =====
 const editProfileToggleBtn = document.getElementById('editProfileToggleBtn');
 const editProfileCard = document.getElementById('editProfileCard');
 const editLogoPreview = document.getElementById('editLogoPreview');
@@ -36,11 +34,9 @@ const saveProfileBtn = document.getElementById('saveProfileBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 
-// ===== Riferimenti sezione post del profilo =====
 const profilePostsGrid = document.getElementById('profilePostsGrid');
 const profilePostsLoader = document.getElementById('profilePostsLoader');
 
-// ===== Riferimenti modale modifica post =====
 const postModal = document.getElementById('postModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const postForm = document.getElementById('postForm');
@@ -49,12 +45,17 @@ const photoInput = document.getElementById('photoInput');
 const photoPreview = document.getElementById('photoPreview');
 const captionInput = document.getElementById('captionInput');
 
-// ===== Riferimenti modale commenti =====
 const commentsModal = document.getElementById('commentsModal');
 const closeCommentsBtn = document.getElementById('closeCommentsBtn');
 const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentInput = document.getElementById('commentInput');
+
+const shareModal = document.getElementById('shareModal');
+const closeShareBtn = document.getElementById('closeShareBtn');
+const shareSearchInput = document.getElementById('shareSearchInput');
+const shareEmptyMsg = document.getElementById('shareEmptyMsg');
+const shareFriendsList = document.getElementById('shareFriendsList');
 
 let currentUser = null;
 let currentLogoUrl = '';
@@ -64,12 +65,13 @@ let postsOrderList = [];
 let editingPostId = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
+let sharingPostId = null;
+let allShareFriends = [];
 
 settingsBtn.addEventListener('click', () => {
   window.location.href = 'settings.html';
 });
 
-// ===== Autenticazione e caricamento profilo =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = 'login.html';
@@ -108,7 +110,6 @@ function updateAvatarDisplay(url, imgEl, placeholderEl) {
   }
 }
 
-// ===== Controllo disponibilità username mentre si scrive =====
 let usernameCheckTimeout;
 usernameEditInput.addEventListener('input', () => {
   clearTimeout(usernameCheckTimeout);
@@ -130,7 +131,6 @@ usernameEditInput.addEventListener('input', () => {
   }, 400);
 });
 
-// ===== Toggle form di modifica profilo =====
 editProfileToggleBtn.addEventListener('click', () => {
   editProfileCard.classList.toggle('hidden');
 });
@@ -282,7 +282,47 @@ postForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Lista post del profilo (con ordine personalizzabile) =====
+// ===== Lista post del profilo =====
+function getPostMedia(post) {
+  if (post.media && post.media.length > 0) return post.media;
+  if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
+  return [];
+}
+
+function renderMediaCarousel(mediaItems, postId) {
+  if (mediaItems.length === 0) return '';
+
+  const slides = mediaItems.map(m =>
+    m.type === 'video'
+      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
+      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
+  ).join('');
+
+  const dots = mediaItems.length > 1
+    ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="carousel-container" data-carousel-id="${postId}">
+      <div class="carousel-track">${slides}</div>
+      ${dots}
+    </div>
+  `;
+}
+
+function attachCarouselListeners() {
+  document.querySelectorAll('.carousel-container').forEach(container => {
+    const track = container.querySelector('.carousel-track');
+    const dots = container.querySelectorAll('.carousel-dot');
+    if (dots.length === 0) return;
+
+    track.addEventListener('scroll', () => {
+      const idx = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    });
+  });
+}
+
 function startListeningToOwnPosts(uid) {
   const postsQuery = query(
     collection(db, 'posts'),
@@ -308,7 +348,6 @@ function startListeningToOwnPosts(uid) {
       fetchedIds.push(docSnap.id);
     });
 
-    // Applica ordine personalizzato salvato, se presente
     const userDoc = await getDoc(doc(db, 'users', uid));
     const savedOrder = userDoc.exists() ? (userDoc.data().postOrder || []) : [];
 
@@ -358,17 +397,19 @@ function renderProfilePosts() {
               <button class="menu-item edit-post-btn" data-id="${id}">
                 <i data-lucide="pencil"></i> Modifica
               </button>
+              <button class="menu-item repost-story-btn" data-id="${id}">
+                <i data-lucide="clapperboard"></i> Pubblica nelle storie
+              </button>
+              <button class="menu-item repost-btn" data-id="${id}">
+                <i data-lucide="repeat"></i> Reposta
+              </button>
               <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
                 <i data-lucide="trash-2"></i> Elimina
               </button>
             </div>
           </div>
         </div>
-        ${(post.media && post.media.length > 0 ? post.media : [{type:'photo', url: post.photoUrl}]).map(m =>
-  m.type === 'video'
-    ? `<video src="${m.url}" class="post-photo" controls></video>`
-    : `<img src="${m.url}" class="post-photo" alt="Post" loading="lazy" />`
-).join('')}
+        ${renderMediaCarousel(getPostMedia(post), id)}
         ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
         <div class="post-actions">
           <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
@@ -379,6 +420,9 @@ function renderProfilePosts() {
             <i data-lucide="message-circle"></i>
             <span>${commentCount}</span>
           </button>
+          <button class="action-btn share-btn" data-id="${id}">
+            <i data-lucide="send"></i>
+          </button>
         </div>
       </article>
     `;
@@ -386,6 +430,7 @@ function renderProfilePosts() {
 
   lucide.createIcons();
   attachProfilePostListeners();
+  attachCarouselListeners();
 }
 
 async function savePostOrder() {
@@ -460,6 +505,22 @@ function attachProfilePostListeners() {
     });
   });
 
+  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      alert('Funzione "Pubblica nelle storie" in arrivo!');
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .repost-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      alert('Funzione "Reposta" in arrivo!');
+    });
+  });
+
   document.querySelectorAll('#profilePostsGrid .like-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.id;
@@ -475,6 +536,10 @@ function attachProfilePostListeners() {
 
   document.querySelectorAll('#profilePostsGrid .comment-btn').forEach(btn => {
     btn.addEventListener('click', () => openComments(btn.dataset.id));
+  });
+
+  document.querySelectorAll('#profilePostsGrid .share-btn').forEach(btn => {
+    btn.addEventListener('click', () => openShareModal(btn.dataset.id));
   });
 }
 
@@ -550,119 +615,101 @@ commentForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Notifiche (invariato dal codice precedente) =====
-const notificationBtn = document.getElementById('notificationBtn');
-const notifBadgeDot = document.getElementById('notifBadgeDot');
-const notificationsPanel = document.getElementById('notificationsPanel');
-const notificationsList = document.getElementById('notificationsList');
-
-let unreadNotifIds = [];
-
-onAuthStateChanged(auth, (user) => {
-  if (!user) return;
-
-  const notifQuery = query(
-    collection(db, 'notifications'),
-    where('toUid', '==', user.uid),
-    orderBy('createdAt', 'desc'),
-    limit(30)
-  );
-
-  onSnapshot(notifQuery, (snapshot) => {
-    unreadNotifIds = [];
-
-    if (snapshot.empty) {
-      notificationsList.innerHTML = '<p class="search-empty">Nessuna notifica per ora.</p>';
-      notifBadgeDot.classList.add('hidden');
-      notificationBtn.classList.remove('has-notifications');
-      return;
-    }
-
-    let hasUnread = false;
-
-    notificationsList.innerHTML = snapshot.docs.map(docSnap => {
-      const n = docSnap.data();
-      if (!n.read) {
-        hasUnread = true;
-        unreadNotifIds.push(docSnap.id);
-      }
-
-      let text;
-if (n.type === 'like') {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like a un tuo post`;
-} else if (n.type === 'story_like') {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like alla tua storia`;
-} else if (n.type === 'story_comment') {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
-} else {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
+// ===== Invia post nei messaggi =====
+function conversationIdFor(uidA, uidB) {
+  return [uidA, uidB].sort().join('_');
 }
 
-      return `
-        <div class="notification-item ${n.read ? '' : 'unread'}">
-          ${n.fromLogoUrl
-            ? `<img src="${n.fromLogoUrl}" class="notification-avatar" alt="" />`
-            : `<div class="notification-avatar-placeholder"><i data-lucide="user"></i></div>`
-          }
-          <span class="notification-text">${text}</span>
-        </div>
-      `;
-    }).join('');
+async function openShareModal(postId) {
+  sharingPostId = postId;
+  shareModal.classList.remove('hidden');
+  shareSearchInput.value = '';
+  shareFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
 
-    lucide.createIcons();
+  const freshDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const freshData = freshDoc.exists() ? freshDoc.data() : {};
+  const following = freshData.following || [];
+  const followers = freshData.followers || [];
+  const mutualIds = following.filter(id => followers.includes(id));
 
-    if (hasUnread) {
-      notifBadgeDot.classList.remove('hidden');
-      notificationBtn.classList.add('has-notifications');
-    } else {
-      notifBadgeDot.classList.add('hidden');
-      notificationBtn.classList.remove('has-notifications');
-    }
-  });
-});
-
-notificationBtn.addEventListener('click', async (e) => {
-  e.stopPropagation();
-  notificationsPanel.classList.toggle('hidden');
-
-  if (!notificationsPanel.classList.contains('hidden') && unreadNotifIds.length > 0) {
-    for (const id of unreadNotifIds) {
-      updateDoc(doc(db, 'notifications', id), { read: true }).catch(() => {});
-    }
+  if (mutualIds.length === 0) {
+    shareFriendsList.innerHTML = '';
+    shareEmptyMsg.classList.remove('hidden');
+    allShareFriends = [];
+    return;
   }
-});
+  shareEmptyMsg.classList.add('hidden');
 
-document.addEventListener('click', (e) => {
-  if (!notificationsPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
-    notificationsPanel.classList.add('hidden');
+  allShareFriends = await Promise.all(mutualIds.map(async (uid) => {
+    const d = await getDoc(doc(db, 'users', uid));
+    return { uid, data: d.exists() ? d.data() : {} };
+  }));
+
+  renderShareFriends(allShareFriends);
+}
+
+function renderShareFriends(users) {
+  if (users.length === 0) {
+    shareFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
+    return;
   }
-});
-import { collection as mCollection, query as mQuery, where as mWhere, onSnapshot as mOnSnapshot } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+  shareFriendsList.innerHTML = users.map(u => `
+    <div class="conversation-item" data-uid="${u.uid}">
+      ${u.data.logoUrl ? `<img src="${u.data.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+      <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.data.username || 'utente')}</span></div>
+    </div>
+  `).join('');
+  lucide.createIcons();
 
-const msgBadgeDot = document.getElementById('msgBadgeDot');
-
-onAuthStateChanged(auth, (user) => {
-  if (!user) return;
-
-  const convQuery = mQuery(
-    mCollection(db, 'conversations'),
-    mWhere('participants', 'array-contains', user.uid)
-  );
-
-  mOnSnapshot(convQuery, (snapshot) => {
-    let totalUnread = 0;
-    snapshot.docs.forEach(docSnap => {
-      const conv = docSnap.data();
-      totalUnread += (conv.unread && conv.unread[user.uid]) || 0;
+  document.querySelectorAll('#shareFriendsList .conversation-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      await sendPostToChat(item.dataset.uid, sharingPostId);
+      shareModal.classList.add('hidden');
     });
-const messagesBtn = document.getElementById('messagesBtn');
-
-if (totalUnread > 0) {
-  msgBadgeDot.classList.remove('hidden');
-  messagesBtn.classList.add('has-notifications');
-} else {
-  msgBadgeDot.classList.add('hidden');
-  messagesBtn.classList.remove('has-notifications');
-}
   });
+}
+
+shareSearchInput.addEventListener('input', () => {
+  const term = shareSearchInput.value.trim().toLowerCase();
+  if (!term) { renderShareFriends(allShareFriends); return; }
+  renderShareFriends(allShareFriends.filter(u => (u.data.username || '').toLowerCase().includes(term)));
 });
+
+closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+
+async function sendPostToChat(otherUid, postId) {
+  const postDoc = await getDoc(doc(db, 'posts', postId));
+  if (!postDoc.exists()) return;
+  const post = postDoc.data();
+  const media = (post.media && post.media.length > 0) ? post.media : (post.photoUrl ? [{ url: post.photoUrl }] : []);
+
+  const convId = conversationIdFor(currentUser.uid, otherUid);
+  const convRef = doc(db, 'conversations', convId);
+  const convDoc = await getDoc(convRef);
+
+  if (!convDoc.exists()) {
+    await setDoc(convRef, {
+      participants: [currentUser.uid, otherUid],
+      lastMessage: '',
+      lastMessageAt: serverTimestamp(),
+      unread: { [currentUser.uid]: 0, [otherUid]: 0 }
+    });
+  }
+
+  await addDoc(collection(db, 'conversations', convId, 'messages'), {
+    from: currentUser.uid,
+    type: 'shared_post',
+    postId,
+    postPhotoUrl: media[0]?.url || '',
+    postCaption: post.caption || '',
+    postAuthor: post.authorName || '',
+    createdAt: serverTimestamp()
+  });
+
+  await updateDoc(convRef, {
+    lastMessage: '📤 Post condiviso',
+    lastMessageAt: serverTimestamp(),
+    [`unread.${otherUid}`]: increment(1)
+  });
+}

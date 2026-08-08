@@ -31,5 +31,16 @@
 
     <p class="legal-disclaimer">⚠️ Questo è un testo generico a scopo dimostrativo. Prima di un lancio pubblico del sito, ti consigliamo di far revisionare questo documento da un professionista legale, specialmente considerando la raccolta di dati di minorenni.</p>
   </div>
+  <div class="modal-overlay hidden" id="shareModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Invia post</h2>
+      <button class="modal-close" id="closeShareBtn"><i data-lucide="x"></i></button>
+    </div>
+    <input type="text" id="shareSearchInput" placeholder="Cerca..." class="search-input-modal" />
+    <p class="otp-info hidden" id="shareEmptyMsg">Puoi inviare messaggi solo a chi ti segue e che segui anche tu.</p>
+    <div id="shareFriendsList"></div>
+  </div>
+</div>
 </body>
 </html>

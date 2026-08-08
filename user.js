@@ -1,4 +1,4 @@
-import { auth, db } from './firebase-config.js';
+import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy,
@@ -26,6 +26,12 @@ const reportDetailsInput = document.getElementById('reportDetailsInput');
 const reportMsg = document.getElementById('reportMsg');
 const reportSubmitBtn = document.getElementById('reportSubmitBtn');
 
+const shareModal = document.getElementById('shareModal');
+const closeShareBtn = document.getElementById('closeShareBtn');
+const shareSearchInput = document.getElementById('shareSearchInput');
+const shareEmptyMsg = document.getElementById('shareEmptyMsg');
+const shareFriendsList = document.getElementById('shareFriendsList');
+
 lucide.createIcons();
 
 let currentUser = null;
@@ -35,6 +41,9 @@ let viewedUsername = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
 let currentlyBlocked = false;
+let postsCacheUser = new Map();
+let sharingPostId = null;
+let allShareFriends = [];
 
 logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
@@ -87,6 +96,46 @@ onAuthStateChanged(auth, async (user) => {
 
 function conversationIdFor(uidA, uidB) {
   return [uidA, uidB].sort().join('_');
+}
+
+function getPostMedia(post) {
+  if (post.media && post.media.length > 0) return post.media;
+  if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
+  return [];
+}
+
+function renderMediaCarousel(mediaItems, postId) {
+  if (mediaItems.length === 0) return '';
+
+  const slides = mediaItems.map(m =>
+    m.type === 'video'
+      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
+      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
+  ).join('');
+
+  const dots = mediaItems.length > 1
+    ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="carousel-container" data-carousel-id="${postId}">
+      <div class="carousel-track">${slides}</div>
+      ${dots}
+    </div>
+  `;
+}
+
+function attachCarouselListeners() {
+  document.querySelectorAll('.carousel-container').forEach(container => {
+    const track = container.querySelector('.carousel-track');
+    const dots = container.querySelectorAll('.carousel-dot');
+    if (dots.length === 0) return;
+
+    track.addEventListener('scroll', () => {
+      const idx = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    });
+  });
 }
 
 async function renderProfile() {
@@ -264,6 +313,7 @@ function startListeningToUserPosts() {
   onSnapshot(postsQuery, (snapshot) => {
     loader.classList.add('hidden');
     document.getElementById('userStatPosts').textContent = snapshot.size;
+    postsCacheUser.clear();
 
     if (snapshot.empty) {
       grid.innerHTML = '<p style="color:#94a3b8;">Nessun post pubblicato.</p>';
@@ -273,6 +323,8 @@ function startListeningToUserPosts() {
     grid.innerHTML = snapshot.docs.map(docSnap => {
       const post = docSnap.data();
       const id = docSnap.id;
+      postsCacheUser.set(id, post);
+
       const likes = post.likes || [];
       const isLiked = likes.includes(currentUser.uid);
       const commentCount = post.commentCount || 0;
@@ -281,8 +333,21 @@ function startListeningToUserPosts() {
         <article class="post-card">
           <div class="post-header">
             <span class="post-date">${formatDate(post.createdAt)}</span>
+            <div class="post-menu">
+              <button class="post-menu-btn" data-id="${id}">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="post-menu-dropdown hidden" data-menu-for="${id}">
+                <button class="menu-item repost-story-btn" data-id="${id}">
+                  <i data-lucide="clapperboard"></i> Pubblica nelle storie
+                </button>
+                <button class="menu-item repost-btn" data-id="${id}">
+                  <i data-lucide="repeat"></i> Reposta
+                </button>
+              </div>
+            </div>
           </div>
-          <img src="${post.photoUrl}" class="post-photo" alt="Post" loading="lazy" />
+          ${renderMediaCarousel(getPostMedia(post), id)}
           ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
           <div class="post-actions">
             <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
@@ -293,6 +358,9 @@ function startListeningToUserPosts() {
               <i data-lucide="message-circle"></i>
               <span>${commentCount}</span>
             </button>
+            <button class="action-btn share-btn" data-id="${id}">
+              <i data-lucide="send"></i>
+            </button>
           </div>
         </article>
       `;
@@ -300,10 +368,37 @@ function startListeningToUserPosts() {
 
     lucide.createIcons();
     attachPostActionListeners();
+    attachCarouselListeners();
   });
 }
 
 function attachPostActionListeners() {
+  document.querySelectorAll('#userPostsGrid .post-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
+      closeAllPostMenus();
+      dropdown.classList.toggle('hidden');
+    });
+  });
+
+  document.querySelectorAll('#userPostsGrid .repost-story-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPostMenus();
+      alert('Funzione "Pubblica nelle storie" in arrivo!');
+    });
+  });
+
+  document.querySelectorAll('#userPostsGrid .repost-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPostMenus();
+      alert('Funzione "Reposta" in arrivo!');
+    });
+  });
+
   document.querySelectorAll('#userPostsGrid .like-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.id;
@@ -335,8 +430,19 @@ function attachPostActionListeners() {
   document.querySelectorAll('#userPostsGrid .comment-btn').forEach(btn => {
     btn.addEventListener('click', () => openComments(btn.dataset.id));
   });
+
+  document.querySelectorAll('#userPostsGrid .share-btn').forEach(btn => {
+    btn.addEventListener('click', () => openShareModal(btn.dataset.id));
+  });
 }
 
+function closeAllPostMenus() {
+  document.querySelectorAll('#userPostsGrid .post-menu-dropdown').forEach(d => d.classList.add('hidden'));
+}
+
+document.addEventListener('click', closeAllPostMenus);
+
+// ===== Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
@@ -401,6 +507,8 @@ commentForm.addEventListener('submit', async (e) => {
     console.error('Errore nell\'invio del commento:', error);
   }
 });
+
+// ===== Segnalazione =====
 reportBtn.addEventListener('click', () => {
   userOptionsDropdown.classList.add('hidden');
   reportModal.classList.remove('hidden');
@@ -442,3 +550,97 @@ reportForm.addEventListener('submit', async (e) => {
     reportSubmitBtn.textContent = 'Invia segnalazione';
   }
 });
+
+// ===== Invia post nei messaggi =====
+async function openShareModal(postId) {
+  sharingPostId = postId;
+  shareModal.classList.remove('hidden');
+  shareSearchInput.value = '';
+  shareFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
+
+  const freshDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const freshData = freshDoc.exists() ? freshDoc.data() : {};
+  const following = freshData.following || [];
+  const followers = freshData.followers || [];
+  const mutualIds = following.filter(id => followers.includes(id));
+
+  if (mutualIds.length === 0) {
+    shareFriendsList.innerHTML = '';
+    shareEmptyMsg.classList.remove('hidden');
+    allShareFriends = [];
+    return;
+  }
+  shareEmptyMsg.classList.add('hidden');
+
+  allShareFriends = await Promise.all(mutualIds.map(async (uid) => {
+    const d = await getDoc(doc(db, 'users', uid));
+    return { uid, data: d.exists() ? d.data() : {} };
+  }));
+
+  renderShareFriends(allShareFriends);
+}
+
+function renderShareFriends(users) {
+  if (users.length === 0) {
+    shareFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
+    return;
+  }
+  shareFriendsList.innerHTML = users.map(u => `
+    <div class="conversation-item" data-uid="${u.uid}">
+      ${u.data.logoUrl ? `<img src="${u.data.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+      <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.data.username || 'utente')}</span></div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+
+  document.querySelectorAll('#shareFriendsList .conversation-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      await sendPostToChat(item.dataset.uid, sharingPostId);
+      shareModal.classList.add('hidden');
+    });
+  });
+}
+
+shareSearchInput.addEventListener('input', () => {
+  const term = shareSearchInput.value.trim().toLowerCase();
+  if (!term) { renderShareFriends(allShareFriends); return; }
+  renderShareFriends(allShareFriends.filter(u => (u.data.username || '').toLowerCase().includes(term)));
+});
+
+closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+
+async function sendPostToChat(otherUid, postId) {
+  const postData = postsCacheUser.get(postId);
+  if (!postData) return;
+  const media = getPostMedia(postData);
+
+  const convId = conversationIdFor(currentUser.uid, otherUid);
+  const convRef = doc(db, 'conversations', convId);
+  const convDoc = await getDoc(convRef);
+
+  if (!convDoc.exists()) {
+    await setDoc(convRef, {
+      participants: [currentUser.uid, otherUid],
+      lastMessage: '',
+      lastMessageAt: serverTimestamp(),
+      unread: { [currentUser.uid]: 0, [otherUid]: 0 }
+    });
+  }
+
+  await addDoc(collection(db, 'conversations', convId, 'messages'), {
+    from: currentUser.uid,
+    type: 'shared_post',
+    postId,
+    postPhotoUrl: media[0]?.url || '',
+    postCaption: postData.caption || '',
+    postAuthor: viewedUsername || '',
+    createdAt: serverTimestamp()
+  });
+
+  await updateDoc(convRef, {
+    lastMessage: '📤 Post condiviso',
+    lastMessageAt: serverTimestamp(),
+    [`unread.${otherUid}`]: increment(1)
+  });
+}

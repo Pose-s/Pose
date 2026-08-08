@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut, getAuth } from "https://www.gstatic.com/fi
 import {
   getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit,
   serverTimestamp, doc, getDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove,
-  where, getDocs, increment
+  where, getDocs, increment, setDoc
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { getStorage, ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
@@ -347,22 +347,29 @@ function startListeningToPosts() {
               <span class="post-author">${escapeHtml(post.authorName || 'Utente')}</span>
               <span class="post-date">${formatDate(post.createdAt)}</span>
             </div>
-            ${isOwner ? `
-              <div class="post-menu">
-                <button class="post-menu-btn" data-id="${id}">
-                  <i data-lucide="more-vertical"></i>
-                </button>
-                <div class="post-menu-dropdown hidden" data-menu-for="${id}">
-                  <button class="menu-item edit-post-btn" data-id="${id}">
-                    <i data-lucide="pencil"></i> Modifica
-                  </button>
-                  <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
-                    <i data-lucide="trash-2"></i> Elimina
-                  </button>
-                </div>
-              </div>
-            ` : ''}
-          </div>
+           <div class="post-menu">
+  <button class="post-menu-btn" data-id="${id}">
+    <i data-lucide="more-vertical"></i>
+  </button>
+  <div class="post-menu-dropdown hidden" data-menu-for="${id}">
+    ${isOwner ? `
+      <button class="menu-item edit-post-btn" data-id="${id}">
+        <i data-lucide="pencil"></i> Modifica
+      </button>
+    ` : ''}
+    <button class="menu-item repost-story-btn" data-id="${id}">
+      <i data-lucide="clapperboard"></i> Pubblica nelle storie
+    </button>
+    <button class="menu-item repost-btn" data-id="${id}">
+      <i data-lucide="repeat"></i> Reposta
+    </button>
+    ${isOwner ? `
+      <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
+        <i data-lucide="trash-2"></i> Elimina
+      </button>
+    ` : ''}
+  </div>
+</div>
           ${renderMediaCarousel(getPostMedia(post), id)}
           ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
           <div class="post-actions">
@@ -374,6 +381,9 @@ function startListeningToPosts() {
               <i data-lucide="message-circle"></i>
               <span>${commentCount}</span>
             </button>
+            <button class="action-btn share-btn" data-id="${id}">
+    <i data-lucide="send"></i>
+  </button>
           </div>
         </article>
       `;
@@ -495,16 +505,26 @@ function attachPostListeners() {
     });
   });
 
-  document.querySelectorAll('.comment-btn').forEach(btn => {
-    btn.addEventListener('click', () => openComments(btn.dataset.id));
+  document.querySelectorAll('.comment-btn')
+  document.querySelectorAll('.share-btn').forEach(btn => {
+  btn.addEventListener('click', () => openShareModal(btn.dataset.id));
+});
+
+document.querySelectorAll('.repost-story-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAllMenus();
+    alert('Funzione "Pubblica nelle storie" in arrivo!');
   });
-}
+});
 
-function closeAllMenus() {
-  document.querySelectorAll('.post-menu-dropdown').forEach(d => d.classList.add('hidden'));
-}
-
-document.addEventListener('click', closeAllMenus);
+document.querySelectorAll('.repost-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAllMenus();
+    alert('Funzione "Reposta" in arrivo!');
+  });
+});
 
 // ===== Commenti sui post =====
 function openComments(postId) {
@@ -1074,5 +1094,110 @@ function loadStoryCommentsForOwner(storyId) {
         </div>
       `;
     }).join('');
+  });
+}
+const shareModal = document.getElementById('shareModal');
+const closeShareBtn = document.getElementById('closeShareBtn');
+const shareSearchInput = document.getElementById('shareSearchInput');
+const shareEmptyMsg = document.getElementById('shareEmptyMsg');
+const shareFriendsList = document.getElementById('shareFriendsList');
+let sharingPostId = null;
+let allShareFriends = [];
+
+function conversationIdFor(uidA, uidB) {
+  return [uidA, uidB].sort().join('_');
+}
+
+async function openShareModal(postId) {
+  sharingPostId = postId;
+  shareModal.classList.remove('hidden');
+  shareSearchInput.value = '';
+  shareFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
+
+  const freshDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const freshData = freshDoc.exists() ? freshDoc.data() : {};
+  const following = freshData.following || [];
+  const followers = freshData.followers || [];
+  const mutualIds = following.filter(id => followers.includes(id));
+
+  if (mutualIds.length === 0) {
+    shareFriendsList.innerHTML = '';
+    shareEmptyMsg.classList.remove('hidden');
+    allShareFriends = [];
+    return;
+  }
+  shareEmptyMsg.classList.add('hidden');
+
+  allShareFriends = await Promise.all(mutualIds.map(async (uid) => {
+    const d = await getDoc(doc(db, 'users', uid));
+    return { uid, data: d.exists() ? d.data() : {} };
+  }));
+
+  renderShareFriends(allShareFriends);
+}
+
+function renderShareFriends(users) {
+  if (users.length === 0) {
+    shareFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
+    return;
+  }
+  shareFriendsList.innerHTML = users.map(u => `
+    <div class="conversation-item" data-uid="${u.uid}">
+      ${u.data.logoUrl ? `<img src="${u.data.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+      <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.data.username || 'utente')}</span></div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+
+  document.querySelectorAll('#shareFriendsList .conversation-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      await sendPostToChat(item.dataset.uid, sharingPostId);
+      shareModal.classList.add('hidden');
+    });
+  });
+}
+
+shareSearchInput.addEventListener('input', () => {
+  const term = shareSearchInput.value.trim().toLowerCase();
+  if (!term) { renderShareFriends(allShareFriends); return; }
+  renderShareFriends(allShareFriends.filter(u => (u.data.username || '').toLowerCase().includes(term)));
+});
+
+closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+
+async function sendPostToChat(otherUid, postId) {
+  const postDoc = await getDoc(doc(db, 'posts', postId));
+  if (!postDoc.exists()) return;
+  const post = postDoc.data();
+  const media = (post.media && post.media.length > 0) ? post.media : (post.photoUrl ? [{ url: post.photoUrl }] : []);
+
+  const convId = conversationIdFor(currentUser.uid, otherUid);
+  const convRef = doc(db, 'conversations', convId);
+  const convDoc = await getDoc(convRef);
+
+  if (!convDoc.exists()) {
+    await setDoc(convRef, {
+      participants: [currentUser.uid, otherUid],
+      lastMessage: '',
+      lastMessageAt: serverTimestamp(),
+      unread: { [currentUser.uid]: 0, [otherUid]: 0 }
+    });
+  }
+
+  await addDoc(collection(db, 'conversations', convId, 'messages'), {
+    from: currentUser.uid,
+    type: 'shared_post',
+    postId,
+    postPhotoUrl: media[0]?.url || '',
+    postCaption: post.caption || '',
+    postAuthor: post.authorName || '',
+    createdAt: serverTimestamp()
+  });
+
+  await updateDoc(convRef, {
+    lastMessage: '📤 Post condiviso',
+    lastMessageAt: serverTimestamp(),
+    [`unread.${otherUid}`]: increment(1)
   });
 }
