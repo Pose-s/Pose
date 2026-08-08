@@ -79,6 +79,7 @@ onAuthStateChanged(auth, async (user) => {
   currentProfile = myDoc.exists() ? myDoc.data() : {};
 
   startListeningToConversations();
+  checkUrlForDirectChat();
 });
 
 function conversationIdFor(uidA, uidB) {
@@ -595,4 +596,17 @@ async function sendMessage(messageData, previewText) {
   } catch (error) {
     console.error('Errore invio messaggio:', error);
   }
+}
+// Apre automaticamente una chat se si arriva da un link tipo messages.html?u=username
+async function checkUrlForDirectChat() {
+  const params = new URLSearchParams(window.location.search);
+  const username = params.get('u');
+  if (!username || !currentUser) return;
+
+  const usernameDoc = await getDoc(doc(db, 'usernames', username.toLowerCase()));
+  if (!usernameDoc.exists()) return;
+
+  const otherUid = usernameDoc.data().uid;
+  const convId = conversationIdFor(currentUser.uid, otherUid);
+  openChat(convId, otherUid);
 }

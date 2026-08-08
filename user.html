@@ -46,6 +46,17 @@
     </aside>
 
     <main class="main-content">
+      <div class="user-top-bar">
+        <div class="post-menu">
+          <button type="button" class="post-menu-btn" id="userOptionsBtn">
+            <i data-lucide="more-vertical"></i>
+          </button>
+          <div class="post-menu-dropdown hidden" id="userOptionsDropdown">
+            <button type="button" class="menu-item menu-item-danger" id="blockToggleBtn">Blocca</button>
+          </div>
+        </div>
+      </div>
+
       <div class="profile-page" id="profilePageContent">
         <div class="loader">
           <div class="spinner"></div>
@@ -75,5 +86,6 @@
 
   <script type="module" src="user.js"></script>
   <script src="sidebar-toggle.js"></script>
+  <script src="cookie-banner.js"></script>
 </body>
 </html>

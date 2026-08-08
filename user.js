@@ -14,6 +14,10 @@ const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentInput = document.getElementById('commentInput');
 
+const userOptionsBtn = document.getElementById('userOptionsBtn');
+const userOptionsDropdown = document.getElementById('userOptionsDropdown');
+const blockToggleBtn = document.getElementById('blockToggleBtn');
+
 lucide.createIcons();
 
 let currentUser = null;
@@ -22,10 +26,20 @@ let viewedUid = null;
 let viewedUsername = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
+let currentlyBlocked = false;
 
 logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
   window.location.href = 'login.html';
+});
+
+userOptionsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  userOptionsDropdown.classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => {
+  userOptionsDropdown.classList.add('hidden');
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -55,7 +69,6 @@ onAuthStateChanged(auth, async (user) => {
   viewedUid = usernameDoc.data().uid;
   viewedUsername = username.toLowerCase();
 
-  // Se è il mio stesso profilo, reindirizzo alla pagina "Profilo"
   if (viewedUid === currentUser.uid) {
     window.location.href = 'profile.html';
     return;
@@ -64,6 +77,10 @@ onAuthStateChanged(auth, async (user) => {
   renderProfile();
 });
 
+function conversationIdFor(uidA, uidB) {
+  return [uidA, uidB].sort().join('_');
+}
+
 async function renderProfile() {
   const userDoc = await getDoc(doc(db, 'users', viewedUid));
   const data = userDoc.exists() ? userDoc.data() : {};
@@ -71,6 +88,15 @@ async function renderProfile() {
   const followers = data.followers || [];
   const following = data.following || [];
   const isFollowing = followers.includes(currentUser.uid);
+  const isFollowedByThem = following.includes(currentUser.uid);
+  const isMutual = isFollowing && isFollowedByThem;
+
+  const myFreshDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const myData = myFreshDoc.exists() ? myFreshDoc.data() : {};
+  const myBlocked = myData.blockedUsers || [];
+  currentlyBlocked = myBlocked.includes(viewedUid);
+
+  blockToggleBtn.textContent = currentlyBlocked ? 'Sblocca' : 'Blocca';
 
   profilePageContent.innerHTML = `
     <div class="profile-top-row">
@@ -103,9 +129,14 @@ async function renderProfile() {
 
     <p class="profile-bio">${escapeHtml(data.bio || '')}</p>
 
-    <button type="button" class="edit-profile-btn ${isFollowing ? 'following-btn' : ''}" id="followBtn">
-      ${isFollowing ? 'Segui già' : 'Segui'}
-    </button>
+    <div class="profile-action-row">
+      <button type="button" class="btn-compact ${isFollowing ? 'following-btn' : ''}" id="followBtn">
+        ${isFollowing ? 'Segui già' : 'Segui'}
+      </button>
+      <button type="button" class="btn-compact" id="messageBtn">
+        Messaggio
+      </button>
+    </div>
 
     <div class="profile-posts-section">
       <div id="userPostsLoader" class="loader hidden">
@@ -119,7 +150,60 @@ async function renderProfile() {
 
   document.getElementById('followBtn').addEventListener('click', toggleFollow);
 
-  startListeningToUserPosts();
+  document.getElementById('messageBtn').addEventListener('click', async () => {
+    if (!isMutual) {
+      alert('Potete scrivervi solo se vi seguite a vicenda.');
+      return;
+    }
+
+    const convId = conversationIdFor(currentUser.uid, viewedUid);
+    const convRef = doc(db, 'conversations', convId);
+    const convDoc = await getDoc(convRef);
+
+    if (!convDoc.exists()) {
+      await setDoc(convRef, {
+        participants: [currentUser.uid, viewedUid],
+        lastMessage: '',
+        lastMessageAt: serverTimestamp(),
+        unread: { [currentUser.uid]: 0, [viewedUid]: 0 }
+      });
+    }
+
+    window.location.href = `messages.html?u=${encodeURIComponent(viewedUsername)}`;
+  });
+
+  blockToggleBtn.onclick = async () => {
+    blockToggleBtn.disabled = true;
+
+    try {
+      if (currentlyBlocked) {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          blockedUsers: arrayRemove(viewedUid)
+        });
+      } else {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          blockedUsers: arrayUnion(viewedUid)
+        });
+        await updateDoc(doc(db, 'users', viewedUid), {
+          followers: arrayRemove(currentUser.uid)
+        }).catch(() => {});
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          following: arrayRemove(viewedUid)
+        }).catch(() => {});
+      }
+      userOptionsDropdown.classList.add('hidden');
+      renderProfile();
+    } catch (error) {
+      console.error('Errore blocco utente:', error);
+      blockToggleBtn.disabled = false;
+    }
+  };
+
+  if (!currentlyBlocked) {
+    startListeningToUserPosts();
+  } else {
+    document.getElementById('userPostsGrid').innerHTML = '<p style="color:#94a3b8;">Hai bloccato questo utente.</p>';
+  }
 }
 
 async function toggleFollow() {
@@ -245,7 +329,6 @@ function attachPostActionListeners() {
   });
 }
 
-// ===== Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');

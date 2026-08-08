@@ -2398,3 +2398,8 @@ a.search-result-item {
 [data-theme="dark"] .main-content {
   background-color: #0f172a;
 }
+.user-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
