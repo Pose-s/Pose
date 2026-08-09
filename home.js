@@ -856,8 +856,7 @@ function renderStoriesBar(myUid) {
   const seen = allSeen(group, myUid);
   html += `
     <div class="story-circle-wrap">
-      <button type="button" class="story-circle ${seen ? 'seen' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
-          ${group.logoUrl
+      <button type="button" class="story-circle ${seen ? 'no-ring' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
             ? `<img src="${group.logoUrl}" class="story-avatar-img" alt="" />`
             : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
           }
