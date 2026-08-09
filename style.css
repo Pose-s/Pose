@@ -3110,3 +3110,31 @@ a.post-author:hover {
   border-color: #7c3aed;
   background: rgba(124,58,237,0.3);
 }
+.story-circle.no-ring {
+  background: transparent;
+  padding: 0;
+}
+html, body {
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    position: fixed;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .main-content {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar {
+    height: 100vh;
+    height: 100dvh;
+  }
+}

@@ -838,7 +838,7 @@ function renderStoriesBar(myUid) {
   html += `
     <div class="story-circle-wrap">
       <div class="story-circle-outer">
-        <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
+        <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'no-ring' : 'unseen') : 'no-story'}" id="myStoryCircle">
           ${currentProfile.logoUrl
             ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
             : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
@@ -853,10 +853,10 @@ function renderStoriesBar(myUid) {
   `;
 
   others.forEach((group) => {
-    const seen = allSeen(group, myUid);
-    html += `
-      <div class="story-circle-wrap">
-        <button type="button" class="story-circle ${seen ? 'seen' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
+  const seen = allSeen(group, myUid);
+  html += `
+    <div class="story-circle-wrap">
+      <button type="button" class="story-circle ${seen ? 'seen' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
           ${group.logoUrl
             ? `<img src="${group.logoUrl}" class="story-avatar-img" alt="" />`
             : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
