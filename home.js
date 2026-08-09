@@ -914,21 +914,47 @@ const storyEditorCloseBtn = document.getElementById('storyEditorCloseBtn');
 const storyDrawToolBtn = document.getElementById('storyDrawToolBtn');
 const storyEraserToolBtn = document.getElementById('storyEraserToolBtn');
 const storyTextToolBtn = document.getElementById('storyTextToolBtn');
-const storyColorSwatches = document.getElementById('storyColorSwatches');
+const colorPickerBtn = document.getElementById('colorPickerBtn');
+const storyColorInput = document.getElementById('storyColorInput');
 const storyUndoBtn = document.getElementById('storyUndoBtn');
 const storyEditorDiscardBtn = document.getElementById('storyEditorDiscardBtn');
 const storyEditorPublishBtn = document.getElementById('storyEditorPublishBtn');
 const storyTextInput = document.getElementById('storyTextInput');
+const textStyleBar = document.getElementById('textStyleBar');
+
+const TEXT_STYLES = [
+  { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
+  { id: 'serif', label: 'Serif', font: '700 38px Georgia, serif' },
+  { id: 'hand', label: 'Corsivo', font: 'italic 40px cursive' },
+  { id: 'outline', label: 'Contorno', font: '700 40px Inter, sans-serif', outline: true },
+  { id: 'pill', label: 'Evidenziato', font: '700 34px Inter, sans-serif', pill: true },
+  { id: 'shadow', label: 'Ombra', font: '700 38px Inter, sans-serif', shadow: true },
+  { id: 'spaced', label: 'Spaziato', font: '600 32px Inter, sans-serif', spaced: true, upper: true },
+  { id: 'thin', label: 'Sottile', font: '300 38px Inter, sans-serif' },
+  { id: 'mono', label: 'Monospace', font: '700 34px "Courier New", monospace' },
+  { id: 'gradient', label: 'Sfumato', font: '800 40px Inter, sans-serif', gradient: true }
+];
 
 let storyCtx = null;
 let storyBaseImage = null;
 let storyCurrentTool = null;
 let storyCurrentColor = '#ffffff';
+let storyCurrentTextStyle = TEXT_STYLES[0].id;
 let storyIsDrawing = false;
 let storyUndoStack = [];
 let storyTextLayers = [];
+let storyDrawingLayer = null;
 let storyDraggingTextIdx = null;
 let storyDragOffset = { x: 0, y: 0 };
+let storyPendingTextPos = null;
+
+function getContrastColor(hex) {
+  const r = parseInt(hex.substr(1, 2), 16);
+  const g = parseInt(hex.substr(3, 2), 16);
+  const b = parseInt(hex.substr(5, 2), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#000000' : '#ffffff';
+}
 
 function openStoryEditor(imageDataUrl) {
   const img = new Image();
@@ -946,28 +972,96 @@ function openStoryEditor(imageDataUrl) {
     storyCtx = storyEditorCanvas.getContext('2d');
     storyBaseImage = img;
     storyTextLayers = [];
+    storyDrawingLayer = null;
     storyCurrentTool = null;
     redrawStoryCanvas();
     storyUndoStack = [captureStoryState()];
     storyEditor.classList.remove('hidden');
+    textStyleBar.classList.add('hidden');
   };
   img.src = imageDataUrl;
 }
 
-// Ridisegna: immagine di base (con eventuali disegni sopra, salvati come parte del bitmap) + livelli di testo separati
-let storyDrawingLayer = null;
+function drawStyledText(ctx, t) {
+  const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
+  ctx.font = style.font;
+  ctx.textBaseline = 'alphabetic';
+
+  let text = t.text;
+  if (style.upper) text = text.toUpperCase();
+
+  if (style.spaced) {
+    let x = t.x;
+    for (const char of text) {
+      if (style.outline) {
+        ctx.strokeStyle = t.color;
+        ctx.lineWidth = 2;
+        ctx.strokeText(char, x, t.y);
+      } else {
+        ctx.fillStyle = t.color;
+        ctx.fillText(char, x, t.y);
+      }
+      x += ctx.measureText(char).width + 6;
+    }
+    return;
+  }
+
+  if (style.pill) {
+    const metrics = ctx.measureText(text);
+    const padX = 14, padY = 10;
+    ctx.fillStyle = t.color;
+    const rectX = t.x - padX;
+    const rectY = t.y - 30 - padY / 2;
+    const rectW = metrics.width + padX * 2;
+    const rectH = 40 + padY;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(rectX, rectY, rectW, rectH, 10) : ctx.rect(rectX, rectY, rectW, rectH);
+    ctx.fill();
+    ctx.fillStyle = getContrastColor(t.color);
+    ctx.fillText(text, t.x, t.y);
+    return;
+  }
+
+  if (style.shadow) {
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = t.color;
+    ctx.fillText(text, t.x, t.y);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    return;
+  }
+
+  if (style.outline) {
+    ctx.strokeStyle = t.color;
+    ctx.lineWidth = 2.5;
+    ctx.strokeText(text, t.x, t.y);
+    return;
+  }
+
+  if (style.gradient) {
+    const metrics = ctx.measureText(text);
+    const gradient = ctx.createLinearGradient(t.x, 0, t.x + metrics.width, 0);
+    gradient.addColorStop(0, t.color);
+    gradient.addColorStop(1, '#ffffff');
+    ctx.fillStyle = gradient;
+    ctx.fillText(text, t.x, t.y);
+    return;
+  }
+
+  ctx.fillStyle = t.color;
+  ctx.fillText(text, t.x, t.y);
+}
 
 function redrawStoryCanvas() {
   storyCtx.clearRect(0, 0, storyEditorCanvas.width, storyEditorCanvas.height);
   storyCtx.drawImage(storyBaseImage, 0, 0, storyEditorCanvas.width, storyEditorCanvas.height);
-  if (storyDrawingLayer) {
-    storyCtx.drawImage(storyDrawingLayer, 0, 0);
-  }
-  storyTextLayers.forEach(t => {
-    storyCtx.fillStyle = t.color;
-    storyCtx.font = 'bold 36px Inter, sans-serif';
-    storyCtx.fillText(t.text, t.x, t.y);
-  });
+  if (storyDrawingLayer) storyCtx.drawImage(storyDrawingLayer, 0, 0);
+  storyTextLayers.forEach(t => drawStyledText(storyCtx, t));
 }
 
 function captureStoryState() {
@@ -1008,6 +1102,7 @@ storyDrawToolBtn.addEventListener('click', () => {
   storyDrawToolBtn.classList.toggle('active', storyCurrentTool === 'draw');
   storyEraserToolBtn.classList.remove('active');
   storyTextToolBtn.classList.remove('active');
+  textStyleBar.classList.add('hidden');
 });
 
 storyEraserToolBtn.addEventListener('click', () => {
@@ -1015,6 +1110,7 @@ storyEraserToolBtn.addEventListener('click', () => {
   storyEraserToolBtn.classList.toggle('active', storyCurrentTool === 'erase');
   storyDrawToolBtn.classList.remove('active');
   storyTextToolBtn.classList.remove('active');
+  textStyleBar.classList.add('hidden');
 });
 
 storyTextToolBtn.addEventListener('click', () => {
@@ -1022,21 +1118,38 @@ storyTextToolBtn.addEventListener('click', () => {
   storyTextToolBtn.classList.toggle('active', storyCurrentTool === 'text');
   storyDrawToolBtn.classList.remove('active');
   storyEraserToolBtn.classList.remove('active');
+
+  if (storyCurrentTool === 'text') {
+    renderTextStyleBar();
+    textStyleBar.classList.remove('hidden');
+  } else {
+    textStyleBar.classList.add('hidden');
+  }
 });
 
-storyColorSwatches.querySelectorAll('.color-swatch').forEach(sw => {
-  sw.addEventListener('click', () => {
-    storyCurrentColor = sw.dataset.color;
-    storyColorSwatches.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-    sw.classList.add('active');
+function renderTextStyleBar() {
+  textStyleBar.innerHTML = TEXT_STYLES.map(s => `
+    <button type="button" class="text-style-option ${s.id === storyCurrentTextStyle ? 'active' : ''}" data-style="${s.id}">${s.label}</button>
+  `).join('');
+
+  textStyleBar.querySelectorAll('.text-style-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      storyCurrentTextStyle = btn.dataset.style;
+      renderTextStyleBar();
+    });
   });
+}
+
+colorPickerBtn.addEventListener('click', () => storyColorInput.click());
+storyColorInput.addEventListener('input', () => {
+  storyCurrentColor = storyColorInput.value;
+  colorPickerBtn.style.background = storyCurrentColor;
 });
 
 storyUndoBtn.addEventListener('click', () => {
   if (storyUndoStack.length <= 1) return;
   storyUndoStack.pop();
-  const prev = storyUndoStack[storyUndoStack.length - 1];
-  restoreStoryState(prev);
+  restoreStoryState(storyUndoStack[storyUndoStack.length - 1]);
 });
 
 function ensureDrawingLayer() {
@@ -1059,6 +1172,8 @@ function getStoryCanvasPos(e) {
 function findTextAt(pos) {
   for (let i = storyTextLayers.length - 1; i >= 0; i--) {
     const t = storyTextLayers[i];
+    const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
+    storyCtx.font = style.font;
     const width = storyCtx.measureText(t.text).width;
     if (pos.x >= t.x - 10 && pos.x <= t.x + width + 10 && pos.y <= t.y + 10 && pos.y >= t.y - 40) {
       return i;
@@ -1079,7 +1194,6 @@ function storyPointerDown(e) {
     return;
   }
 
-  // Nessuno strumento attivo: prova a trascinare un testo esistente
   const idx = findTextAt(pos);
   if (idx !== -1) {
     storyDraggingTextIdx = idx;
@@ -1142,15 +1256,14 @@ storyEditorCanvas.addEventListener('touchstart', (e) => storyPointerDown(e), { p
 storyEditorCanvas.addEventListener('touchmove', (e) => storyPointerMove(e), { passive: true });
 storyEditorCanvas.addEventListener('touchend', storyPointerUp);
 
-let storyPendingTextPos = null;
-
 storyTextInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && storyPendingTextPos) {
     storyTextLayers.push({
       text: storyTextInput.value,
       x: storyPendingTextPos.x,
       y: storyPendingTextPos.y,
-      color: storyCurrentColor
+      color: storyCurrentColor,
+      styleId: storyCurrentTextStyle
     });
     redrawStoryCanvas();
     storyTextInput.classList.add('hidden');

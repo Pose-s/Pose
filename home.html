@@ -204,16 +204,12 @@
   <button type="button" class="camera-icon-btn" id="storyDrawToolBtn"><i data-lucide="pencil"></i></button>
   <button type="button" class="camera-icon-btn" id="storyEraserToolBtn"><i data-lucide="eraser"></i></button>
   <button type="button" class="camera-icon-btn" id="storyTextToolBtn"><i data-lucide="type"></i></button>
-  <div class="camera-color-swatches" id="storyColorSwatches">
-    <button type="button" class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></button>
-    <button type="button" class="color-swatch" style="background:#ef4444" data-color="#ef4444"></button>
-    <button type="button" class="color-swatch" style="background:#22c55e" data-color="#22c55e"></button>
-    <button type="button" class="color-swatch" style="background:#3b82f6" data-color="#3b82f6"></button>
-    <button type="button" class="color-swatch" style="background:#eab308" data-color="#eab308"></button>
-    <button type="button" class="color-swatch" style="background:#7c3aed" data-color="#7c3aed"></button>
-  </div>
-  <button type="button" class="camera-icon-btn" id="storyUndoBtn" title="Annulla ultima modifica"><i data-lucide="undo-2"></i></button>
+  <button type="button" class="color-picker-btn" id="colorPickerBtn" style="background:#ffffff"></button>
+  <input type="color" id="storyColorInput" class="hidden-color-input" value="#ffffff" />
+  <button type="button" class="camera-icon-btn" id="storyUndoBtn" title="Annulla"><i data-lucide="undo-2"></i></button>
 </div>
+
+<div class="text-style-bar hidden" id="textStyleBar"></div>
   
   <div class="camera-edit-bottom">
     <button type="button" class="camera-discard-btn" id="storyEditorDiscardBtn"><i data-lucide="trash-2"></i></button>
