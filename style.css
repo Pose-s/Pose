@@ -3032,3 +3032,7 @@ a.post-author:hover {
 .reply-preview.hidden {
   display: none !important;
 }
+.notif-dot {
+  fill: #334155;
+  stroke: none;
+}
