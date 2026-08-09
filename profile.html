@@ -198,14 +198,6 @@
     <div id="commentsPostMedia"></div>
     <p id="commentsPostCaption" class="post-caption hidden"></p>
     <div class="comments-list" id="commentsList"></div>
-    <form id="commentForm" class="comment-form">
-      <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
-      <button type="submit" class="comment-send-btn">
-        <i data-lucide="send"></i>
-      </button>
-    </form>
-  </div>
-</div>
         <button class="modal-close" id="closeCommentsBtn">
           <i data-lucide="x"></i>
         </button>
@@ -222,10 +214,8 @@
 
   <script type="module" src="profile.js"></script>
   <script src="sidebar-toggle.js"></script>
-  (function() {
-  if (localStorage.getItem('pose_cookie_consent')) return;
-
-  const banner = document.createElement('div');
+  <script src="sidebar-toggle.js"></script>
+<script src="cookie-banner.js"></script>
   banner.className = 'cookie-banner';
   banner.innerHTML = `
     <p>Questo sito utilizza cookie tecnici necessari al funzionamento (login, sessione). Continuando la navigazione accetti il loro utilizzo. <a href="privacy.html">Privacy Policy</a></p>

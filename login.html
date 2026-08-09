@@ -58,10 +58,8 @@
   </div>
 
   <script type="module" src="login.js"></script>
-  (function() {
-  if (localStorage.getItem('pose_cookie_consent')) return;
-
-  const banner = document.createElement('div');
+  <script src="sidebar-toggle.js"></script>
+<script src="cookie-banner.js"></script>
   banner.className = 'cookie-banner';
   banner.innerHTML = `
     <p>Questo sito utilizza cookie tecnici necessari al funzionamento (login, sessione). Continuando la navigazione accetti il loro utilizzo. <a href="privacy.html">Privacy Policy</a></p>
