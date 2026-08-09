@@ -272,14 +272,14 @@ async function openChat(convId, otherUid) {
   contentHtml = `<span class="chat-sticker-msg">${m.sticker}</span>`;
 } else if (m.type === 'shared_post') {
   contentHtml = `
-    <div class="shared-post-card">
+   <a href="user.html?u=${encodeURIComponent(m.postAuthor || '')}" class="shared-post-card" style="text-decoration:none; display:block;">
       ${m.postPhotoUrl ? `<img src="${m.postPhotoUrl}" class="shared-post-img" alt="" />` : ''}
       <div class="shared-post-info">
         <span class="shared-post-author">@${escapeHtml(m.postAuthor || '')}</span>
         ${m.postCaption ? `<p class="shared-post-caption">${escapeHtml(m.postCaption)}</p>` : ''}
       </div>
-    </div>
-  `;
+    </a>
+  `;  
 } else {
   contentHtml = escapeHtml(m.text || '');
 }

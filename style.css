@@ -3024,3 +3024,11 @@ a.post-author:hover {
 .save-btn.saved i {
   fill: #eab308;
 }
+.sticker-panel.hidden {
+  display: none !important;
+}
+
+.recording-bar.hidden,
+.reply-preview.hidden {
+  display: none !important;
+}
