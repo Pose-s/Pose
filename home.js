@@ -814,6 +814,7 @@ function startListeningToStories(myUid) {
       });
 
       groupedStories = Object.values(groups).sort((a, b) => {
+        Object.values(groups).forEach(g => g.stories.reverse());
         if (a.uid === myUid) return -1;
         if (b.uid === myUid) return 1;
         return 0;
@@ -895,15 +896,168 @@ function allSeen(group, myUid) {
   return group.stories.every(s => (s.viewedBy || []).includes(myUid));
 }
 
-storyPhotoInput.addEventListener('change', async () => {
+storyPhotoInput.addEventListener('change', () => {
   const file = storyPhotoInput.files[0];
-  if (!file || !currentUser) return;
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => openStoryEditor(e.target.result);
+  reader.readAsDataURL(file);
+
+  storyPhotoInput.value = '';
+});
+
+// ===== Editor storia =====
+const storyEditor = document.getElementById('storyEditor');
+const storyEditorCanvas = document.getElementById('storyEditorCanvas');
+const storyEditorCloseBtn = document.getElementById('storyEditorCloseBtn');
+const storyDrawToolBtn = document.getElementById('storyDrawToolBtn');
+const storyTextToolBtn = document.getElementById('storyTextToolBtn');
+const storyColorSwatches = document.getElementById('storyColorSwatches');
+const storyUndoBtn = document.getElementById('storyUndoBtn');
+const storyEditorDiscardBtn = document.getElementById('storyEditorDiscardBtn');
+const storyEditorPublishBtn = document.getElementById('storyEditorPublishBtn');
+const storyTextInput = document.getElementById('storyTextInput');
+
+let storyCtx = null;
+let storyCurrentTool = null;
+let storyCurrentColor = '#ffffff';
+let storyIsDrawing = false;
+let storyUndoStack = [];
+let storyPendingTextPos = null;
+
+function openStoryEditor(imageDataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    const maxW = window.innerWidth;
+    const maxH = window.innerHeight;
+    let w = img.width;
+    let h = img.height;
+    const scale = Math.min(maxW / w, maxH / h);
+    w = w * scale;
+    h = h * scale;
+
+    storyEditorCanvas.width = w;
+    storyEditorCanvas.height = h;
+    storyCtx = storyEditorCanvas.getContext('2d');
+    storyCtx.drawImage(img, 0, 0, w, h);
+    storyUndoStack = [storyEditorCanvas.toDataURL()];
+    storyCurrentTool = null;
+    storyEditor.classList.remove('hidden');
+  };
+  img.src = imageDataUrl;
+}
+
+storyEditorCloseBtn.addEventListener('click', () => {
+  storyEditor.classList.add('hidden');
+});
+storyEditorDiscardBtn.addEventListener('click', () => {
+  storyEditor.classList.add('hidden');
+});
+
+storyDrawToolBtn.addEventListener('click', () => {
+  storyCurrentTool = storyCurrentTool === 'draw' ? null : 'draw';
+  storyDrawToolBtn.classList.toggle('active', storyCurrentTool === 'draw');
+  storyTextToolBtn.classList.remove('active');
+});
+
+storyTextToolBtn.addEventListener('click', () => {
+  storyCurrentTool = storyCurrentTool === 'text' ? null : 'text';
+  storyTextToolBtn.classList.toggle('active', storyCurrentTool === 'text');
+  storyDrawToolBtn.classList.remove('active');
+});
+
+storyColorSwatches.querySelectorAll('.color-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    storyCurrentColor = sw.dataset.color;
+    storyColorSwatches.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+  });
+});
+
+function saveStoryUndo() {
+  storyUndoStack.push(storyEditorCanvas.toDataURL());
+  if (storyUndoStack.length > 15) storyUndoStack.shift();
+}
+
+storyUndoBtn.addEventListener('click', () => {
+  if (storyUndoStack.length <= 1) return;
+  storyUndoStack.pop();
+  const prev = storyUndoStack[storyUndoStack.length - 1];
+  const img = new Image();
+  img.onload = () => storyCtx.drawImage(img, 0, 0, storyEditorCanvas.width, storyEditorCanvas.height);
+  img.src = prev;
+});
+
+function getStoryCanvasPos(e) {
+  const rect = storyEditorCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const scaleX = storyEditorCanvas.width / rect.width;
+  const scaleY = storyEditorCanvas.height / rect.height;
+  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY, clientX, clientY };
+}
+
+function storyStartDraw(e) {
+  if (storyCurrentTool !== 'draw') return;
+  storyIsDrawing = true;
+  const pos = getStoryCanvasPos(e);
+  storyCtx.beginPath();
+  storyCtx.moveTo(pos.x, pos.y);
+}
+function storyMoveDraw(e) {
+  if (!storyIsDrawing || storyCurrentTool !== 'draw') return;
+  const pos = getStoryCanvasPos(e);
+  storyCtx.lineTo(pos.x, pos.y);
+  storyCtx.strokeStyle = storyCurrentColor;
+  storyCtx.lineWidth = 6;
+  storyCtx.lineCap = 'round';
+  storyCtx.stroke();
+}
+function storyEndDraw() {
+  if (storyIsDrawing) saveStoryUndo();
+  storyIsDrawing = false;
+}
+
+storyEditorCanvas.addEventListener('mousedown', storyStartDraw);
+storyEditorCanvas.addEventListener('mousemove', storyMoveDraw);
+storyEditorCanvas.addEventListener('mouseup', storyEndDraw);
+storyEditorCanvas.addEventListener('touchstart', (e) => storyStartDraw(e), { passive: true });
+storyEditorCanvas.addEventListener('touchmove', (e) => storyMoveDraw(e), { passive: true });
+storyEditorCanvas.addEventListener('touchend', storyEndDraw);
+
+storyEditorCanvas.addEventListener('click', (e) => {
+  if (storyCurrentTool !== 'text') return;
+  const pos = getStoryCanvasPos(e);
+  storyPendingTextPos = pos;
+  storyTextInput.style.left = `${pos.clientX}px`;
+  storyTextInput.style.top = `${pos.clientY}px`;
+  storyTextInput.style.color = storyCurrentColor;
+  storyTextInput.classList.remove('hidden');
+  storyTextInput.value = '';
+  storyTextInput.focus();
+});
+
+storyTextInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && storyPendingTextPos) {
+    storyCtx.fillStyle = storyCurrentColor;
+    storyCtx.font = 'bold 36px Inter, sans-serif';
+    storyCtx.fillText(storyTextInput.value, storyPendingTextPos.x, storyPendingTextPos.y);
+    storyTextInput.classList.add('hidden');
+    storyPendingTextPos = null;
+    saveStoryUndo();
+  }
+});
+
+storyEditorPublishBtn.addEventListener('click', async () => {
+  if (!currentUser) return;
+  storyEditorPublishBtn.disabled = true;
 
   try {
-    const compressed = await compressImage(file, 1080, 0.8);
+    const dataUrl = storyEditorCanvas.toDataURL('image/jpeg', 0.85);
     const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
     const storyRef = ref(storage, storyPath);
-    await uploadString(storyRef, compressed, 'data_url');
+    await uploadString(storyRef, dataUrl, 'data_url');
     const mediaUrl = await getDownloadURL(storyRef);
 
     const durationHours = parseInt(currentProfile.storyDuration || '24');
@@ -914,15 +1068,18 @@ storyPhotoInput.addEventListener('change', async () => {
       username: currentProfile.username || currentUser.email.split('@')[0],
       logoUrl: currentProfile.logoUrl || '',
       mediaUrl,
+      mediaPath: storyPath,
       viewedBy: [],
       likes: [],
       expiresAt,
       createdAt: serverTimestamp()
     });
+
+    storyEditor.classList.add('hidden');
   } catch (error) {
-    console.error('Errore caricamento storia:', error);
+    console.error('Errore pubblicazione storia:', error);
   } finally {
-    storyPhotoInput.value = '';
+    storyEditorPublishBtn.disabled = false;
   }
 });
 
@@ -1136,9 +1293,11 @@ storyCommentInput.addEventListener('keydown', (e) => {
 storyCommentInput.addEventListener('focus', pauseStoryTimer);
 storyCommentInput.addEventListener('blur', () => { if (!isStoryPaused) startStoryTimer(); });
 
-storyViewersBtn.addEventListener('click', async () => {
+async function openViewersPanel() {
   const data = getCurrentStoryData();
   if (!data || !data.story) return;
+  const isOwner = data.group.uid === currentUser.uid;
+  if (!isOwner) return;
 
   pauseStoryTimer();
   storyViewersPanel.classList.remove('hidden');
@@ -1147,6 +1306,47 @@ storyViewersBtn.addEventListener('click', async () => {
 
   await loadViewersList(data.story);
   loadStoryCommentsForOwner(data.story.id);
+}
+
+storyViewersBtn.addEventListener('click', openViewersPanel);
+
+const storyDeleteBtn = document.getElementById('storyDeleteBtn');
+storyDeleteBtn.addEventListener('click', async () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  if (!confirm('Vuoi eliminare questa storia?')) return;
+
+  try {
+    await deleteDoc(doc(db, 'stories', data.story.id));
+    if (data.story.mediaPath) {
+      deleteObject(ref(storage, data.story.mediaPath)).catch(() => {});
+    }
+  } catch (error) {
+    console.error('Errore eliminazione storia:', error);
+  }
+});
+
+// Swipe verso l'alto per aprire visualizzazioni (solo proprietario)
+let touchStartY = 0;
+storyViewer.addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+});
+storyViewer.addEventListener('touchend', (e) => {
+  const deltaY = touchStartY - e.changedTouches[0].clientY;
+  if (deltaY > 60) openViewersPanel();
+});
+
+let mouseStartY = 0;
+let isMouseSwipe = false;
+storyViewer.addEventListener('mousedown', (e) => {
+  mouseStartY = e.clientY;
+  isMouseSwipe = true;
+});
+storyViewer.addEventListener('mouseup', (e) => {
+  if (!isMouseSwipe) return;
+  isMouseSwipe = false;
+  const deltaY = mouseStartY - e.clientY;
+  if (deltaY > 60) openViewersPanel();
 });
 
 closeViewersPanelBtn.addEventListener('click', () => {
