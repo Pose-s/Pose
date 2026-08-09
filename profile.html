@@ -50,15 +50,7 @@
 
         <div class="profile-header-bar">
            <a href="messages.html" class="notification-bell-btn messages-btn" id="messagesBtn">
-  <svg viewBox="0 0 400 400" class="notif-icon">
-    <polygon class="notif-olive-fill" points="140,90 330,90 70,150 280,310 140,310" />
-    <polygon class="notif-liquid-fill" points="70,150 280,310 140,310 100,370 150,310 80,260" />
-    <polygon class="notif-liquid-fill" points="330,90 370,150 330,260 280,310" />
-    <path class="notif-outline" d="M140,90 L330,90 L370,150 L330,260 L280,310 L140,310 L100,370 L150,310 L80,260 L70,150 Z" />
-    <line class="notif-outline" x1="70" y1="150" x2="280" y2="310" />
-    <line class="notif-outline" x1="330" y1="90" x2="330" y2="260" />
-    <line class="notif-outline" x1="370" y1="150" x2="280" y2="310" />
-  </svg>
+  <img src="messages-icon-off.png" class="notif-icon" id="msgIcon" alt="Messaggi" />
   <span class="notif-badge-dot hidden" id="msgBadgeDot"></span>
 </a>
           <button type="button" class="notification-bell-btn" id="notificationBtn">
@@ -198,6 +190,14 @@
     <div id="commentsPostMedia"></div>
     <p id="commentsPostCaption" class="post-caption hidden"></p>
     <div class="comments-list" id="commentsList"></div>
+    <form id="commentForm" class="comment-form">
+      <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
+      <button type="submit" class="comment-send-btn">
+        <i data-lucide="send"></i>
+      </button>
+    </form>
+  </div>
+</div>
         <button class="modal-close" id="closeCommentsBtn">
           <i data-lucide="x"></i>
         </button>
@@ -214,6 +214,21 @@
 
   <script type="module" src="profile.js"></script>
   <script src="sidebar-toggle.js"></script>
-<script src="cookie-banner.js"></script>
+  (function() {
+  if (localStorage.getItem('pose_cookie_consent')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'cookie-banner';
+  banner.innerHTML = `
+    <p>Questo sito utilizza cookie tecnici necessari al funzionamento (login, sessione). Continuando la navigazione accetti il loro utilizzo. <a href="privacy.html">Privacy Policy</a></p>
+    <button id="cookieAcceptBtn">Ho capito</button>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('cookieAcceptBtn').addEventListener('click', () => {
+    localStorage.setItem('pose_cookie_consent', 'true');
+    banner.remove();
+  });
+})();
 </body>
 </html>

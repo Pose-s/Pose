@@ -726,6 +726,7 @@ const notificationsPanel = document.getElementById('notificationsPanel');
 const notificationsList = document.getElementById('notificationsList');
 const msgBadgeDot = document.getElementById('msgBadgeDot');
 const messagesBtn = document.getElementById('messagesBtn');
+const msgIcon = document.getElementById('msgIcon');
 
 let unreadNotifIds = [];
 
@@ -806,9 +807,11 @@ onAuthStateChanged(auth, (user) => {
     if (totalUnread > 0) {
       msgBadgeDot.classList.remove('hidden');
       messagesBtn.classList.add('has-notifications');
+      msgIcon.src = 'messages-icon-on.png';
     } else {
       msgBadgeDot.classList.add('hidden');
       messagesBtn.classList.remove('has-notifications');
+      msgIcon.src = 'messages-icon-off.png';
     }
   });
 });
