@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <script src="theme.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pose - Salvati</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <span>Pose</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="newspaper"></i>
+          <span>News</span>
+        </a>
+        <a href="home.html" class="nav-item">
+          <i data-lucide="home"></i>
+          <span>Home</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+          <i data-lucide="user"></i>
+          <span>Profilo</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="logout-btn">
+          <i data-lucide="log-out"></i> Esci
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="home-header">
+        <a href="settings.html" class="btn-compact">← Indietro</a>
+        <h1 style="font-size:20px; margin-left:12px;">Salvati</h1>
+      </header>
+
+      <div id="savedLoader" class="loader hidden">
+        <div class="spinner"></div>
+      </div>
+      <div class="posts-grid" id="savedGrid"></div>
+    </main>
+  </div>
+
+  <script type="module" src="saved.js"></script>
+  <script src="sidebar-toggle.js"></script>
+  <script src="cookie-banner.js"></script>
+</body>
+</html>

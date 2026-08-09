@@ -69,6 +69,7 @@ let activeCommentsPostId = null;
 let unsubscribeComments = null;
 let sharingPostId = null;
 let allShareFriends = [];
+let savedPostIds = new Set();
 
 settingsBtn.addEventListener('click', () => {
   window.location.href = 'settings.html';
@@ -84,6 +85,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   currentUser = user;
+  await loadSavedPosts();
   startListeningToOwnPosts(user.uid);
 
   const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -104,6 +106,38 @@ onAuthStateChanged(auth, async (user) => {
   usernameEditInput.value = currentUsername;
   updateAvatarDisplay(currentLogoUrl, editLogoPreview, editLogoPlaceholder);
 });
+
+// ===== Salvati =====
+async function loadSavedPosts() {
+  const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const data = myDoc.exists() ? myDoc.data() : {};
+  savedPostIds = new Set(data.savedPosts || []);
+}
+
+function attachSaveListeners(scopeSelector) {
+  document.querySelectorAll(`${scopeSelector} .save-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const isSaved = savedPostIds.has(postId);
+
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+        });
+        if (isSaved) {
+          savedPostIds.delete(postId);
+          btn.classList.remove('saved');
+        } else {
+          savedPostIds.add(postId);
+          btn.classList.add('saved');
+        }
+      } catch (error) {
+        console.error('Errore salvataggio post:', error);
+      }
+    });
+  });
+}
 
 function updateAvatarDisplay(url, imgEl, placeholderEl) {
   if (url) {
@@ -409,6 +443,7 @@ function renderProfilePosts() {
     const likes = post.likes || [];
     const isLiked = currentUser && likes.includes(currentUser.uid);
     const commentCount = post.commentCount || 0;
+    const isSaved = savedPostIds.has(id);
 
     return `
       <article class="post-card profile-post-card">
@@ -463,6 +498,9 @@ function renderProfilePosts() {
           <button class="action-btn share-btn" data-id="${id}">
             <i data-lucide="send"></i>
           </button>
+          <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+            <i data-lucide="bookmark"></i>
+          </button>
         </div>
       </article>
     `;
@@ -471,6 +509,7 @@ function renderProfilePosts() {
   lucide.createIcons();
   attachProfilePostListeners();
   attachCarouselListeners();
+  attachSaveListeners('#profilePostsGrid');
 }
 
 async function savePostOrder() {

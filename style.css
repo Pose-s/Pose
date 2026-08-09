@@ -3017,3 +3017,10 @@ a.post-author:hover {
   width: 12px;
   height: 12px;
 }
+.save-btn.saved {
+  color: #eab308;
+}
+
+.save-btn.saved i {
+  fill: #eab308;
+}

@@ -46,6 +46,7 @@ let currentlyBlocked = false;
 let postsCacheUser = new Map();
 let sharingPostId = null;
 let allShareFriends = [];
+let savedPostIds = new Set();
 
 logoutBtn.addEventListener('click', async () => {
   await signOut(auth);
@@ -70,6 +71,8 @@ onAuthStateChanged(auth, async (user) => {
 
   const myDoc = await getDoc(doc(db, 'users', user.uid));
   if (myDoc.exists()) currentProfile = myDoc.data();
+
+  await loadSavedPosts();
 
   const params = new URLSearchParams(window.location.search);
   const username = params.get('u');
@@ -105,6 +108,7 @@ function getPostMedia(post) {
   if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
   return [];
 }
+
 function renderMediaCarousel(mediaItems, postId) {
   if (mediaItems.length === 0) return '';
 
@@ -170,6 +174,39 @@ function attachCarouselListeners() {
     }, { passive: false });
   });
 }
+
+// ===== Salvati =====
+async function loadSavedPosts() {
+  const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const data = myDoc.exists() ? myDoc.data() : {};
+  savedPostIds = new Set(data.savedPosts || []);
+}
+
+function attachSaveListeners(scopeSelector) {
+  document.querySelectorAll(`${scopeSelector} .save-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const isSaved = savedPostIds.has(postId);
+
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+        });
+        if (isSaved) {
+          savedPostIds.delete(postId);
+          btn.classList.remove('saved');
+        } else {
+          savedPostIds.add(postId);
+          btn.classList.add('saved');
+        }
+      } catch (error) {
+        console.error('Errore salvataggio post:', error);
+      }
+    });
+  });
+}
+
 async function renderProfile() {
   const userDoc = await getDoc(doc(db, 'users', viewedUid));
   const data = userDoc.exists() ? userDoc.data() : {};
@@ -289,7 +326,7 @@ async function renderProfile() {
   };
 
   if (!currentlyBlocked) {
-    startListeningToUserPosts();
+    startListeningToUserPosts(data);
   } else {
     document.getElementById('userPostsGrid').innerHTML = '<p style="color:#94a3b8;">Hai bloccato questo utente.</p>';
   }
@@ -331,7 +368,7 @@ async function toggleFollow() {
   }
 }
 
-async function startListeningToUserPosts() {
+function startListeningToUserPosts(ownerData) {
   const postsQuery = query(
     collection(db, 'posts'),
     where('uid', '==', viewedUid),
@@ -341,8 +378,7 @@ async function startListeningToUserPosts() {
   const loader = document.getElementById('userPostsLoader');
   const grid = document.getElementById('userPostsGrid');
   loader.classList.remove('hidden');
-const ownerDoc = await getDoc(doc(db, 'users', viewedUid));
-const ownerData = ownerDoc.exists() ? ownerDoc.data() : {};
+
   onSnapshot(postsQuery, (snapshot) => {
     loader.classList.add('hidden');
     document.getElementById('userStatPosts').textContent = snapshot.size;
@@ -361,20 +397,20 @@ const ownerData = ownerDoc.exists() ? ownerDoc.data() : {};
       const likes = post.likes || [];
       const isLiked = likes.includes(currentUser.uid);
       const commentCount = post.commentCount || 0;
+      const isSaved = savedPostIds.has(id);
 
       return `
         <article class="post-card">
           <div class="post-header">
-  ${ownerData && ownerData.logoUrl
-  ? `<img src="${ownerData.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-  : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-}
-  }
-  <div class="post-header-info">
-    <a href="user.html?u=${encodeURIComponent(viewedUsername)}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(viewedUsername)}</a>
-    <span class="post-date">${formatDate(post.createdAt)}</span>
-  </div>
-  <div class="post-menu">
+            ${ownerData && ownerData.logoUrl
+              ? `<img src="${ownerData.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+              : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+            }
+            <div class="post-header-info">
+              <a href="user.html?u=${encodeURIComponent(viewedUsername)}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(viewedUsername)}</a>
+              <span class="post-date">${formatDate(post.createdAt)}</span>
+            </div>
+            <div class="post-menu">
               <button class="post-menu-btn" data-id="${id}">
                 <i data-lucide="more-vertical"></i>
               </button>
@@ -404,6 +440,9 @@ const ownerData = ownerDoc.exists() ? ownerDoc.data() : {};
             <button class="action-btn share-btn" data-id="${id}">
               <i data-lucide="send"></i>
             </button>
+            <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+              <i data-lucide="bookmark"></i>
+            </button>
           </div>
         </article>
       `;
@@ -412,6 +451,7 @@ const ownerData = ownerDoc.exists() ? ownerDoc.data() : {};
     lucide.createIcons();
     attachPostActionListeners();
     attachCarouselListeners();
+    attachSaveListeners('#userPostsGrid');
   });
 }
 

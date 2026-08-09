@@ -91,6 +91,7 @@ let editingPostId = null;
 let activeCommentsPostId = null;
 let unsubscribeComments = null;
 let searchTimeout;
+let savedPostIds = new Set();
 
 let pendingNewFiles = [];
 let existingEditMedia = [];
@@ -118,6 +119,7 @@ onAuthStateChanged(auth, async (user) => {
   const userDoc = await getDoc(doc(db, 'users', user.uid));
   if (userDoc.exists()) currentProfile = userDoc.data();
 
+  await loadSavedPosts();
   startListeningToPosts();
   startListeningToStories(user.uid);
 });
@@ -135,6 +137,38 @@ function getPostMedia(post) {
   if (post.media && post.media.length > 0) return post.media;
   if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
   return [];
+}
+
+// ===== Salvati =====
+async function loadSavedPosts() {
+  const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+  const data = myDoc.exists() ? myDoc.data() : {};
+  savedPostIds = new Set(data.savedPosts || []);
+}
+
+function attachSaveListeners(scopeSelector) {
+  document.querySelectorAll(`${scopeSelector} .save-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const isSaved = savedPostIds.has(postId);
+
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+        });
+        if (isSaved) {
+          savedPostIds.delete(postId);
+          btn.classList.remove('saved');
+        } else {
+          savedPostIds.add(postId);
+          btn.classList.add('saved');
+        }
+      } catch (error) {
+        console.error('Errore salvataggio post:', error);
+      }
+    });
+  });
 }
 
 // ===== Modale Crea/Modifica Post =====
@@ -348,6 +382,7 @@ function startListeningToPosts() {
       const likes = post.likes || [];
       const isLiked = currentUser && likes.includes(currentUser.uid);
       const commentCount = post.commentCount || 0;
+      const isSaved = savedPostIds.has(id);
 
       return `
         <article class="post-card">
@@ -400,6 +435,9 @@ function startListeningToPosts() {
             <button class="action-btn share-btn" data-id="${id}">
               <i data-lucide="send"></i>
             </button>
+            <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+              <i data-lucide="bookmark"></i>
+            </button>
           </div>
         </article>
       `;
@@ -408,6 +446,7 @@ function startListeningToPosts() {
     lucide.createIcons();
     attachPostListeners();
     attachCarouselListeners();
+    attachSaveListeners('#postsGrid');
   }, (error) => {
     postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
@@ -796,22 +835,21 @@ function renderStoriesBar(myUid) {
   let html = '';
 
   html += `
-  <div class="story-circle-wrap">
-    <div class="story-circle-outer">
-      <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
-        ${currentProfile.logoUrl
-          ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
-          : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
-        }
-      </button>
-      <button type="button" class="story-add-btn" id="addStoryBtn">
-        <i data-lucide="plus"></i>
-      </button>
+    <div class="story-circle-wrap">
+      <div class="story-circle-outer">
+        <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'seen' : 'unseen') : 'no-story'}" id="myStoryCircle">
+          ${currentProfile.logoUrl
+            ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
+            : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+          }
+        </button>
+        <button type="button" class="story-add-btn" id="addStoryBtn">
+          <i data-lucide="plus"></i>
+        </button>
+      </div>
+      <span class="story-username-label">La tua storia</span>
     </div>
-    <span class="story-username-label">La tua storia</span>
-  </div>
-`;
-
+  `;
 
   others.forEach((group) => {
     const seen = allSeen(group, myUid);
@@ -832,19 +870,19 @@ function renderStoriesBar(myUid) {
   lucide.createIcons();
 
   const myCircleBtn = document.getElementById('myStoryCircle');
-myCircleBtn.addEventListener('click', () => {
-  if (myGroup) {
-    openStoryViewer(groupedStories.indexOf(myGroup));
-  } else {
-    storyPhotoInput.click();
-  }
-});
+  myCircleBtn.addEventListener('click', () => {
+    if (myGroup) {
+      openStoryViewer(groupedStories.indexOf(myGroup));
+    } else {
+      storyPhotoInput.click();
+    }
+  });
 
-const addStoryBtn = document.getElementById('addStoryBtn');
-addStoryBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  storyPhotoInput.click();
-});
+  const addStoryBtn = document.getElementById('addStoryBtn');
+  addStoryBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    storyPhotoInput.click();
+  });
 
   document.querySelectorAll('.story-circle[data-group-idx]').forEach(btn => {
     btn.addEventListener('click', () => {
