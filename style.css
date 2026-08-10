@@ -3138,3 +3138,29 @@ html, body {
     height: 100dvh;
   }
 }
+@media (max-width: 768px) {
+  .chat-panel.mobile-active {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+  }
+
+  .chat-active {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .messages-layout {
+    height: 100dvh;
+  }
+
+  .conversations-panel {
+    height: 100dvh;
+  }
+}

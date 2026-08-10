@@ -1142,6 +1142,10 @@ function renderTextStyleBar() {
     btn.addEventListener('click', () => {
       storyCurrentTextStyle = btn.dataset.style;
       renderTextStyleBar();
+      if (storyEditingTextIdx !== null) {
+        storyTextLayers[storyEditingTextIdx].styleId = storyCurrentTextStyle;
+        redrawStoryCanvas();
+      }
     });
   });
 }
@@ -1149,6 +1153,10 @@ function renderTextStyleBar() {
 storyColorInput.addEventListener('input', () => {
   storyCurrentColor = storyColorInput.value;
   colorPickerBtn.style.background = storyCurrentColor;
+  if (storyEditingTextIdx !== null) {
+    storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
+    redrawStoryCanvas();
+  }
 });
 
 storyUndoBtn.addEventListener('click', () => {
@@ -1203,16 +1211,22 @@ function storyPointerDown(e) {
   if (idx !== -1) {
     storyDraggingTextIdx = idx;
     storyDragOffset = { x: pos.x - storyTextLayers[idx].x, y: pos.y - storyTextLayers[idx].y };
+    storyDragMoved = false;
+    storyDragStartPos = pos;
     return;
   }
 
   if (storyCurrentTool === 'text') {
     storyPendingTextPos = pos;
+    storyEditingTextIdx = null;
+    storyCurrentColor = storyCurrentColor;
     storyTextInput.style.left = `${pos.clientX}px`;
     storyTextInput.style.top = `${pos.clientY}px`;
     storyTextInput.style.color = storyCurrentColor;
     storyTextInput.classList.remove('hidden');
     storyTextInput.value = '';
+    renderTextStyleBar();
+    textStyleBar.classList.remove('hidden');
     storyTextInput.focus();
   }
 }
@@ -1238,9 +1252,14 @@ function storyPointerMove(e) {
   }
 
   if (storyDraggingTextIdx !== null) {
-    storyTextLayers[storyDraggingTextIdx].x = pos.x - storyDragOffset.x;
-    storyTextLayers[storyDraggingTextIdx].y = pos.y - storyDragOffset.y;
-    redrawStoryCanvas();
+    const dist = Math.hypot(pos.x - storyDragStartPos.x, pos.y - storyDragStartPos.y);
+    if (dist > 6) storyDragMoved = true;
+
+    if (storyDragMoved) {
+      storyTextLayers[storyDraggingTextIdx].x = pos.x - storyDragOffset.x;
+      storyTextLayers[storyDraggingTextIdx].y = pos.y - storyDragOffset.y;
+      redrawStoryCanvas();
+    }
   }
 }
 
@@ -1249,67 +1268,43 @@ function storyPointerUp() {
   storyIsDrawing = false;
 
   if (storyDraggingTextIdx !== null) {
+    if (storyDragMoved) {
+      // È stato trascinato: salva la nuova posizione
+      saveStoryUndo();
+    } else {
+      // Non è stato trascinato: apri la modifica
+      openTextEditMode(storyDraggingTextIdx);
+    }
     storyDraggingTextIdx = null;
-    saveStoryUndo();
+    storyDragMoved = false;
   }
 }
 
-storyEditorCanvas.addEventListener('mousedown', storyPointerDown);
-storyEditorCanvas.addEventListener('mousemove', storyPointerMove);
-storyEditorCanvas.addEventListener('mouseup', storyPointerUp);
-storyEditorCanvas.addEventListener('touchstart', (e) => storyPointerDown(e), { passive: true });
-storyEditorCanvas.addEventListener('touchmove', (e) => storyPointerMove(e), { passive: true });
-storyEditorCanvas.addEventListener('touchend', storyPointerUp);
+function openTextEditMode(idx) {
+  const t = storyTextLayers[idx];
+  storyEditingTextIdx = idx;
+  storyPendingTextPos = { x: t.x, y: t.y };
+  storyCurrentColor = t.color;
+  storyCurrentTextStyle = t.styleId;
 
-storyTextInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && storyPendingTextPos) {
-    storyTextLayers.push({
-      text: storyTextInput.value,
-      x: storyPendingTextPos.x,
-      y: storyPendingTextPos.y,
-      color: storyCurrentColor,
-      styleId: storyCurrentTextStyle
-    });
-    redrawStoryCanvas();
-    storyTextInput.classList.add('hidden');
-    storyPendingTextPos = null;
-    saveStoryUndo();
-  }
-});
+  colorPickerBtn.style.background = t.color;
+  storyColorInput.value = t.color;
 
-storyEditorPublishBtn.addEventListener('click', async () => {
-  if (!currentUser) return;
-  storyEditorPublishBtn.disabled = true;
+  const rect = storyEditorCanvas.getBoundingClientRect();
+  const scaleX = rect.width / storyEditorCanvas.width;
+  const scaleY = rect.height / storyEditorCanvas.height;
 
-  try {
-    const dataUrl = storyEditorCanvas.toDataURL('image/jpeg', 0.85);
-    const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
-    const storyRef = ref(storage, storyPath);
-    await uploadString(storyRef, dataUrl, 'data_url');
-    const mediaUrl = await getDownloadURL(storyRef);
+  storyTextInput.style.left = `${rect.left + t.x * scaleX}px`;
+  storyTextInput.style.top = `${rect.top + t.y * scaleY}px`;
+  storyTextInput.style.color = t.color;
+  storyTextInput.classList.remove('hidden');
+  storyTextInput.value = t.text;
+  storyTextInput.focus();
+  storyTextInput.select();
 
-    const durationHours = parseInt(currentProfile.storyDuration || '24');
-    const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
-
-    await addDoc(collection(db, 'stories'), {
-      uid: currentUser.uid,
-      username: currentProfile.username || currentUser.email.split('@')[0],
-      logoUrl: currentProfile.logoUrl || '',
-      mediaUrl,
-      mediaPath: storyPath,
-      viewedBy: [],
-      likes: [],
-      expiresAt,
-      createdAt: serverTimestamp()
-    });
-
-    storyEditor.classList.add('hidden');
-  } catch (error) {
-    console.error('Errore pubblicazione storia:', error);
-  } finally {
-    storyEditorPublishBtn.disabled = false;
-  }
-});
+  renderTextStyleBar();
+  textStyleBar.classList.remove('hidden');
+}
 
 function openStoryViewer(groupIdx) {
   currentStoryGroupIndex = groupIdx;
