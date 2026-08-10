@@ -959,16 +959,8 @@ function getContrastColor(hex) {
 function openStoryEditor(imageDataUrl) {
   const img = new Image();
   img.onload = () => {
-    const maxW = window.innerWidth;
-    const maxH = window.innerHeight;
-    let w = img.width;
-    let h = img.height;
-    const scale = Math.min(maxW / w, maxH / h);
-    w = w * scale;
-    h = h * scale;
-
-    storyEditorCanvas.width = w;
-    storyEditorCanvas.height = h;
+    storyEditorCanvas.width = window.innerWidth;
+    storyEditorCanvas.height = window.innerHeight;
     storyCtx = storyEditorCanvas.getContext('2d');
     storyBaseImage = img;
     storyTextLayers = [];
@@ -1058,8 +1050,22 @@ function drawStyledText(ctx, t) {
 }
 
 function redrawStoryCanvas() {
-  storyCtx.clearRect(0, 0, storyEditorCanvas.width, storyEditorCanvas.height);
-  storyCtx.drawImage(storyBaseImage, 0, 0, storyEditorCanvas.width, storyEditorCanvas.height);
+  const cw = storyEditorCanvas.width;
+  const ch = storyEditorCanvas.height;
+
+  storyCtx.clearRect(0, 0, cw, ch);
+  storyCtx.fillStyle = '#000000';
+  storyCtx.fillRect(0, 0, cw, ch);
+
+  const iw = storyBaseImage.width;
+  const ih = storyBaseImage.height;
+  const scale = Math.min(cw / iw, ch / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  const dx = (cw - dw) / 2;
+  const dy = (ch - dh) / 2;
+  storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
+
   if (storyDrawingLayer) storyCtx.drawImage(storyDrawingLayer, 0, 0);
   storyTextLayers.forEach(t => drawStyledText(storyCtx, t));
 }
@@ -1140,7 +1146,6 @@ function renderTextStyleBar() {
   });
 }
 
-colorPickerBtn.addEventListener('click', () => storyColorInput.click());
 storyColorInput.addEventListener('input', () => {
   storyCurrentColor = storyColorInput.value;
   colorPickerBtn.style.background = storyCurrentColor;
