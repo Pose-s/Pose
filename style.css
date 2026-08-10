@@ -3164,3 +3164,12 @@ html, body {
     height: 100dvh;
   }
 }
+@media (max-width: 768px) {
+  .chat-form input,
+  .chat-form textarea,
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

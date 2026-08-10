@@ -1145,6 +1145,7 @@ function renderTextStyleBar() {
     btn.addEventListener('click', () => {
       storyCurrentTextStyle = btn.dataset.style;
       renderTextStyleBar();
+
       if (storyEditingTextIdx !== null) {
         storyTextLayers[storyEditingTextIdx].styleId = storyCurrentTextStyle;
         redrawStoryCanvas();
@@ -1210,19 +1211,9 @@ function storyPointerDown(e) {
     return;
   }
 
-  const idx = findTextAt(pos);
-  if (idx !== -1) {
-    storyDraggingTextIdx = idx;
-    storyDragOffset = { x: pos.x - storyTextLayers[idx].x, y: pos.y - storyTextLayers[idx].y };
-    storyDragMoved = false;
-    storyDragStartPos = pos;
-    return;
-  }
-
   if (storyCurrentTool === 'text') {
     storyPendingTextPos = pos;
     storyEditingTextIdx = null;
-    storyCurrentColor = storyCurrentColor;
     storyTextInput.style.left = `${pos.clientX}px`;
     storyTextInput.style.top = `${pos.clientY}px`;
     storyTextInput.style.color = storyCurrentColor;
@@ -1231,6 +1222,16 @@ function storyPointerDown(e) {
     renderTextStyleBar();
     textStyleBar.classList.remove('hidden');
     storyTextInput.focus();
+    return;
+  }
+
+  // Nessuno strumento attivo: prova a trascinare/modificare un testo esistente
+  const idx = findTextAt(pos);
+  if (idx !== -1) {
+    storyDraggingTextIdx = idx;
+    storyDragOffset = { x: pos.x - storyTextLayers[idx].x, y: pos.y - storyTextLayers[idx].y };
+    storyDragMoved = false;
+    storyDragStartPos = pos;
   }
 }
 
