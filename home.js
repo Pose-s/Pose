@@ -1282,6 +1282,12 @@ function storyPointerUp() {
     storyDragMoved = false;
   }
 }
+storyEditorCanvas.addEventListener('mousedown', storyPointerDown);
+storyEditorCanvas.addEventListener('mousemove', storyPointerMove);
+storyEditorCanvas.addEventListener('mouseup', storyPointerUp);
+storyEditorCanvas.addEventListener('touchstart', (e) => storyPointerDown(e), { passive: true });
+storyEditorCanvas.addEventListener('touchmove', (e) => storyPointerMove(e), { passive: true });
+storyEditorCanvas.addEventListener('touchend', storyPointerUp);
 
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
