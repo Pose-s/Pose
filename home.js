@@ -946,6 +946,9 @@ let storyTextLayers = [];
 let storyDrawingLayer = null;
 let storyDraggingTextIdx = null;
 let storyDragOffset = { x: 0, y: 0 };
+let storyDragMoved = false;
+let storyDragStartPos = null;
+let storyEditingTextIdx = null;
 let storyPendingTextPos = null;
 
 function getContrastColor(hex) {
