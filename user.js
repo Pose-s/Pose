@@ -2,7 +2,8 @@ import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy,
-  onSnapshot, addDoc, serverTimestamp, increment, arrayUnion, arrayRemove
+  onSnapshot, addDoc, serverTimestamp, increment, arrayUnion, arrayRemove,
+  deleteDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { escapeHtml, formatDate } from './utils.js';
 
@@ -207,6 +208,88 @@ function attachSaveListeners(scopeSelector) {
   });
 }
 
+// ===== Repost + Tag =====
+async function attachRepostAndTagListeners(scopeSelector, cache) {
+  const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
+
+  for (const btn of repostBtns) {
+    const postId = btn.dataset.id;
+    const existingRepostQuery = query(
+      collection(db, 'reposts'),
+      where('uid', '==', currentUser.uid),
+      where('postId', '==', postId)
+    );
+    const existingSnap = await getDocs(existingRepostQuery);
+    if (!existingSnap.empty) {
+      btn.classList.add('reposted');
+      btn.dataset.repostDocId = existingSnap.docs[0].id;
+    }
+  }
+
+  document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      if (!post) return;
+
+      if (post.uid === currentUser.uid) {
+        alert('Non puoi repostare i tuoi stessi post.');
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        if (btn.classList.contains('reposted')) {
+          await deleteDoc(doc(db, 'reposts', btn.dataset.repostDocId));
+          btn.classList.remove('reposted');
+          delete btn.dataset.repostDocId;
+        } else {
+          const docRef = await addDoc(collection(db, 'reposts'), {
+            uid: currentUser.uid,
+            postId,
+            originalAuthorUid: post.uid,
+            createdAt: serverTimestamp()
+          });
+          btn.classList.add('reposted');
+          btn.dataset.repostDocId = docRef.id;
+
+          await addDoc(collection(db, 'notifications'), {
+            toUid: post.uid,
+            fromUid: currentUser.uid,
+            fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+            fromLogoUrl: currentProfile.logoUrl || '',
+            type: 'repost',
+            postId,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error('Errore repost:', error);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPostMenus();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+      }
+    });
+  });
+}
+
 async function renderProfile() {
   const userDoc = await getDoc(doc(db, 'users', viewedUid));
   const data = userDoc.exists() ? userDoc.data() : {};
@@ -379,7 +462,7 @@ function startListeningToUserPosts(ownerData) {
   const grid = document.getElementById('userPostsGrid');
   loader.classList.remove('hidden');
 
-  onSnapshot(postsQuery, (snapshot) => {
+  onSnapshot(postsQuery, async (snapshot) => {
     loader.classList.add('hidden');
     document.getElementById('userStatPosts').textContent = snapshot.size;
     postsCacheUser.clear();
@@ -389,10 +472,13 @@ function startListeningToUserPosts(ownerData) {
       return;
     }
 
+    snapshot.docs.forEach(docSnap => {
+      postsCacheUser.set(docSnap.id, docSnap.data());
+    });
+
     grid.innerHTML = snapshot.docs.map(docSnap => {
       const post = docSnap.data();
       const id = docSnap.id;
-      postsCacheUser.set(id, post);
 
       const likes = post.likes || [];
       const isLiked = likes.includes(currentUser.uid);
@@ -418,8 +504,8 @@ function startListeningToUserPosts(ownerData) {
                 <button class="menu-item repost-story-btn" data-id="${id}">
                   <i data-lucide="clapperboard"></i> Pubblica nelle storie
                 </button>
-                <button class="menu-item repost-btn" data-id="${id}">
-                  <i data-lucide="repeat"></i> Reposta
+                <button class="menu-item tag-view-btn" data-id="${id}">
+                  <i data-lucide="users"></i> Persone taggate
                 </button>
               </div>
             </div>
@@ -440,25 +526,22 @@ function startListeningToUserPosts(ownerData) {
             <button class="action-btn share-btn" data-id="${id}">
               <i data-lucide="send"></i>
             </button>
+            <button class="action-btn repost-action-btn" data-id="${id}">
+              <i data-lucide="repeat"></i>
+            </button>
             <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
               <i data-lucide="bookmark"></i>
             </button>
-            <button class="action-btn repost-action-btn ${/* opzionale: repostato-da-te */''}" data-id="${id}">
-  <i data-lucide="repeat"></i>
-</button>
-            <button class="menu-item tag-view-btn" data-id="${id}">
-  <i data-lucide="users"></i> Persone taggate
-</button>
           </div>
         </article>
       `;
     }).join('');
 
     lucide.createIcons();
-attachPostActionListeners();
-attachCarouselListeners();
-attachSaveListeners('#userPostsGrid');
-attachRepostAndTagListeners('#userPostsGrid', postsCacheUser);
+    attachPostActionListeners();
+    attachCarouselListeners();
+    attachSaveListeners('#userPostsGrid');
+    await attachRepostAndTagListeners('#userPostsGrid', postsCacheUser);
   });
 }
 
@@ -482,14 +565,6 @@ function attachPostActionListeners() {
       e.stopPropagation();
       closeAllPostMenus();
       alert('Funzione "Pubblica nelle storie" in arrivo!');
-    });
-  });
-
-  document.querySelectorAll('#userPostsGrid .repost-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllPostMenus();
-      alert('Funzione "Reposta" in arrivo!');
     });
   });
 

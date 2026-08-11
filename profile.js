@@ -516,7 +516,7 @@ function renderProfilePosts() {
 attachProfilePostListeners();
 attachCarouselListeners();
 attachSaveListeners('#profilePostsGrid');
-attachRepostAndTagListeners('#profilePostsGrid', postsCacheProfile);
+await attachRepostAndTagListeners('#profilePostsGrid', postsCacheProfile);
 }
 
 async function savePostOrder() {
@@ -773,6 +773,11 @@ onAuthStateChanged(auth, (user) => {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like alla tua storia`;
       } else if (n.type === 'story_comment') {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
+        } else if (n.type === 'repost') {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha repostato un tuo post`;
+} else if (n.type === 'story_comment') {
+  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
+} else {
       } else {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
       }
@@ -964,41 +969,162 @@ async function loadReposts() {
   }));
 
   const validPosts = posts.filter(p => p);
-  grid.innerHTML = validPosts.map(post => {
-    const media = getPostMedia(post);
-    const first = media[0];
-    return `
-      <div class="post-card">
-        ${first ? (first.type === 'video' ? `<video src="${first.url}" class="post-photo" muted></video>` : `<img src="${first.url}" class="post-photo" alt="" />`) : ''}
-        <p class="post-caption">@${escapeHtml(post.authorName || '')}</p>
-      </div>
-    `;
-  }).join('');
-}
 
-async function loadTaggedPosts() {
-  const loader = document.getElementById('taggedLoader');
-  const grid = document.getElementById('taggedGrid');
-  loader.classList.remove('hidden');
-
-  const taggedQuery = query(collection(db, 'posts'), where('taggedUids', 'array-contains', currentUser.uid), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(taggedQuery);
-  loader.classList.add('hidden');
-
-  if (snapshot.empty) {
-    grid.innerHTML = '<p style="color:#94a3b8;">Nessuna foto o video in cui sei taggato.</p>';
+  if (validPosts.length === 0) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
     return;
   }
 
-  grid.innerHTML = snapshot.docs.map(docSnap => {
-    const post = docSnap.data();
-    const media = getPostMedia(post);
-    const first = media[0];
+  validPosts.forEach(p => postsCacheProfile.set(p.id, p));
+
+  grid.innerHTML = validPosts.map(post => {
+    const id = post.id;
+    const likes = post.likes || [];
+    const isLiked = likes.includes(currentUser.uid);
+    const commentCount = post.commentCount || 0;
+    const isSaved = savedPostIds.has(id);
+
     return `
-      <div class="post-card">
-        ${first ? (first.type === 'video' ? `<video src="${first.url}" class="post-photo" muted></video>` : `<img src="${first.url}" class="post-photo" alt="" />`) : ''}
-        <p class="post-caption">@${escapeHtml(post.authorName || '')}</p>
-      </div>
+      <article class="post-card">
+        <div class="post-header">
+          ${post.logoUrl
+            ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+            : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+          }
+          <div class="post-header-info">
+            <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
+            <span class="post-date">${formatDate(post.createdAt)}</span>
+          </div>
+        </div>
+        <div class="post-media-clickable" data-id="${id}">
+          ${renderMediaCarousel(getPostMedia(post), id)}
+        </div>
+        ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+        <div class="post-actions">
+          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
+            <i data-lucide="heart"></i>
+            <span>${likes.length}</span>
+          </button>
+          <button class="action-btn comment-btn" data-id="${id}">
+            <i data-lucide="message-circle"></i>
+            <span>${commentCount}</span>
+          </button>
+          <button class="action-btn share-btn" data-id="${id}">
+            <i data-lucide="send"></i>
+          </button>
+          <button class="action-btn repost-action-btn reposted" data-id="${id}">
+            <i data-lucide="repeat"></i>
+          </button>
+          <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+            <i data-lucide="bookmark"></i>
+          </button>
+        </div>
+      </article>
     `;
   }).join('');
+
+  lucide.createIcons();
+  document.querySelectorAll('#repostsGrid .post-media-clickable').forEach(el => {
+    el.addEventListener('click', () => openComments(el.dataset.id));
+  });
+  document.querySelectorAll('#repostsGrid .like-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = postsCacheProfile.get(postId);
+      const likes = post?.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+    });
+  });
+  document.querySelectorAll('#repostsGrid .comment-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openComments(btn.dataset.id); });
+  });
+  document.querySelectorAll('#repostsGrid .share-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openShareModal(btn.dataset.id); });
+  });
+  attachSaveListeners('#repostsGrid');
+  async function attachRepostAndTagListeners(scopeSelector, cache) {
+  const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
+
+  for (const btn of repostBtns) {
+    const postId = btn.dataset.id;
+    const existingRepostQuery = query(
+      collection(db, 'reposts'),
+      where('uid', '==', currentUser.uid),
+      where('postId', '==', postId)
+    );
+    const existingSnap = await getDocs(existingRepostQuery);
+    if (!existingSnap.empty) {
+      btn.classList.add('reposted');
+      btn.dataset.repostDocId = existingSnap.docs[0].id;
+    }
+  }
+
+  document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      if (!post) return;
+
+      if (post.uid === currentUser.uid) {
+        alert('Non puoi repostare i tuoi stessi post.');
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        if (btn.classList.contains('reposted')) {
+          // Rimuovi il repost
+          await deleteDoc(doc(db, 'reposts', btn.dataset.repostDocId));
+          btn.classList.remove('reposted');
+          delete btn.dataset.repostDocId;
+        } else {
+          // Aggiungi il repost
+          const docRef = await addDoc(collection(db, 'reposts'), {
+            uid: currentUser.uid,
+            postId,
+            originalAuthorUid: post.uid,
+            createdAt: serverTimestamp()
+          });
+          btn.classList.add('reposted');
+          btn.dataset.repostDocId = docRef.id;
+
+          await addDoc(collection(db, 'notifications'), {
+            toUid: post.uid,
+            fromUid: currentUser.uid,
+            fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+            fromLogoUrl: currentProfile.logoUrl || '',
+            type: 'repost',
+            postId,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error('Errore repost:', error);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+      }
+    });
+  });
 }

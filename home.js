@@ -499,11 +499,11 @@ function startListeningToPosts() {
       `;
     }).join('');
 
-    lucide.createIcons();
+lucide.createIcons();
 attachPostListeners();
 attachCarouselListeners();
 attachSaveListeners('#postsGrid');
-attachRepostAndTagListeners('#postsGrid', postsCache);
+await attachRepostAndTagListeners('#postsGrid', postsCache);
   }, (error) => {
     postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
@@ -1966,27 +1966,69 @@ function renderTaggedPreview() {
   }
   taggedPreview.innerHTML = `<span class="tagged-preview-text">Con: ${pendingTaggedUsers.map(t => '@' + escapeHtml(t.username)).join(', ')}</span>`;
 }
-function attachRepostAndTagListeners(scopeSelector, cache) {
+async function attachRepostAndTagListeners(scopeSelector, cache) {
+  const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
+
+  for (const btn of repostBtns) {
+    const postId = btn.dataset.id;
+    const existingRepostQuery = query(
+      collection(db, 'reposts'),
+      where('uid', '==', currentUser.uid),
+      where('postId', '==', postId)
+    );
+    const existingSnap = await getDocs(existingRepostQuery);
+    if (!existingSnap.empty) {
+      btn.classList.add('reposted');
+      btn.dataset.repostDocId = existingSnap.docs[0].id;
+    }
+  }
+
   document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const postId = btn.dataset.id;
       const post = cache.get(postId);
-      if (!post || post.uid === currentUser.uid) {
+      if (!post) return;
+
+      if (post.uid === currentUser.uid) {
         alert('Non puoi repostare i tuoi stessi post.');
         return;
       }
 
+      btn.disabled = true;
+
       try {
-        await addDoc(collection(db, 'reposts'), {
-          uid: currentUser.uid,
-          postId,
-          originalAuthorUid: post.uid,
-          createdAt: serverTimestamp()
-        });
-        btn.classList.add('reposted');
+        if (btn.classList.contains('reposted')) {
+          // Rimuovi il repost
+          await deleteDoc(doc(db, 'reposts', btn.dataset.repostDocId));
+          btn.classList.remove('reposted');
+          delete btn.dataset.repostDocId;
+        } else {
+          // Aggiungi il repost
+          const docRef = await addDoc(collection(db, 'reposts'), {
+            uid: currentUser.uid,
+            postId,
+            originalAuthorUid: post.uid,
+            createdAt: serverTimestamp()
+          });
+          btn.classList.add('reposted');
+          btn.dataset.repostDocId = docRef.id;
+
+          await addDoc(collection(db, 'notifications'), {
+            toUid: post.uid,
+            fromUid: currentUser.uid,
+            fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+            fromLogoUrl: currentProfile.logoUrl || '',
+            type: 'repost',
+            postId,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
       } catch (error) {
         console.error('Errore repost:', error);
+      } finally {
+        btn.disabled = false;
       }
     });
   });
