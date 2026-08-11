@@ -455,9 +455,10 @@ function startListeningToUserPosts(ownerData) {
     }).join('');
 
     lucide.createIcons();
-    attachPostActionListeners();
-    attachCarouselListeners();
-    attachSaveListeners('#userPostsGrid');
+attachPostActionListeners();
+attachCarouselListeners();
+attachSaveListeners('#userPostsGrid');
+attachRepostAndTagListeners('#userPostsGrid', postsCacheUser);
   });
 }
 

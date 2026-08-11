@@ -513,9 +513,10 @@ function renderProfilePosts() {
   }).join('');
 
   lucide.createIcons();
-  attachProfilePostListeners();
-  attachCarouselListeners();
-  attachSaveListeners('#profilePostsGrid');
+attachProfilePostListeners();
+attachCarouselListeners();
+attachSaveListeners('#profilePostsGrid');
+attachRepostAndTagListeners('#profilePostsGrid', postsCacheProfile);
 }
 
 async function savePostOrder() {

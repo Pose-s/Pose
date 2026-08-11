@@ -500,9 +500,10 @@ function startListeningToPosts() {
     }).join('');
 
     lucide.createIcons();
-    attachPostListeners();
-    attachCarouselListeners();
-    attachSaveListeners('#postsGrid');
+attachPostListeners();
+attachCarouselListeners();
+attachSaveListeners('#postsGrid');
+attachRepostAndTagListeners('#postsGrid', postsCache);
   }, (error) => {
     postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
