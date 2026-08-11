@@ -1189,8 +1189,8 @@ function ensureDrawingLayer() {
 
 function getStoryCanvasPos(e) {
   const rect = storyEditorCanvas.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.clientX;
+  const clientY = e.clientY;
   const scaleX = storyEditorCanvas.width / rect.width;
   const scaleY = storyEditorCanvas.height / rect.height;
   return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY, clientX, clientY };
@@ -1292,12 +1292,10 @@ function storyPointerUp() {
   }
 }
 
-storyEditorCanvas.addEventListener('mousedown', storyPointerDown);
-storyEditorCanvas.addEventListener('mousemove', storyPointerMove);
-storyEditorCanvas.addEventListener('mouseup', storyPointerUp);
-storyEditorCanvas.addEventListener('touchstart', (e) => storyPointerDown(e), { passive: true });
-storyEditorCanvas.addEventListener('touchmove', (e) => storyPointerMove(e), { passive: true });
-storyEditorCanvas.addEventListener('touchend', storyPointerUp);
+storyEditorCanvas.style.touchAction = 'none';
+storyEditorCanvas.addEventListener('pointerdown', storyPointerDown);
+storyEditorCanvas.addEventListener('pointermove', storyPointerMove);
+storyEditorCanvas.addEventListener('pointerup', storyPointerUp);
 
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
