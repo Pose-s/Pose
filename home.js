@@ -75,12 +75,27 @@ const closeViewersPanelBtn = document.getElementById('closeViewersPanelBtn');
 const viewersSearchInput = document.getElementById('viewersSearchInput');
 const storyViewersList = document.getElementById('storyViewersList');
 const storyCommentsOwnerList = document.getElementById('storyCommentsOwnerList');
+const storyDeleteBtn = document.getElementById('storyDeleteBtn');
 
 const shareModal = document.getElementById('shareModal');
 const closeShareBtn = document.getElementById('closeShareBtn');
 const shareSearchInput = document.getElementById('shareSearchInput');
 const shareEmptyMsg = document.getElementById('shareEmptyMsg');
 const shareFriendsList = document.getElementById('shareFriendsList');
+
+const storyEditor = document.getElementById('storyEditor');
+const storyEditorCanvas = document.getElementById('storyEditorCanvas');
+const storyEditorCloseBtn = document.getElementById('storyEditorCloseBtn');
+const storyDrawToolBtn = document.getElementById('storyDrawToolBtn');
+const storyEraserToolBtn = document.getElementById('storyEraserToolBtn');
+const storyTextToolBtn = document.getElementById('storyTextToolBtn');
+const colorPickerBtn = document.getElementById('colorPickerBtn');
+const storyColorInput = document.getElementById('storyColorInput');
+const storyUndoBtn = document.getElementById('storyUndoBtn');
+const storyEditorDiscardBtn = document.getElementById('storyEditorDiscardBtn');
+const storyEditorPublishBtn = document.getElementById('storyEditorPublishBtn');
+const storyTextInput = document.getElementById('storyTextInput');
+const textStyleBar = document.getElementById('textStyleBar');
 
 lucide.createIcons();
 
@@ -108,6 +123,36 @@ let unsubscribeStoryComments = null;
 
 let sharingPostId = null;
 let allShareFriends = [];
+
+const TEXT_STYLES = [
+  { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
+  { id: 'serif', label: 'Serif', font: '700 38px Georgia, serif' },
+  { id: 'hand', label: 'Corsivo', font: 'italic 40px cursive' },
+  { id: 'outline', label: 'Contorno', font: '700 40px Inter, sans-serif', outline: true },
+  { id: 'pill', label: 'Evidenziato', font: '700 34px Inter, sans-serif', pill: true },
+  { id: 'shadow', label: 'Ombra', font: '700 38px Inter, sans-serif', shadow: true },
+  { id: 'spaced', label: 'Spaziato', font: '600 32px Inter, sans-serif', spaced: true, upper: true },
+  { id: 'thin', label: 'Sottile', font: '300 38px Inter, sans-serif' },
+  { id: 'mono', label: 'Monospace', font: '700 34px "Courier New", monospace' },
+  { id: 'gradient', label: 'Sfumato', font: '800 40px Inter, sans-serif', gradient: true }
+];
+
+let storyCtx = null;
+let storyBaseImage = null;
+let storyCurrentTool = null;
+let storyCurrentColor = '#ffffff';
+let storyCurrentTextStyle = TEXT_STYLES[0].id;
+let storyIsDrawing = false;
+let storyUndoStack = [];
+let storyTextLayers = [];
+let storyDrawingLayer = null;
+let storyDraggingTextIdx = null;
+let storyDragOffset = { x: 0, y: 0 };
+let storyDragMoved = false;
+let storyDragStartPos = null;
+let storyEditingTextIdx = null;
+let storyPendingTextPos = null;
+let storyTextCommitted = false;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -813,8 +858,9 @@ function startListeningToStories(myUid) {
         groups[story.uid].stories.push(story);
       });
 
+      Object.values(groups).forEach(g => g.stories.reverse());
+
       groupedStories = Object.values(groups).sort((a, b) => {
-        Object.values(groups).forEach(g => g.stories.reverse());
         if (a.uid === myUid) return -1;
         if (b.uid === myUid) return 1;
         return 0;
@@ -838,7 +884,7 @@ function renderStoriesBar(myUid) {
   html += `
     <div class="story-circle-wrap">
       <div class="story-circle-outer">
-        <button type="button" class="story-circle ${myGroup ? (allSeen(myGroup, myUid) ? 'no-ring' : 'unseen') : 'no-story'}" id="myStoryCircle">
+        <button type="button" class="story-circle ${myGroup ? 'seen' : 'no-story'}" id="myStoryCircle">
           ${currentProfile.logoUrl
             ? `<img src="${currentProfile.logoUrl}" class="story-avatar-img" alt="" />`
             : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
@@ -853,15 +899,15 @@ function renderStoriesBar(myUid) {
   `;
 
   others.forEach((group) => {
-  const seen = allSeen(group, myUid);
-  html += `
-    <div class="story-circle-wrap">
-    <button type="button" class="story-circle ${myGroup ? 'seen' : 'no-story'}" id="myStoryCircle">
-    ${group.logoUrl
-    ? `<img src="${group.logoUrl}" class="story-avatar-img" alt="" />`
-    : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
-  }
-</button>
+    const seen = allSeen(group, myUid);
+    html += `
+      <div class="story-circle-wrap">
+        <button type="button" class="story-circle ${seen ? 'seen' : 'unseen'}" data-group-idx="${groupedStories.indexOf(group)}">
+          ${group.logoUrl
+            ? `<img src="${group.logoUrl}" class="story-avatar-img" alt="" />`
+            : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
+          }
+        </button>
         <span class="story-username-label">${escapeHtml(group.username)}</span>
       </div>
     `;
@@ -908,49 +954,6 @@ storyPhotoInput.addEventListener('change', () => {
 });
 
 // ===== Editor storia =====
-const storyEditor = document.getElementById('storyEditor');
-const storyEditorCanvas = document.getElementById('storyEditorCanvas');
-const storyEditorCloseBtn = document.getElementById('storyEditorCloseBtn');
-const storyDrawToolBtn = document.getElementById('storyDrawToolBtn');
-const storyEraserToolBtn = document.getElementById('storyEraserToolBtn');
-const storyTextToolBtn = document.getElementById('storyTextToolBtn');
-const colorPickerBtn = document.getElementById('colorPickerBtn');
-const storyColorInput = document.getElementById('storyColorInput');
-const storyUndoBtn = document.getElementById('storyUndoBtn');
-const storyEditorDiscardBtn = document.getElementById('storyEditorDiscardBtn');
-const storyEditorPublishBtn = document.getElementById('storyEditorPublishBtn');
-const storyTextInput = document.getElementById('storyTextInput');
-const textStyleBar = document.getElementById('textStyleBar');
-
-const TEXT_STYLES = [
-  { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
-  { id: 'serif', label: 'Serif', font: '700 38px Georgia, serif' },
-  { id: 'hand', label: 'Corsivo', font: 'italic 40px cursive' },
-  { id: 'outline', label: 'Contorno', font: '700 40px Inter, sans-serif', outline: true },
-  { id: 'pill', label: 'Evidenziato', font: '700 34px Inter, sans-serif', pill: true },
-  { id: 'shadow', label: 'Ombra', font: '700 38px Inter, sans-serif', shadow: true },
-  { id: 'spaced', label: 'Spaziato', font: '600 32px Inter, sans-serif', spaced: true, upper: true },
-  { id: 'thin', label: 'Sottile', font: '300 38px Inter, sans-serif' },
-  { id: 'mono', label: 'Monospace', font: '700 34px "Courier New", monospace' },
-  { id: 'gradient', label: 'Sfumato', font: '800 40px Inter, sans-serif', gradient: true }
-];
-
-let storyCtx = null;
-let storyBaseImage = null;
-let storyCurrentTool = null;
-let storyCurrentColor = '#ffffff';
-let storyCurrentTextStyle = TEXT_STYLES[0].id;
-let storyIsDrawing = false;
-let storyUndoStack = [];
-let storyTextLayers = [];
-let storyDrawingLayer = null;
-let storyDraggingTextIdx = null;
-let storyDragOffset = { x: 0, y: 0 };
-let storyDragMoved = false;
-let storyDragStartPos = null;
-let storyEditingTextIdx = null;
-let storyPendingTextPos = null;
-
 function getContrastColor(hex) {
   const r = parseInt(hex.substr(1, 2), 16);
   const g = parseInt(hex.substr(3, 2), 16);
@@ -1010,7 +1013,11 @@ function drawStyledText(ctx, t) {
     const rectW = metrics.width + padX * 2;
     const rectH = 40 + padY;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(rectX, rectY, rectW, rectH, 10) : ctx.rect(rectX, rectY, rectW, rectH);
+    if (ctx.roundRect) {
+      ctx.roundRect(rectX, rectY, rectW, rectH, 10);
+    } else {
+      ctx.rect(rectX, rectY, rectW, rectH);
+    }
     ctx.fill();
     ctx.fillStyle = getContrastColor(t.color);
     ctx.fillText(text, t.x, t.y);
@@ -1142,9 +1149,11 @@ function renderTextStyleBar() {
   `).join('');
 
   textStyleBar.querySelectorAll('.text-style-option').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       storyCurrentTextStyle = btn.dataset.style;
       renderTextStyleBar();
+      storyTextInput.focus();
 
       if (storyEditingTextIdx !== null) {
         storyTextLayers[storyEditingTextIdx].styleId = storyCurrentTextStyle;
@@ -1154,6 +1163,7 @@ function renderTextStyleBar() {
   });
 }
 
+colorPickerBtn.addEventListener('click', () => {});
 storyColorInput.addEventListener('input', () => {
   storyCurrentColor = storyColorInput.value;
   colorPickerBtn.style.background = storyCurrentColor;
@@ -1212,6 +1222,7 @@ function storyPointerDown(e) {
   }
 
   if (storyCurrentTool === 'text') {
+    storyTextCommitted = false;
     storyPendingTextPos = pos;
     storyEditingTextIdx = null;
     storyTextInput.style.left = `${pos.clientX}px`;
@@ -1225,7 +1236,6 @@ function storyPointerDown(e) {
     return;
   }
 
-  // Nessuno strumento attivo: prova a trascinare/modificare un testo esistente
   const idx = findTextAt(pos);
   if (idx !== -1) {
     storyDraggingTextIdx = idx;
@@ -1273,16 +1283,15 @@ function storyPointerUp() {
 
   if (storyDraggingTextIdx !== null) {
     if (storyDragMoved) {
-      // È stato trascinato: salva la nuova posizione
       saveStoryUndo();
     } else {
-      // Non è stato trascinato: apri la modifica
       openTextEditMode(storyDraggingTextIdx);
     }
     storyDraggingTextIdx = null;
     storyDragMoved = false;
   }
 }
+
 storyEditorCanvas.addEventListener('mousedown', storyPointerDown);
 storyEditorCanvas.addEventListener('mousemove', storyPointerMove);
 storyEditorCanvas.addEventListener('mouseup', storyPointerUp);
@@ -1292,6 +1301,7 @@ storyEditorCanvas.addEventListener('touchend', storyPointerUp);
 
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
+  storyTextCommitted = false;
   storyEditingTextIdx = idx;
   storyPendingTextPos = { x: t.x, y: t.y };
   storyCurrentColor = t.color;
@@ -1316,6 +1326,89 @@ function openTextEditMode(idx) {
   textStyleBar.classList.remove('hidden');
 }
 
+function commitStoryText() {
+  if (storyTextCommitted) return;
+  if (!storyPendingTextPos) return;
+
+  const value = storyTextInput.value.trim();
+
+  if (!value) {
+    if (storyEditingTextIdx !== null) {
+      storyTextLayers.splice(storyEditingTextIdx, 1);
+    }
+  } else if (storyEditingTextIdx !== null) {
+    storyTextLayers[storyEditingTextIdx].text = value;
+    storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
+    storyTextLayers[storyEditingTextIdx].styleId = storyCurrentTextStyle;
+  } else {
+    storyTextLayers.push({
+      text: value,
+      x: storyPendingTextPos.x,
+      y: storyPendingTextPos.y,
+      color: storyCurrentColor,
+      styleId: storyCurrentTextStyle
+    });
+  }
+
+  storyTextCommitted = true;
+  redrawStoryCanvas();
+  storyTextInput.classList.add('hidden');
+  textStyleBar.classList.add('hidden');
+  storyPendingTextPos = null;
+  storyEditingTextIdx = null;
+  saveStoryUndo();
+}
+
+storyTextInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    commitStoryText();
+  }
+});
+
+storyTextInput.addEventListener('blur', () => {
+  commitStoryText();
+});
+
+storyTextInput.addEventListener('focus', () => {
+  storyTextCommitted = false;
+});
+
+storyEditorPublishBtn.addEventListener('click', async () => {
+  if (!currentUser) return;
+  storyEditorPublishBtn.disabled = true;
+
+  try {
+    const dataUrl = storyEditorCanvas.toDataURL('image/jpeg', 0.85);
+    const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
+    const storyRef = ref(storage, storyPath);
+    await uploadString(storyRef, dataUrl, 'data_url');
+    const mediaUrl = await getDownloadURL(storyRef);
+
+    const durationHours = parseInt(currentProfile.storyDuration || '24');
+    const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+    await addDoc(collection(db, 'stories'), {
+      uid: currentUser.uid,
+      username: currentProfile.username || currentUser.email.split('@')[0],
+      logoUrl: currentProfile.logoUrl || '',
+      mediaUrl,
+      mediaPath: storyPath,
+      viewedBy: [],
+      likes: [],
+      expiresAt,
+      createdAt: serverTimestamp()
+    });
+
+    storyEditor.classList.add('hidden');
+  } catch (error) {
+    console.error('Errore pubblicazione storia:', error);
+  } finally {
+    storyEditorPublishBtn.disabled = false;
+  }
+});
+
+// ===== Visualizzatore storie =====
 function openStoryViewer(groupIdx) {
   currentStoryGroupIndex = groupIdx;
   currentStoryIndex = 0;
@@ -1558,7 +1651,6 @@ async function openViewersPanel() {
 
 storyViewersBtn.addEventListener('click', openViewersPanel);
 
-const storyDeleteBtn = document.getElementById('storyDeleteBtn');
 storyDeleteBtn.addEventListener('click', async () => {
   const data = getCurrentStoryData();
   if (!data || !data.story) return;
@@ -1574,7 +1666,6 @@ storyDeleteBtn.addEventListener('click', async () => {
   }
 });
 
-// Swipe verso l'alto per aprire visualizzazioni (solo proprietario)
 let touchStartY = 0;
 let touchStartX = 0;
 storyViewer.addEventListener('touchstart', (e) => {
@@ -1584,7 +1675,6 @@ storyViewer.addEventListener('touchstart', (e) => {
 storyViewer.addEventListener('touchend', (e) => {
   const deltaY = touchStartY - e.changedTouches[0].clientY;
   const deltaX = Math.abs(touchStartX - e.changedTouches[0].clientX);
-  // Solo se il movimento verticale è chiaro e non un tap semplice
   if (deltaY > 60 && deltaX < 40) openViewersPanel();
 });
 
