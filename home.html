@@ -89,6 +89,10 @@
           <label for="captionInput">Didascalia</label>
           <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
         </div>
+        <button type="button" class="btn-compact" id="openTagModalBtn">
+  <i data-lucide="user-plus"></i> Tagga persone
+</button>
+<div id="taggedPreview" class="tagged-preview"></div>
 
         <button type="submit" class="publish-btn" id="publishBtn">Pubblica</button>
       </form>
@@ -217,6 +221,18 @@
   </div>
 
   <input type="text" id="storyTextInput" class="camera-text-input hidden" placeholder="Scrivi..." />
+</div>
+<div class="modal-overlay hidden" id="tagModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Tagga persone</h2>
+      <button class="modal-close" id="closeTagModalBtn"><i data-lucide="x"></i></button>
+    </div>
+    <input type="text" id="tagSearchInput" placeholder="Cerca utenti..." class="search-input-modal" />
+    <div id="tagResultsList"></div>
+    <div id="taggedSelectedList" class="tagged-selected-list"></div>
+    <button type="button" class="publish-btn" id="tagModalDoneBtn">Fatto</button>
+  </div>
 </div>
 </body>
 </html>

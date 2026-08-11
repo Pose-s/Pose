@@ -150,12 +150,26 @@
         </div>
 
         <!-- Post dell'utente -->
-        <div class="profile-posts-section">
-          <div id="profilePostsLoader" class="loader hidden">
-            <div class="spinner"></div>
-          </div>
-          <div class="posts-grid" id="profilePostsGrid"></div>
-        </div>
+        <div class="profile-tabs">
+  <button type="button" class="profile-tab active" data-tab="posts"><i data-lucide="grid-3x3"></i></button>
+  <button type="button" class="profile-tab" data-tab="reposts"><i data-lucide="repeat"></i></button>
+  <button type="button" class="profile-tab" data-tab="tagged"><i data-lucide="user-square"></i></button>
+</div>
+
+<div class="profile-posts-section" id="tabPosts">
+  <div id="profilePostsLoader" class="loader hidden"><div class="spinner"></div></div>
+  <div class="posts-grid" id="profilePostsGrid"></div>
+</div>
+
+<div class="profile-posts-section hidden" id="tabReposts">
+  <div id="repostsLoader" class="loader hidden"><div class="spinner"></div></div>
+  <div class="posts-grid" id="repostsGrid"></div>
+</div>
+
+<div class="profile-posts-section hidden" id="tabTagged">
+  <div id="taggedLoader" class="loader hidden"><div class="spinner"></div></div>
+  <div class="posts-grid" id="taggedGrid"></div>
+</div>
 
       </div>
     </main>

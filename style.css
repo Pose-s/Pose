@@ -3173,3 +3173,49 @@ html, body {
     font-size: 16px !important;
   }
 }
+.tagged-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3e8ff;
+  color: #7c3aed;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 13px;
+  margin: 4px 4px 0 0;
+}
+.tagged-chip-remove {
+  background: none;
+  border: none;
+  color: #7c3aed;
+  cursor: pointer;
+  font-weight: 700;
+}
+.tagged-preview-text {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.profile-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  margin-bottom: 16px;
+}
+.profile-tab {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  padding: 10px;
+  cursor: pointer;
+}
+.profile-tab.active {
+  color: #7c3aed;
+  border-bottom: 2px solid #7c3aed;
+}
+
+.repost-action-btn.reposted {
+  color: #7c3aed;
+}

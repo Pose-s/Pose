@@ -443,6 +443,12 @@ function startListeningToUserPosts(ownerData) {
             <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
               <i data-lucide="bookmark"></i>
             </button>
+            <button class="action-btn repost-action-btn ${/* opzionale: repostato-da-te */''}" data-id="${id}">
+  <i data-lucide="repeat"></i>
+</button>
+            <button class="menu-item tag-view-btn" data-id="${id}">
+  <i data-lucide="users"></i> Persone taggate
+</button>
           </div>
         </article>
       `;

@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import {
   doc, getDoc, setDoc, collection, query, where, orderBy,
   onSnapshot, deleteDoc, updateDoc, addDoc, serverTimestamp,
-  increment, arrayUnion, arrayRemove, limit
+  increment, arrayUnion, arrayRemove, limit, getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
@@ -498,9 +498,15 @@ function renderProfilePosts() {
           <button class="action-btn share-btn" data-id="${id}">
             <i data-lucide="send"></i>
           </button>
+          <button class="action-btn repost-action-btn ${/* opzionale: repostato-da-te */''}" data-id="${id}">
+  <i data-lucide="repeat"></i>
+</button>
           <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
             <i data-lucide="bookmark"></i>
           </button>
+          <button class="menu-item tag-view-btn" data-id="${id}">
+  <i data-lucide="users"></i> Persone taggate
+</button>
         </div>
       </article>
     `;
@@ -923,4 +929,75 @@ async function sendPostToChat(otherUid, postId) {
     lastMessageAt: serverTimestamp(),
     [`unread.${otherUid}`]: increment(1)
   });
+}
+document.querySelectorAll('.profile-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tabPosts').classList.toggle('hidden', tab.dataset.tab !== 'posts');
+    document.getElementById('tabReposts').classList.toggle('hidden', tab.dataset.tab !== 'reposts');
+    document.getElementById('tabTagged').classList.toggle('hidden', tab.dataset.tab !== 'tagged');
+
+    if (tab.dataset.tab === 'reposts') loadReposts();
+    if (tab.dataset.tab === 'tagged') loadTaggedPosts();
+  });
+});
+
+async function loadReposts() {
+  const loader = document.getElementById('repostsLoader');
+  const grid = document.getElementById('repostsGrid');
+  loader.classList.remove('hidden');
+
+  const repostsQuery = query(collection(db, 'reposts'), where('uid', '==', currentUser.uid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(repostsQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
+    return;
+  }
+
+  const posts = await Promise.all(snapshot.docs.map(async (d) => {
+    const postDoc = await getDoc(doc(db, 'posts', d.data().postId));
+    return postDoc.exists() ? { id: postDoc.id, ...postDoc.data() } : null;
+  }));
+
+  const validPosts = posts.filter(p => p);
+  grid.innerHTML = validPosts.map(post => {
+    const media = getPostMedia(post);
+    const first = media[0];
+    return `
+      <div class="post-card">
+        ${first ? (first.type === 'video' ? `<video src="${first.url}" class="post-photo" muted></video>` : `<img src="${first.url}" class="post-photo" alt="" />`) : ''}
+        <p class="post-caption">@${escapeHtml(post.authorName || '')}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadTaggedPosts() {
+  const loader = document.getElementById('taggedLoader');
+  const grid = document.getElementById('taggedGrid');
+  loader.classList.remove('hidden');
+
+  const taggedQuery = query(collection(db, 'posts'), where('taggedUids', 'array-contains', currentUser.uid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(taggedQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessuna foto o video in cui sei taggato.</p>';
+    return;
+  }
+
+  grid.innerHTML = snapshot.docs.map(docSnap => {
+    const post = docSnap.data();
+    const media = getPostMedia(post);
+    const first = media[0];
+    return `
+      <div class="post-card">
+        ${first ? (first.type === 'video' ? `<video src="${first.url}" class="post-photo" muted></video>` : `<img src="${first.url}" class="post-photo" alt="" />`) : ''}
+        <p class="post-caption">@${escapeHtml(post.authorName || '')}</p>
+      </div>
+    `;
+  }).join('');
 }

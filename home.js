@@ -123,6 +123,7 @@ let unsubscribeStoryComments = null;
 
 let sharingPostId = null;
 let allShareFriends = [];
+let pendingTaggedUsers = [];
 
 const TEXT_STYLES = [
   { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
@@ -371,11 +372,13 @@ postForm.addEventListener('submit', async (e) => {
         if (m.path) deleteObject(ref(storage, m.path)).catch(() => {});
       });
 
-      await updateDoc(doc(db, 'posts', editingPostId), {
+    await updateDoc(doc(db, 'posts', editingPostId), {
         caption: captionInput.value.trim(),
         media: finalMedia,
         photoUrl: finalMedia[0]?.url || '',
-        photoPath: finalMedia[0]?.path || ''
+        photoPath: finalMedia[0]?.path || '',
+        taggedUids: pendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: pendingTaggedUsers.map(t => t.username)
       });
     } else {
       await addDoc(collection(db, 'posts'), {
@@ -388,6 +391,8 @@ postForm.addEventListener('submit', async (e) => {
         caption: captionInput.value.trim(),
         likes: [],
         commentCount: 0,
+        taggedUids: pendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: pendingTaggedUsers.map(t => t.username),
         createdAt: serverTimestamp()
       });
     }
@@ -480,9 +485,15 @@ function startListeningToPosts() {
             <button class="action-btn share-btn" data-id="${id}">
               <i data-lucide="send"></i>
             </button>
+            <button class="action-btn repost-action-btn ${/* opzionale: repostato-da-te */''}" data-id="${id}">
+  <i data-lucide="repeat"></i>
+</button>
             <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
               <i data-lucide="bookmark"></i>
             </button>
+            <button class="menu-item tag-view-btn" data-id="${id}">
+  <i data-lucide="users"></i> Persone taggate
+</button>
           </div>
         </article>
       `;
@@ -1870,5 +1881,127 @@ async function sendPostToChat(otherUid, postId) {
     lastMessage: '📤 Post condiviso',
     lastMessageAt: serverTimestamp(),
     [`unread.${otherUid}`]: increment(1)
+  });
+}
+const tagModal = document.getElementById('tagModal');
+const closeTagModalBtn = document.getElementById('closeTagModalBtn');
+const tagSearchInput = document.getElementById('tagSearchInput');
+const tagResultsList = document.getElementById('tagResultsList');
+const taggedSelectedList = document.getElementById('taggedSelectedList');
+const tagModalDoneBtn = document.getElementById('tagModalDoneBtn');
+const openTagModalBtn = document.getElementById('openTagModalBtn');
+const taggedPreview = document.getElementById('taggedPreview');
+
+openTagModalBtn.addEventListener('click', () => {
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderTaggedSelected();
+});
+
+closeTagModalBtn.addEventListener('click', () => tagModal.classList.add('hidden'));
+tagModal.addEventListener('click', (e) => { if (e.target === tagModal) tagModal.classList.add('hidden'); });
+tagModalDoneBtn.addEventListener('click', () => {
+  tagModal.classList.add('hidden');
+  renderTaggedPreview();
+});
+
+let tagSearchTimeout;
+tagSearchInput.addEventListener('input', () => {
+  clearTimeout(tagSearchTimeout);
+  const term = tagSearchInput.value.trim().toLowerCase();
+  if (!term) { tagResultsList.innerHTML = ''; return; }
+
+  tagSearchTimeout = setTimeout(async () => {
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('username', '>=', term),
+      where('username', '<=', term + '\uf8ff'),
+      limit(8)
+    );
+    const snapshot = await getDocs(usersQuery);
+
+    tagResultsList.innerHTML = snapshot.docs
+      .filter(d => d.id !== currentUser.uid && !pendingTaggedUsers.some(t => t.uid === d.id))
+      .map(docSnap => {
+        const u = docSnap.data();
+        return `
+          <div class="conversation-item" data-uid="${docSnap.id}" data-username="${escapeHtml(u.username || '')}">
+            ${u.logoUrl ? `<img src="${u.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+            <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.username || '')}</span></div>
+          </div>
+        `;
+      }).join('');
+    lucide.createIcons();
+
+    tagResultsList.querySelectorAll('.conversation-item').forEach(item => {
+      item.addEventListener('click', () => {
+        pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+        tagSearchInput.value = '';
+        tagResultsList.innerHTML = '';
+        renderTaggedSelected();
+      });
+    });
+  }, 300);
+});
+
+function renderTaggedSelected() {
+  taggedSelectedList.innerHTML = pendingTaggedUsers.map(t => `
+    <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove">×</button></span>
+  `).join('');
+
+  taggedSelectedList.querySelectorAll('.tagged-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingTaggedUsers = pendingTaggedUsers.filter(t => t.uid !== btn.dataset.uid);
+      renderTaggedSelected();
+    });
+  });
+}
+
+function renderTaggedPreview() {
+  if (pendingTaggedUsers.length === 0) {
+    taggedPreview.innerHTML = '';
+    return;
+  }
+  taggedPreview.innerHTML = `<span class="tagged-preview-text">Con: ${pendingTaggedUsers.map(t => '@' + escapeHtml(t.username)).join(', ')}</span>`;
+}
+function attachRepostAndTagListeners(scopeSelector, cache) {
+  document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      if (!post || post.uid === currentUser.uid) {
+        alert('Non puoi repostare i tuoi stessi post.');
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'reposts'), {
+          uid: currentUser.uid,
+          postId,
+          originalAuthorUid: post.uid,
+          createdAt: serverTimestamp()
+        });
+        btn.classList.add('reposted');
+      } catch (error) {
+        console.error('Errore repost:', error);
+      }
+    });
+  });
+
+  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+      }
+    });
   });
 }
