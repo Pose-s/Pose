@@ -1221,33 +1221,21 @@ function storyPointerDown(e) {
     return;
   }
 
-  // Prova sempre prima a vedere se stai toccando un testo esistente
-  const idx = findTextAt(pos);
-  if (idx !== -1) {
-    storyDraggingTextIdx = idx;
-    storyDragOffset = { x: pos.x - storyTextLayers[idx].x, y: pos.y - storyTextLayers[idx].y };
-    storyDragMoved = false;
-    storyDragStartPos = pos;
+  if (storyCurrentTool === 'text') {
+    storyTextCommitted = false;
+    storyPendingTextPos = pos;
+    storyEditingTextIdx = null;
+    storyTextInput.style.left = `${pos.clientX}px`;
+    storyTextInput.style.top = `${pos.clientY}px`;
+    storyTextInput.style.color = storyCurrentColor;
+    storyTextInput.classList.remove('hidden');
+    storyTextInput.value = '';
+    renderTextStyleBar();
+    textStyleBar.classList.remove('hidden');
+    storyTextInput.focus();
     return;
   }
 
-  // Nessun testo toccato: se stai disegnando/gommando, non fare nulla qui
-  if (storyCurrentTool === 'draw' || storyCurrentTool === 'erase') return;
-
-  // Altrimenti, tocco su area vuota: crea un nuovo testo
-  storyTextCommitted = false;
-  storyPendingTextPos = pos;
-  storyEditingTextIdx = null;
-  storyTextInput.style.left = `${pos.clientX}px`;
-  storyTextInput.style.top = `${pos.clientY}px`;
-  storyTextInput.style.color = storyCurrentColor;
-  storyTextInput.classList.remove('hidden');
-  storyTextInput.value = '';
-  renderTextStyleBar();
-  textStyleBar.classList.remove('hidden');
-  storyTextInput.focus();
-}
-
   const idx = findTextAt(pos);
   if (idx !== -1) {
     storyDraggingTextIdx = idx;
@@ -1255,6 +1243,7 @@ function storyPointerDown(e) {
     storyDragMoved = false;
     storyDragStartPos = pos;
   }
+}
 
 function storyPointerMove(e) {
   const pos = getStoryCanvasPos(e);
