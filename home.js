@@ -1255,7 +1255,6 @@ function storyPointerDown(e) {
     storyDragMoved = false;
     storyDragStartPos = pos;
   }
-}
 
 function storyPointerMove(e) {
   const pos = getStoryCanvasPos(e);
