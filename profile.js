@@ -702,7 +702,7 @@ function renderProfilePosts() {
                 <i data-lucide="clapperboard"></i> Pubblica nelle storie
               </button>
               <button class="menu-item tag-view-btn" data-id="${id}">
-                <i data-lucide="users"></i> Persone taggate
+                <i data-lucide="tag"></i> Tag
               </button>
               <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
                 <i data-lucide="trash-2"></i> Elimina
@@ -1190,3 +1190,40 @@ async function sendPostToChat(otherUid, postId, cache) {
     [`unread.${otherUid}`]: increment(1)
   });
 }
+const tagChoiceModal = document.getElementById('tagChoiceModal');
+const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
+const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
+const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
+let activeTagPostId = null;
+let activeTagCache = null;
+
+function openTagChoiceModal(postId, cache) {
+  activeTagPostId = postId;
+  activeTagCache = cache;
+  tagChoiceModal.classList.remove('hidden');
+}
+
+closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
+tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+
+viewTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  const tags = post?.taggedUsernames || [];
+  if (tags.length === 0) {
+    alert('Nessuna persona taggata in questo post.');
+  } else {
+    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+  }
+});
+
+addTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
+
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderTaggedSelected();
+});

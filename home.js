@@ -294,19 +294,12 @@ async function attachRepostAndTagListeners(scopeSelector, cache) {
   });
 
   document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllMenus();
-      const postId = btn.dataset.id;
-      const post = cache.get(postId);
-      const tags = post?.taggedUsernames || [];
-      if (tags.length === 0) {
-        alert('Nessuna persona taggata in questo post.');
-      } else {
-        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-      }
-    });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAllMenus();
+    openTagChoiceModal(btn.dataset.id, cache);
   });
+});
 }
 
 // ===== Modale tag persone =====
@@ -319,9 +312,23 @@ openTagModalBtn.addEventListener('click', () => {
 
 closeTagModalBtn.addEventListener('click', () => tagModal.classList.add('hidden'));
 tagModal.addEventListener('click', (e) => { if (e.target === tagModal) tagModal.classList.add('hidden'); });
-tagModalDoneBtn.addEventListener('click', () => {
+tagModalDoneBtn.addEventListener('click', async () => {
   tagModal.classList.add('hidden');
-  renderTaggedPreview();
+
+  if (activeTagPostId) {
+    try {
+      await updateDoc(doc(db, 'posts', activeTagPostId), {
+        taggedUids: pendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: pendingTaggedUsers.map(t => t.username)
+      });
+      alert('Tag aggiornati!');
+    } catch (error) {
+      console.error('Errore aggiornamento tag:', error);
+    }
+    activeTagPostId = null;
+  } else {
+    renderTaggedPreview();
+  }
 });
 
 let tagSearchTimeout;
@@ -636,7 +643,7 @@ function startListeningToPosts() {
                   <i data-lucide="clapperboard"></i> Pubblica nelle storie
                 </button>
                 <button class="menu-item tag-view-btn" data-id="${id}">
-                  <i data-lucide="users"></i> Persone taggate
+                  <i data-lucide="tag"></i> Tag
                 </button>
                 ${isOwner ? `
                   <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
@@ -1646,7 +1653,36 @@ function showCurrentStory() {
   }
 
   storyViewerUsername.textContent = `@${group.username}`;
+  storyViewerImage.onclick = null;
+storyViewerImage.style.cursor = 'default';
+
+const sharedPostCard = document.getElementById('sharedPostStoryCard');
+if (sharedPostCard) sharedPostCard.remove();
+
+if (story.type === 'post_share' && story.sharedPostAuthor) {
+  storyViewerImage.src = '';
+  storyViewerImage.style.display = 'none';
+
+  const card = document.createElement('div');
+  card.id = 'sharedPostStoryCard';
+  card.className = 'shared-post-story-card';
+  card.innerHTML = `
+    <div class="shared-post-story-inner">
+      <img src="${story.mediaUrl}" class="shared-post-story-img" alt="" />
+      <div class="shared-post-story-info">
+        <span class="shared-post-story-author">@${escapeHtml(story.sharedPostAuthor)}</span>
+        ${story.sharedPostCaption ? `<p class="shared-post-story-caption">${escapeHtml(story.sharedPostCaption)}</p>` : ''}
+      </div>
+    </div>
+  `;
+  card.addEventListener('click', () => {
+    window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
+  });
+  storyViewerImage.parentElement.appendChild(card);
+} else {
+  storyViewerImage.style.display = 'block';
   storyViewerImage.src = story.mediaUrl;
+}
   storyViewerImage.onclick = null;
 storyViewerImage.style.cursor = 'default';
 
@@ -2167,4 +2203,41 @@ storyTagViewBtn.addEventListener('click', () => {
   } else {
     alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
   }
+});
+const tagChoiceModal = document.getElementById('tagChoiceModal');
+const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
+const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
+const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
+let activeTagPostId = null;
+let activeTagCache = null;
+
+function openTagChoiceModal(postId, cache) {
+  activeTagPostId = postId;
+  activeTagCache = cache;
+  tagChoiceModal.classList.remove('hidden');
+}
+
+closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
+tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+
+viewTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  const tags = post?.taggedUsernames || [];
+  if (tags.length === 0) {
+    alert('Nessuna persona taggata in questo post.');
+  } else {
+    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+  }
+});
+
+addTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
+
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderTaggedSelected();
 });

@@ -3268,3 +3268,42 @@ html, body {
   cursor: pointer;
   font-weight: 700;
 }
+.shared-post-story-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 260px;
+  cursor: pointer;
+  z-index: 8;
+}
+
+.shared-post-story-inner {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+
+.shared-post-story-img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.shared-post-story-info {
+  padding: 12px 14px;
+}
+
+.shared-post-story-author {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.shared-post-story-caption {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
