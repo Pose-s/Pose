@@ -133,6 +133,7 @@ let unsubscribeStoryComments = null;
 
 let sharingPostId = null;
 let allShareFriends = [];
+let storyPendingTaggedUsers = [];
 
 const TEXT_STYLES = [
   { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
@@ -353,7 +354,13 @@ tagSearchInput.addEventListener('input', () => {
 
     tagResultsList.querySelectorAll('.conversation-item').forEach(item => {
       item.addEventListener('click', () => {
-        pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+      if (!storyEditor.classList.contains('hidden')) {
+  storyPendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+  renderStoryTaggedSelected();
+} else {
+  pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+  renderTaggedSelected();
+}
         tagSearchInput.value = '';
         tagResultsList.innerHTML = '';
         renderTaggedSelected();
@@ -769,12 +776,42 @@ function attachPostListeners() {
   });
 
   document.querySelectorAll('.repost-story-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllMenus();
-      alert('Funzione "Pubblica nelle storie" in arrivo!');
-    });
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    closeAllMenus();
+
+    const postId = btn.dataset.id;
+    const post = postsCache.get(postId);
+    if (!post) return;
+
+    const media = getPostMedia(post);
+    if (media.length === 0) return;
+
+    try {
+      const durationHours = parseInt(currentProfile.storyDuration || '24');
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+      await addDoc(collection(db, 'stories'), {
+        uid: currentUser.uid,
+        username: currentProfile.username || currentUser.email.split('@')[0],
+        logoUrl: currentProfile.logoUrl || '',
+        mediaUrl: media[0].url,
+        type: 'post_share',
+        sharedPostId: postId,
+        sharedPostAuthor: post.authorName || '',
+        sharedPostCaption: post.caption || '',
+        viewedBy: [],
+        likes: [],
+        expiresAt,
+        createdAt: serverTimestamp()
+      });
+
+      alert('Post pubblicato nelle tue storie!');
+    } catch (error) {
+      console.error('Errore pubblicazione post nelle storie:', error);
+    }
   });
+});
 
   document.querySelectorAll('.delete-post-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -1142,6 +1179,7 @@ function openStoryEditor(imageDataUrl) {
     storyCtx = storyEditorCanvas.getContext('2d');
     storyBaseImage = img;
     storyTextLayers = [];
+    storyPendingTaggedUsers = [];
     storyDrawingLayer = null;
     storyCurrentTool = null;
     redrawStoryCanvas();
@@ -1554,6 +1592,8 @@ storyEditorPublishBtn.addEventListener('click', async () => {
 
     const durationHours = parseInt(currentProfile.storyDuration || '24');
     const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+    taggedUids: storyPendingTaggedUsers.map(t => t.uid),
+    taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
 
     await addDoc(collection(db, 'stories'), {
       uid: currentUser.uid,
@@ -1608,6 +1648,15 @@ function showCurrentStory() {
 
   storyViewerUsername.textContent = `@${group.username}`;
   storyViewerImage.src = story.mediaUrl;
+  storyViewerImage.onclick = null;
+storyViewerImage.style.cursor = 'default';
+
+if (story.type === 'post_share' && story.sharedPostAuthor) {
+  storyViewerImage.style.cursor = 'pointer';
+  storyViewerImage.onclick = () => {
+    window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
+  };
+}
 
   const avatarToShow = group.uid === currentUser.uid
     ? (currentProfile.logoUrl || group.logoUrl)
@@ -2087,3 +2136,36 @@ async function attachRepostersDisplay() {
 
   lucide.createIcons();
 }
+const storyTagBtn = document.getElementById('storyTagBtn');
+const storyTagViewBtn = document.getElementById('storyTagViewBtn');
+
+storyTagBtn.addEventListener('click', () => {
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderStoryTaggedSelected();
+});
+
+function renderStoryTaggedSelected() {
+  taggedSelectedList.innerHTML = storyPendingTaggedUsers.map(t => `
+    <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove-story">×</button></span>
+  `).join('');
+
+  taggedSelectedList.querySelectorAll('.tagged-chip-remove-story').forEach(btn => {
+    btn.addEventListener('click', () => {
+      storyPendingTaggedUsers = storyPendingTaggedUsers.filter(t => t.uid !== btn.dataset.uid);
+      renderStoryTaggedSelected();
+    });
+  });
+}
+
+storyTagViewBtn.addEventListener('click', () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const tags = data.story.taggedUsernames || [];
+  if (tags.length === 0) {
+    alert('Nessuna persona taggata in questa storia.');
+  } else {
+    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+  }
+});

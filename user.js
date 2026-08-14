@@ -560,13 +560,43 @@ function attachPostActionListeners() {
     });
   });
 
-  document.querySelectorAll('#userPostsGrid .repost-story-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllPostMenus();
-      alert('Funzione "Pubblica nelle storie" in arrivo!');
-    });
+  document.querySelectorAll('.repost-story-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    closeAllMenus();
+
+    const postId = btn.dataset.id;
+    const post = postsCacheUser.get(postId);
+    if (!post) return;
+
+    const media = getPostMedia(post);
+    if (media.length === 0) return;
+
+    try {
+      const durationHours = parseInt(currentProfile.storyDuration || '24');
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+      await addDoc(collection(db, 'stories'), {
+        uid: currentUser.uid,
+        username: currentProfile.username || currentUser.email.split('@')[0],
+        logoUrl: currentProfile.logoUrl || '',
+        mediaUrl: media[0].url,
+        type: 'post_share',
+        sharedPostId: postId,
+        sharedPostAuthor: post.authorName || '',
+        sharedPostCaption: post.caption || '',
+        viewedBy: [],
+        likes: [],
+        expiresAt,
+        createdAt: serverTimestamp()
+      });
+
+      alert('Post pubblicato nelle tue storie!');
+    } catch (error) {
+      console.error('Errore pubblicazione post nelle storie:', error);
+    }
   });
+});
 
   document.querySelectorAll('#userPostsGrid .like-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {

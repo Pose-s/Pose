@@ -148,6 +148,9 @@
 
     <!-- Barra proprietario: vede chi ha guardato -->
     <div class="story-bottom-bar" id="storyOwnerBar">
+    <button type="button" class="story-viewers-btn" id="storyTagViewBtn">
+  <i data-lucide="users"></i>
+</button>  
   <button type="button" class="story-viewers-btn" id="storyViewersBtn">
     <i data-lucide="eye"></i>
     <span id="storyViewersCount">0</span>
@@ -159,6 +162,9 @@
 
     <!-- Barra visitatore: like e commento -->
     <div class="story-bottom-bar hidden" id="storyViewerBar">
+    <button type="button" class="story-viewers-btn" id="storyTagViewBtn">
+  <i data-lucide="users"></i>
+</button>
       <button type="button" class="story-like-btn" id="storyLikeBtn">
         <i data-lucide="heart"></i>
       </button>
@@ -211,6 +217,7 @@
   <label for="storyColorInput" class="color-picker-btn" id="colorPickerBtn" style="background:#ffffff"></label>
 <input type="color" id="storyColorInput" class="hidden-color-input" value="#ffffff" />
   <button type="button" class="camera-icon-btn" id="storyUndoBtn" title="Annulla"><i data-lucide="undo-2"></i></button>
+  <button type="button" class="camera-icon-btn" id="storyTagBtn" title="Tagga persone"><i data-lucide="user-plus"></i></button>
 </div>
 
 <div class="text-style-bar hidden" id="textStyleBar"></div>

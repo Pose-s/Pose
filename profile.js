@@ -277,21 +277,43 @@ async function attachRepostAndTagListeners(scopeSelector, cache) {
     });
   });
 
-  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllProfileMenus();
-      const postId = btn.dataset.id;
-      const post = cache.get(postId);
-      const tags = post?.taggedUsernames || [];
-      if (tags.length === 0) {
-        alert('Nessuna persona taggata in questo post.');
-      } else {
-        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-      }
-    });
+  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    closeAllProfileMenus();
+
+    const postId = btn.dataset.id;
+    const post = postsCacheProfile.get(postId);
+    if (!post) return;
+
+    const media = getPostMedia(post);
+    if (media.length === 0) return;
+
+    try {
+      const durationHours = 24;
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+      await addDoc(collection(db, 'stories'), {
+        uid: currentUser.uid,
+        username: currentUsername || currentUser.email.split('@')[0],
+        logoUrl: currentLogoUrl || '',
+        mediaUrl: media[0].url,
+        type: 'post_share',
+        sharedPostId: postId,
+        sharedPostAuthor: post.authorName || '',
+        sharedPostCaption: post.caption || '',
+        viewedBy: [],
+        likes: [],
+        expiresAt,
+        createdAt: serverTimestamp()
+      });
+
+      alert('Post pubblicato nelle tue storie!');
+    } catch (error) {
+      console.error('Errore pubblicazione post nelle storie:', error);
+    }
   });
-}
+});
 
 function updateAvatarDisplay(url, imgEl, placeholderEl) {
   if (url) {

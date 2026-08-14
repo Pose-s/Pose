@@ -3261,3 +3261,10 @@ html, body {
   width: 14px;
   height: 14px;
 }
+.tagged-chip-remove-story {
+  background: none;
+  border: none;
+  color: #7c3aed;
+  cursor: pointer;
+  font-weight: 700;
+}
