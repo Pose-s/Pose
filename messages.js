@@ -280,6 +280,15 @@ async function openChat(convId, otherUid) {
       </div>
     </a>
   `;  
+  } else if (m.type === 'story_tag') {
+  contentHtml = `
+    <div class="shared-post-card">
+      ${m.storyMediaUrl ? `<img src="${m.storyMediaUrl}" class="shared-post-img" alt="" />` : ''}
+      <div class="shared-post-info">
+        <span class="shared-post-author">🎬 Ti ha taggato in una storia</span>
+      </div>
+    </div>
+  `;
 } else {
   contentHtml = escapeHtml(m.text || '');
 }

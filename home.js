@@ -96,6 +96,7 @@ const storyEditorDiscardBtn = document.getElementById('storyEditorDiscardBtn');
 const storyEditorPublishBtn = document.getElementById('storyEditorPublishBtn');
 const storyTextInput = document.getElementById('storyTextInput');
 const textStyleBar = document.getElementById('textStyleBar');
+const storyTagBtn = document.getElementById('storyTagBtn');
 
 const tagModal = document.getElementById('tagModal');
 const closeTagModalBtn = document.getElementById('closeTagModalBtn');
@@ -105,6 +106,14 @@ const taggedSelectedList = document.getElementById('taggedSelectedList');
 const tagModalDoneBtn = document.getElementById('tagModalDoneBtn');
 const openTagModalBtn = document.getElementById('openTagModalBtn');
 const taggedPreview = document.getElementById('taggedPreview');
+
+const tagChoiceModal = document.getElementById('tagChoiceModal');
+const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
+const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
+const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
+
+const storyTagViewBtn2 = document.getElementById('storyTagViewBtn2');
+const storyRepostBtn = document.getElementById('storyRepostBtn');
 
 lucide.createIcons();
 
@@ -117,6 +126,9 @@ let unsubscribeComments = null;
 let searchTimeout;
 let savedPostIds = new Set();
 let pendingTaggedUsers = [];
+let storyPendingTaggedUsers = [];
+let activeTagPostId = null;
+let activeTagCache = null;
 
 let pendingNewFiles = [];
 let existingEditMedia = [];
@@ -133,7 +145,6 @@ let unsubscribeStoryComments = null;
 
 let sharingPostId = null;
 let allShareFriends = [];
-let storyPendingTaggedUsers = [];
 
 const TEXT_STYLES = [
   { id: 'classic', label: 'Classico', font: '700 36px Inter, sans-serif' },
@@ -227,7 +238,7 @@ function attachSaveListeners(scopeSelector) {
   });
 }
 
-// ===== Repost + Tag =====
+// ===== Repost + Tag post =====
 async function attachRepostAndTagListeners(scopeSelector, cache) {
   const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
 
@@ -294,15 +305,46 @@ async function attachRepostAndTagListeners(scopeSelector, cache) {
   });
 
   document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeAllMenus();
-    openTagChoiceModal(btn.dataset.id, cache);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      openTagChoiceModal(btn.dataset.id, cache);
+    });
   });
-});
 }
 
-// ===== Modale tag persone =====
+function openTagChoiceModal(postId, cache) {
+  activeTagPostId = postId;
+  activeTagCache = cache;
+  tagChoiceModal.classList.remove('hidden');
+}
+
+closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
+tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+
+viewTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  const tags = post?.taggedUsernames || [];
+  if (tags.length === 0) {
+    alert('Nessuna persona taggata in questo post.');
+  } else {
+    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+  }
+});
+
+addTagsChoiceBtn.addEventListener('click', () => {
+  tagChoiceModal.classList.add('hidden');
+  const post = activeTagCache.get(activeTagPostId);
+  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
+
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderTaggedSelected();
+});
+
+// ===== Modale tag persone (condiviso: post + storie) =====
 openTagModalBtn.addEventListener('click', () => {
   tagModal.classList.remove('hidden');
   tagSearchInput.value = '';
@@ -312,6 +354,7 @@ openTagModalBtn.addEventListener('click', () => {
 
 closeTagModalBtn.addEventListener('click', () => tagModal.classList.add('hidden'));
 tagModal.addEventListener('click', (e) => { if (e.target === tagModal) tagModal.classList.add('hidden'); });
+
 tagModalDoneBtn.addEventListener('click', async () => {
   tagModal.classList.add('hidden');
 
@@ -346,8 +389,10 @@ tagSearchInput.addEventListener('input', () => {
     );
     const snapshot = await getDocs(usersQuery);
 
+    const activeTagList = !storyEditor.classList.contains('hidden') ? storyPendingTaggedUsers : pendingTaggedUsers;
+
     tagResultsList.innerHTML = snapshot.docs
-      .filter(d => d.id !== currentUser.uid && !pendingTaggedUsers.some(t => t.uid === d.id))
+      .filter(d => d.id !== currentUser.uid && !activeTagList.some(t => t.uid === d.id))
       .map(docSnap => {
         const u = docSnap.data();
         return `
@@ -361,16 +406,15 @@ tagSearchInput.addEventListener('input', () => {
 
     tagResultsList.querySelectorAll('.conversation-item').forEach(item => {
       item.addEventListener('click', () => {
-      if (!storyEditor.classList.contains('hidden')) {
-  storyPendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
-  renderStoryTaggedSelected();
-} else {
-  pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
-  renderTaggedSelected();
-}
+        if (!storyEditor.classList.contains('hidden')) {
+          storyPendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+          renderStoryTaggedSelected();
+        } else {
+          pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+          renderTaggedSelected();
+        }
         tagSearchInput.value = '';
         tagResultsList.innerHTML = '';
-        renderTaggedSelected();
       });
     });
   }, 300);
@@ -395,6 +439,19 @@ function renderTaggedPreview() {
     return;
   }
   taggedPreview.innerHTML = `<span class="tagged-preview-text">Con: ${pendingTaggedUsers.map(t => '@' + escapeHtml(t.username)).join(', ')}</span>`;
+}
+
+function renderStoryTaggedSelected() {
+  taggedSelectedList.innerHTML = storyPendingTaggedUsers.map(t => `
+    <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove-story">×</button></span>
+  `).join('');
+
+  taggedSelectedList.querySelectorAll('.tagged-chip-remove-story').forEach(btn => {
+    btn.addEventListener('click', () => {
+      storyPendingTaggedUsers = storyPendingTaggedUsers.filter(t => t.uid !== btn.dataset.uid);
+      renderStoryTaggedSelected();
+    });
+  });
 }
 
 // ===== Modale Crea/Modifica Post =====
@@ -693,6 +750,53 @@ function startListeningToPosts() {
   });
 }
 
+async function attachRepostersDisplay() {
+  const following = currentProfile.following || [];
+  if (following.length === 0) return;
+
+  const postCards = document.querySelectorAll('#postsGrid .post-card');
+
+  for (const card of postCards) {
+    const mediaEl = card.querySelector('.post-media-clickable');
+    if (!mediaEl) continue;
+    const postId = mediaEl.dataset.id;
+
+    const repostersQuery = query(
+      collection(db, 'reposts'),
+      where('postId', '==', postId),
+      where('uid', 'in', following.slice(0, 30))
+    );
+
+    const snap = await getDocs(repostersQuery);
+    if (snap.empty) continue;
+
+    const reposterUids = [...new Set(snap.docs.map(d => d.data().uid))];
+    const users = await Promise.all(reposterUids.slice(0, 5).map(async (uid) => {
+      const uDoc = await getDoc(doc(db, 'users', uid));
+      return uDoc.exists() ? { uid, ...uDoc.data() } : null;
+    }));
+
+    const validUsers = users.filter(u => u);
+    if (validUsers.length === 0) continue;
+
+    const badge = document.createElement('div');
+    badge.className = 'reposters-badge';
+    badge.innerHTML = validUsers.map(u => `
+      <a href="user.html?u=${encodeURIComponent(u.username || '')}" class="reposter-avatar" title="@${escapeHtml(u.username || '')}">
+        ${u.logoUrl
+          ? `<img src="${u.logoUrl}" alt="" />`
+          : `<div class="reposter-avatar-placeholder"><i data-lucide="user"></i></div>`
+        }
+      </a>
+    `).join('');
+
+    card.style.position = 'relative';
+    card.appendChild(badge);
+  }
+
+  lucide.createIcons();
+}
+
 function renderMediaCarousel(mediaItems, postId) {
   if (mediaItems.length === 0) return '';
 
@@ -783,42 +887,42 @@ function attachPostListeners() {
   });
 
   document.querySelectorAll('.repost-story-btn').forEach(btn => {
-  btn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    closeAllMenus();
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      closeAllMenus();
 
-    const postId = btn.dataset.id;
-    const post = postsCache.get(postId);
-    if (!post) return;
+      const postId = btn.dataset.id;
+      const post = postsCache.get(postId);
+      if (!post) return;
 
-    const media = getPostMedia(post);
-    if (media.length === 0) return;
+      const media = getPostMedia(post);
+      if (media.length === 0) return;
 
-    try {
-      const durationHours = parseInt(currentProfile.storyDuration || '24');
-      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+      try {
+        const durationHours = parseInt(currentProfile.storyDuration || '24');
+        const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
 
-      await addDoc(collection(db, 'stories'), {
-        uid: currentUser.uid,
-        username: currentProfile.username || currentUser.email.split('@')[0],
-        logoUrl: currentProfile.logoUrl || '',
-        mediaUrl: media[0].url,
-        type: 'post_share',
-        sharedPostId: postId,
-        sharedPostAuthor: post.authorName || '',
-        sharedPostCaption: post.caption || '',
-        viewedBy: [],
-        likes: [],
-        expiresAt,
-        createdAt: serverTimestamp()
-      });
+        await addDoc(collection(db, 'stories'), {
+          uid: currentUser.uid,
+          username: currentProfile.username || currentUser.email.split('@')[0],
+          logoUrl: currentProfile.logoUrl || '',
+          mediaUrl: media[0].url,
+          type: 'post_share',
+          sharedPostId: postId,
+          sharedPostAuthor: post.authorName || '',
+          sharedPostCaption: post.caption || '',
+          viewedBy: [],
+          likes: [],
+          expiresAt,
+          createdAt: serverTimestamp()
+        });
 
-      alert('Post pubblicato nelle tue storie!');
-    } catch (error) {
-      console.error('Errore pubblicazione post nelle storie:', error);
-    }
+        alert('Post pubblicato nelle tue storie!');
+      } catch (error) {
+        console.error('Errore pubblicazione post nelle storie:', error);
+      }
+    });
   });
-});
 
   document.querySelectorAll('.delete-post-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -1186,9 +1290,9 @@ function openStoryEditor(imageDataUrl) {
     storyCtx = storyEditorCanvas.getContext('2d');
     storyBaseImage = img;
     storyTextLayers = [];
-    storyPendingTaggedUsers = [];
     storyDrawingLayer = null;
     storyCurrentTool = null;
+    storyPendingTaggedUsers = [];
     redrawStoryCanvas();
     storyUndoStack = [captureStoryState()];
     storyEditor.classList.remove('hidden');
@@ -1344,6 +1448,23 @@ storyEraserToolBtn.addEventListener('click', () => {
   textStyleBar.classList.add('hidden');
 });
 
+storyTextToolBtn.addEventListener('click', () => {
+  const centerPos = {
+    x: storyEditorCanvas.width / 2,
+    y: storyEditorCanvas.height / 2,
+    clientX: window.innerWidth / 2,
+    clientY: window.innerHeight / 2
+  };
+  openStoryTextInputAt(centerPos);
+});
+
+storyTagBtn.addEventListener('click', () => {
+  tagModal.classList.remove('hidden');
+  tagSearchInput.value = '';
+  tagResultsList.innerHTML = '';
+  renderStoryTaggedSelected();
+});
+
 function renderTextStyleBar() {
   textStyleBar.innerHTML = TEXT_STYLES.map(s => `
     <button type="button" class="text-style-option ${s.id === storyCurrentTextStyle ? 'active' : ''}" data-style="${s.id}">${s.label}</button>
@@ -1389,11 +1510,9 @@ function ensureDrawingLayer() {
 
 function getStoryCanvasPos(e) {
   const rect = storyEditorCanvas.getBoundingClientRect();
-  const clientX = e.clientX;
-  const clientY = e.clientY;
   const scaleX = storyEditorCanvas.width / rect.width;
   const scaleY = storyEditorCanvas.height / rect.height;
-  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY, clientX, clientY };
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY, clientX: e.clientX, clientY: e.clientY };
 }
 
 function findTextAt(pos) {
@@ -1407,6 +1526,20 @@ function findTextAt(pos) {
     }
   }
   return -1;
+}
+
+function openStoryTextInputAt(pos) {
+  storyTextCommitted = false;
+  storyPendingTextPos = pos;
+  storyEditingTextIdx = null;
+  storyTextInput.style.left = `${pos.clientX}px`;
+  storyTextInput.style.top = `${pos.clientY}px`;
+  storyTextInput.style.color = storyCurrentColor;
+  storyTextInput.classList.remove('hidden');
+  storyTextInput.value = '';
+  renderTextStyleBar();
+  textStyleBar.classList.remove('hidden');
+  storyTextInput.focus();
 }
 
 function storyPointerDown(e) {
@@ -1430,17 +1563,7 @@ function storyPointerDown(e) {
     return;
   }
 
-  storyTextCommitted = false;
-  storyPendingTextPos = pos;
-  storyEditingTextIdx = null;
-  storyTextInput.style.left = `${pos.clientX}px`;
-  storyTextInput.style.top = `${pos.clientY}px`;
-  storyTextInput.style.color = storyCurrentColor;
-  storyTextInput.classList.remove('hidden');
-  storyTextInput.value = '';
-  renderTextStyleBar();
-  textStyleBar.classList.remove('hidden');
-  storyTextInput.focus();
+  openStoryTextInputAt(pos);
 }
 
 function storyPointerMove(e) {
@@ -1570,6 +1693,54 @@ storyTextInput.addEventListener('focus', () => {
   storyTextCommitted = false;
 });
 
+// ===== Notifica via messaggio quando qualcuno viene taggato in una storia =====
+async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
+  for (const t of taggedUsers) {
+    if (t.uid === currentUser.uid) continue;
+
+    try {
+      const convId = conversationIdFor(currentUser.uid, t.uid);
+      const convRef = doc(db, 'conversations', convId);
+      const convDoc = await getDoc(convRef);
+
+      if (!convDoc.exists()) {
+        await setDoc(convRef, {
+          participants: [currentUser.uid, t.uid],
+          lastMessage: '',
+          lastMessageAt: serverTimestamp(),
+          unread: { [currentUser.uid]: 0, [t.uid]: 0 }
+        });
+      }
+
+      await addDoc(collection(db, 'conversations', convId, 'messages'), {
+        from: currentUser.uid,
+        type: 'story_tag',
+        storyMediaUrl,
+        text: 'Ti ha taggato in una storia',
+        createdAt: serverTimestamp()
+      });
+
+      await updateDoc(convRef, {
+        lastMessage: '🎬 Ti ha taggato in una storia',
+        lastMessageAt: serverTimestamp(),
+        [`unread.${t.uid}`]: increment(1)
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        toUid: t.uid,
+        fromUid: currentUser.uid,
+        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+        fromLogoUrl: currentProfile.logoUrl || '',
+        type: 'story_tag',
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Errore notifica tag storia:', error);
+    }
+  }
+}
+
 storyEditorPublishBtn.addEventListener('click', async () => {
   if (!currentUser) return;
   storyEditorPublishBtn.disabled = true;
@@ -1593,9 +1764,16 @@ storyEditorPublishBtn.addEventListener('click', async () => {
       viewedBy: [],
       likes: [],
       expiresAt,
-      mentions: extractStoryMentions(),
+      taggedUids: storyPendingTaggedUsers.map(t => t.uid),
+      taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
       createdAt: serverTimestamp()
     });
+
+    if (storyPendingTaggedUsers.length > 0) {
+      await notifyTaggedUsersInStory(storyPendingTaggedUsers, mediaUrl);
+    }
+
+    storyPendingTaggedUsers = [];
     storyEditor.classList.add('hidden');
   } catch (error) {
     console.error('Errore pubblicazione storia:', error);
@@ -1636,46 +1814,37 @@ function showCurrentStory() {
   }
 
   storyViewerUsername.textContent = `@${group.username}`;
+
   storyViewerImage.onclick = null;
-storyViewerImage.style.cursor = 'default';
+  storyViewerImage.style.cursor = 'default';
 
-const sharedPostCard = document.getElementById('sharedPostStoryCard');
-if (sharedPostCard) sharedPostCard.remove();
+  const sharedPostCard = document.getElementById('sharedPostStoryCard');
+  if (sharedPostCard) sharedPostCard.remove();
 
-if (story.type === 'post_share' && story.sharedPostAuthor) {
-  storyViewerImage.src = '';
-  storyViewerImage.style.display = 'none';
-  renderStoryMentionOverlays(story);
+  if (story.type === 'post_share' && story.sharedPostAuthor) {
+    storyViewerImage.src = '';
+    storyViewerImage.style.display = 'none';
 
-  const card = document.createElement('div');
-  card.id = 'sharedPostStoryCard';
-  card.className = 'shared-post-story-card';
-  card.innerHTML = `
-    <div class="shared-post-story-inner">
-      <img src="${story.mediaUrl}" class="shared-post-story-img" alt="" />
-      <div class="shared-post-story-info">
-        <span class="shared-post-story-author">@${escapeHtml(story.sharedPostAuthor)}</span>
-        ${story.sharedPostCaption ? `<p class="shared-post-story-caption">${escapeHtml(story.sharedPostCaption)}</p>` : ''}
+    const card = document.createElement('div');
+    card.id = 'sharedPostStoryCard';
+    card.className = 'shared-post-story-card';
+    card.innerHTML = `
+      <div class="shared-post-story-inner">
+        <img src="${story.mediaUrl}" class="shared-post-story-img" alt="" />
+        <div class="shared-post-story-info">
+          <span class="shared-post-story-author">@${escapeHtml(story.sharedPostAuthor)}</span>
+          ${story.sharedPostCaption ? `<p class="shared-post-story-caption">${escapeHtml(story.sharedPostCaption)}</p>` : ''}
+        </div>
       </div>
-    </div>
-  `;
-  card.addEventListener('click', () => {
-    window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
-  });
-  storyViewerImage.parentElement.appendChild(card);
-} else {
-  storyViewerImage.style.display = 'block';
-  storyViewerImage.src = story.mediaUrl;
-}
-  storyViewerImage.onclick = null;
-storyViewerImage.style.cursor = 'default';
-
-if (story.type === 'post_share' && story.sharedPostAuthor) {
-  storyViewerImage.style.cursor = 'pointer';
-  storyViewerImage.onclick = () => {
-    window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
-  };
-}
+    `;
+    card.addEventListener('click', () => {
+      window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
+    });
+    storyViewerImage.parentElement.appendChild(card);
+  } else {
+    storyViewerImage.style.display = 'block';
+    storyViewerImage.src = story.mediaUrl;
+  }
 
   const avatarToShow = group.uid === currentUser.uid
     ? (currentProfile.logoUrl || group.logoUrl)
@@ -1708,6 +1877,15 @@ if (story.type === 'post_share' && story.sharedPostAuthor) {
     const likes = story.likes || [];
     const isLiked = likes.includes(currentUser.uid);
     storyLikeBtn.classList.toggle('liked', isLiked);
+
+    const repostQuery = query(
+      collection(db, 'storyReposts'),
+      where('uid', '==', currentUser.uid),
+      where('storyId', '==', story.id)
+    );
+    getDocs(repostQuery).then(snap => {
+      storyRepostBtn.classList.toggle('reposted', !snap.empty);
+    });
 
     if (!(story.viewedBy || []).includes(currentUser.uid)) {
       updateDoc(doc(db, 'stories', story.id), {
@@ -1778,7 +1956,6 @@ function closeStoryViewer() {
   storyViewer.classList.add('hidden');
   storyViewersPanel.classList.add('hidden');
   if (unsubscribeStoryComments) unsubscribeStoryComments();
-  document.querySelectorAll('.story-mention-overlay').forEach(el => el.remove());
 }
 
 storyViewerClose.addEventListener('click', closeStoryViewer);
@@ -1827,6 +2004,66 @@ storyLikeBtn.addEventListener('click', async () => {
     }
   } catch (error) {
     console.error('Errore like storia:', error);
+  }
+});
+
+storyRepostBtn.addEventListener('click', async () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const { group, story } = data;
+
+  if (group.uid === currentUser.uid) {
+    alert('Non puoi repostare le tue stesse storie.');
+    return;
+  }
+
+  storyRepostBtn.disabled = true;
+
+  try {
+    const existingQuery = query(
+      collection(db, 'storyReposts'),
+      where('uid', '==', currentUser.uid),
+      where('storyId', '==', story.id)
+    );
+    const existingSnap = await getDocs(existingQuery);
+
+    if (!existingSnap.empty) {
+      await deleteDoc(doc(db, 'storyReposts', existingSnap.docs[0].id));
+      storyRepostBtn.classList.remove('reposted');
+    } else {
+      await addDoc(collection(db, 'storyReposts'), {
+        uid: currentUser.uid,
+        storyId: story.id,
+        originalUid: group.uid,
+        createdAt: serverTimestamp()
+      });
+      storyRepostBtn.classList.add('reposted');
+
+      await addDoc(collection(db, 'notifications'), {
+        toUid: group.uid,
+        fromUid: currentUser.uid,
+        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+        fromLogoUrl: currentProfile.logoUrl || '',
+        type: 'story_repost',
+        read: false,
+        createdAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error('Errore repost storia:', error);
+  } finally {
+    storyRepostBtn.disabled = false;
+  }
+});
+
+storyTagViewBtn2.addEventListener('click', () => {
+  const data = getCurrentStoryData();
+  if (!data || !data.story) return;
+  const tags = data.story.taggedUsernames || [];
+  if (tags.length === 0) {
+    alert('Nessuna persona taggata in questa storia.');
+  } else {
+    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
   }
 });
 
@@ -2111,176 +2348,3 @@ async function sendPostToChat(otherUid, postId) {
     [`unread.${otherUid}`]: increment(1)
   });
 }
-async function attachRepostersDisplay() {
-  const following = currentProfile.following || [];
-  if (following.length === 0) return;
-
-  const postCards = document.querySelectorAll('#postsGrid .post-card');
-
-  for (const card of postCards) {
-    const mediaEl = card.querySelector('.post-media-clickable');
-    if (!mediaEl) continue;
-    const postId = mediaEl.dataset.id;
-
-    const repostersQuery = query(
-      collection(db, 'reposts'),
-      where('postId', '==', postId),
-      where('uid', 'in', following.slice(0, 30))
-    );
-
-    const snap = await getDocs(repostersQuery);
-    if (snap.empty) continue;
-
-    const reposterUids = [...new Set(snap.docs.map(d => d.data().uid))];
-    const users = await Promise.all(reposterUids.slice(0, 5).map(async (uid) => {
-      const uDoc = await getDoc(doc(db, 'users', uid));
-      return uDoc.exists() ? { uid, ...uDoc.data() } : null;
-    }));
-
-    const validUsers = users.filter(u => u);
-    if (validUsers.length === 0) continue;
-
-    const badge = document.createElement('div');
-    badge.className = 'reposters-badge';
-    badge.innerHTML = validUsers.map(u => `
-      <a href="user.html?u=${encodeURIComponent(u.username || '')}" class="reposter-avatar" title="@${escapeHtml(u.username || '')}">
-        ${u.logoUrl
-          ? `<img src="${u.logoUrl}" alt="" />`
-          : `<div class="reposter-avatar-placeholder"><i data-lucide="user"></i></div>`
-        }
-      </a>
-    `).join('');
-
-    card.style.position = 'relative';
-    card.appendChild(badge);
-  }
-
-  lucide.createIcons();
-}
-const storyTagBtn = document.getElementById('storyTagBtn');
-const storyTagViewBtn = document.getElementById('storyTagViewBtn');
-
-storyTagBtn.addEventListener('click', () => {
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderStoryTaggedSelected();
-});
-
-function renderStoryTaggedSelected() {
-  taggedSelectedList.innerHTML = storyPendingTaggedUsers.map(t => `
-    <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove-story">×</button></span>
-  `).join('');
-
-  taggedSelectedList.querySelectorAll('.tagged-chip-remove-story').forEach(btn => {
-    btn.addEventListener('click', () => {
-      storyPendingTaggedUsers = storyPendingTaggedUsers.filter(t => t.uid !== btn.dataset.uid);
-      renderStoryTaggedSelected();
-    });
-  });
-}
-
-storyTagViewBtn.addEventListener('click', () => {
-  const data = getCurrentStoryData();
-  if (!data || !data.story) return;
-  const tags = data.story.taggedUsernames || [];
-  if (tags.length === 0) {
-    alert('Nessuna persona taggata in questa storia.');
-  } else {
-    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-  }
-});
-const tagChoiceModal = document.getElementById('tagChoiceModal');
-const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
-const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
-const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
-let activeTagPostId = null;
-let activeTagCache = null;
-
-function openTagChoiceModal(postId, cache) {
-  activeTagPostId = postId;
-  activeTagCache = cache;
-  tagChoiceModal.classList.remove('hidden');
-}
-
-closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
-tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
-
-viewTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  const tags = post?.taggedUsernames || [];
-  if (tags.length === 0) {
-    alert('Nessuna persona taggata in questo post.');
-  } else {
-    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-  }
-});
-
-addTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
-
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderTaggedSelected();
-});
-function extractStoryMentions() {
-  const mentions = [];
-  const cw = storyEditorCanvas.width;
-  const ch = storyEditorCanvas.height;
-  storyTextLayers.forEach(t => {
-    const match = t.text.match(/^@([a-zA-Z0-9_]+)/);
-    if (!match) return;
-    const username = match[1];
-    const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
-    storyCtx.font = style.font;
-    const width = storyCtx.measureText(t.text).width;
-    mentions.push({
-      username,
-      xPercent: (t.x - 10) / cw,
-      yPercent: (t.y - 40) / ch,
-      wPercent: (width + 20) / cw,
-      hPercent: 50 / ch
-    });
-  });
-  return mentions;
-}
-
-function renderStoryMentionOverlays(story) {
-  document.querySelectorAll('.story-mention-overlay').forEach(el => el.remove());
-  const mentions = story.mentions || [];
-  if (mentions.length === 0 || story.type === 'post_share') return;
-
-  const applyOverlays = () => {
-    const rect = storyViewerImage.getBoundingClientRect();
-    mentions.forEach(m => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'story-mention-overlay';
-      btn.style.left = `${rect.left + m.xPercent * rect.width}px`;
-      btn.style.top = `${rect.top + m.yPercent * rect.height}px`;
-      btn.style.width = `${m.wPercent * rect.width}px`;
-      btn.style.height = `${m.hPercent * rect.height}px`;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.location.href = `user.html?u=${encodeURIComponent(m.username)}`;
-      });
-      document.body.appendChild(btn);
-    });
-  };
-
-  if (storyViewerImage.complete) applyOverlays();
-  else storyViewerImage.onload = applyOverlays;
-}
-storyTextToolBtn.addEventListener('click', () => {
-  const centerPos = {
-    x: storyEditorCanvas.width / 2,
-    y: storyEditorCanvas.height / 2,
-    clientX: window.innerWidth / 2,
-    clientY: window.innerHeight / 2
-  };
-  openStoryTextInputAt(centerPos);
-});
