@@ -1334,7 +1334,6 @@ storyDrawToolBtn.addEventListener('click', () => {
   storyCurrentTool = storyCurrentTool === 'draw' ? null : 'draw';
   storyDrawToolBtn.classList.toggle('active', storyCurrentTool === 'draw');
   storyEraserToolBtn.classList.remove('active');
-  storyTextToolBtn.classList.remove('active');
   textStyleBar.classList.add('hidden');
 });
 
@@ -1342,22 +1341,7 @@ storyEraserToolBtn.addEventListener('click', () => {
   storyCurrentTool = storyCurrentTool === 'erase' ? null : 'erase';
   storyEraserToolBtn.classList.toggle('active', storyCurrentTool === 'erase');
   storyDrawToolBtn.classList.remove('active');
-  storyTextToolBtn.classList.remove('active');
   textStyleBar.classList.add('hidden');
-});
-
-storyTextToolBtn.addEventListener('click', () => {
-  storyCurrentTool = storyCurrentTool === 'text' ? null : 'text';
-  storyTextToolBtn.classList.toggle('active', storyCurrentTool === 'text');
-  storyDrawToolBtn.classList.remove('active');
-  storyEraserToolBtn.classList.remove('active');
-
-  if (storyCurrentTool === 'text') {
-    renderTextStyleBar();
-    textStyleBar.classList.remove('hidden');
-  } else {
-    textStyleBar.classList.add('hidden');
-  }
 });
 
 function renderTextStyleBar() {
@@ -2291,3 +2275,12 @@ function renderStoryMentionOverlays(story) {
   if (storyViewerImage.complete) applyOverlays();
   else storyViewerImage.onload = applyOverlays;
 }
+storyTextToolBtn.addEventListener('click', () => {
+  const centerPos = {
+    x: storyEditorCanvas.width / 2,
+    y: storyEditorCanvas.height / 2,
+    clientX: window.innerWidth / 2,
+    clientY: window.innerHeight / 2
+  };
+  openStoryTextInputAt(centerPos);
+});
