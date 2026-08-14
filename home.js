@@ -671,6 +671,7 @@ function startListeningToPosts() {
     attachCarouselListeners();
     attachSaveListeners('#postsGrid');
     await attachRepostAndTagListeners('#postsGrid', postsCache);
+    await attachRepostersDisplay();
   }, (error) => {
     postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
@@ -2039,4 +2040,50 @@ async function sendPostToChat(otherUid, postId) {
     lastMessageAt: serverTimestamp(),
     [`unread.${otherUid}`]: increment(1)
   });
+}
+async function attachRepostersDisplay() {
+  const following = currentProfile.following || [];
+  if (following.length === 0) return;
+
+  const postCards = document.querySelectorAll('#postsGrid .post-card');
+
+  for (const card of postCards) {
+    const mediaEl = card.querySelector('.post-media-clickable');
+    if (!mediaEl) continue;
+    const postId = mediaEl.dataset.id;
+
+    const repostersQuery = query(
+      collection(db, 'reposts'),
+      where('postId', '==', postId),
+      where('uid', 'in', following.slice(0, 30))
+    );
+
+    const snap = await getDocs(repostersQuery);
+    if (snap.empty) continue;
+
+    const reposterUids = [...new Set(snap.docs.map(d => d.data().uid))];
+    const users = await Promise.all(reposterUids.slice(0, 5).map(async (uid) => {
+      const uDoc = await getDoc(doc(db, 'users', uid));
+      return uDoc.exists() ? { uid, ...uDoc.data() } : null;
+    }));
+
+    const validUsers = users.filter(u => u);
+    if (validUsers.length === 0) continue;
+
+    const badge = document.createElement('div');
+    badge.className = 'reposters-badge';
+    badge.innerHTML = validUsers.map(u => `
+      <a href="user.html?u=${encodeURIComponent(u.username || '')}" class="reposter-avatar" title="@${escapeHtml(u.username || '')}">
+        ${u.logoUrl
+          ? `<img src="${u.logoUrl}" alt="" />`
+          : `<div class="reposter-avatar-placeholder"><i data-lucide="user"></i></div>`
+        }
+      </a>
+    `).join('');
+
+    card.style.position = 'relative';
+    card.appendChild(badge);
+  }
+
+  lucide.createIcons();
 }
