@@ -3307,3 +3307,14 @@ html, body {
   color: #64748b;
   margin-top: 4px;
 }
+.story-mention-overlay {
+  position: fixed;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 15;
+}
+.camera-text-input.hidden,
+.text-style-bar.hidden {
+  display: none !important;
+}

@@ -347,15 +347,47 @@ async function renderProfile() {
       </button>
     </div>
 
-    <div class="profile-posts-section">
-      <div id="userPostsLoader" class="loader hidden">
-        <div class="spinner"></div>
-      </div>
-      <div class="posts-grid" id="userPostsGrid"></div>
-    </div>
+    <div class="profile-tabs">
+  <button type="button" class="profile-tab active" data-tab="posts"><i data-lucide="grid-3x3"></i></button>
+  <button type="button" class="profile-tab" data-tab="reposts"><i data-lucide="repeat"></i></button>
+  <button type="button" class="profile-tab" data-tab="tagged"><i data-lucide="user-square"></i></button>
+</div>
+
+<div class="profile-posts-section" id="tabPosts">
+  <div id="userPostsLoader" class="loader hidden">
+    <div class="spinner"></div>
+  </div>
+  <div class="posts-grid" id="userPostsGrid"></div>
+</div>
+
+<div class="profile-posts-section hidden" id="tabReposts">
+  <div id="userRepostsLoader" class="loader hidden">
+    <div class="spinner"></div>
+  </div>
+  <div class="posts-grid" id="userRepostsGrid"></div>
+</div>
+
+<div class="profile-posts-section hidden" id="tabTagged">
+  <div id="userTaggedLoader" class="loader hidden">
+    <div class="spinner"></div>
+  </div>
+  <div class="posts-grid" id="userTaggedGrid"></div>
+</div>
   `;
 
   lucide.createIcons();
+  document.querySelectorAll('.profile-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tabPosts').classList.toggle('hidden', tab.dataset.tab !== 'posts');
+    document.getElementById('tabReposts').classList.toggle('hidden', tab.dataset.tab !== 'reposts');
+    document.getElementById('tabTagged').classList.toggle('hidden', tab.dataset.tab !== 'tagged');
+
+    if (tab.dataset.tab === 'reposts') loadUserReposts();
+    if (tab.dataset.tab === 'tagged') loadUserTaggedPosts();
+  });
+});
 
   document.getElementById('followBtn').addEventListener('click', toggleFollow);
 
@@ -901,3 +933,134 @@ addTagsChoiceBtn.addEventListener('click', () => {
   tagResultsList.innerHTML = '';
   renderTaggedSelected();
 });
+function renderFullPostCardUser(post, id) {
+  const likes = post.likes || [];
+  const isLiked = currentUser && likes.includes(currentUser.uid);
+  const commentCount = post.commentCount || 0;
+  const isSaved = savedPostIds.has(id);
+
+  return `
+    <article class="post-card">
+      <div class="post-header">
+        ${post.logoUrl
+          ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+          : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+        }
+        <div class="post-header-info">
+          <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
+          <span class="post-date">${formatDate(post.createdAt)}</span>
+        </div>
+      </div>
+      <div class="post-media-clickable" data-id="${id}">
+        ${renderMediaCarousel(getPostMedia(post), id)}
+      </div>
+      ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+      <div class="post-actions">
+        <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
+          <i data-lucide="heart"></i>
+          <span>${likes.length}</span>
+        </button>
+        <button class="action-btn comment-btn" data-id="${id}">
+          <i data-lucide="message-circle"></i>
+          <span>${commentCount}</span>
+        </button>
+        <button class="action-btn share-btn" data-id="${id}">
+          <i data-lucide="send"></i>
+        </button>
+        <button class="action-btn repost-action-btn" data-id="${id}">
+          <i data-lucide="repeat"></i>
+        </button>
+        <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+          <i data-lucide="bookmark"></i>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function attachGenericGridListenersUser(gridSelector, cache) {
+  document.querySelectorAll(`${gridSelector} .post-media-clickable`).forEach(el => {
+    el.addEventListener('click', () => openComments(el.dataset.id, cache));
+  });
+  document.querySelectorAll(`${gridSelector} .like-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const likes = post?.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+    });
+  });
+  document.querySelectorAll(`${gridSelector} .comment-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openComments(btn.dataset.id, cache); });
+  });
+  document.querySelectorAll(`${gridSelector} .share-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openShareModal(btn.dataset.id, cache); });
+  });
+  attachSaveListeners(gridSelector);
+}
+
+async function loadUserReposts() {
+  const loader = document.getElementById('userRepostsLoader');
+  const grid = document.getElementById('userRepostsGrid');
+  loader.classList.remove('hidden');
+
+  const repostsQuery = query(collection(db, 'reposts'), where('uid', '==', viewedUid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(repostsQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
+    return;
+  }
+
+  const posts = await Promise.all(snapshot.docs.map(async (d) => {
+    const postDoc = await getDoc(doc(db, 'posts', d.data().postId));
+    return postDoc.exists() ? { id: postDoc.id, ...postDoc.data() } : null;
+  }));
+
+  const validPosts = posts.filter(p => p);
+
+  if (validPosts.length === 0) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
+    return;
+  }
+
+  const repostsCache = new Map();
+  validPosts.forEach(p => repostsCache.set(p.id, p));
+
+  grid.innerHTML = validPosts.map(post => renderFullPostCardUser(post, post.id)).join('');
+
+  lucide.createIcons();
+  attachGenericGridListenersUser('#userRepostsGrid', repostsCache);
+  await attachRepostAndTagListeners('#userRepostsGrid', repostsCache);
+  attachCarouselListeners();
+}
+
+async function loadUserTaggedPosts() {
+  const loader = document.getElementById('userTaggedLoader');
+  const grid = document.getElementById('userTaggedGrid');
+  loader.classList.remove('hidden');
+
+  const taggedQuery = query(collection(db, 'posts'), where('taggedUids', 'array-contains', viewedUid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(taggedQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessuna foto o video in cui è taggato.</p>';
+    return;
+  }
+
+  const taggedCache = new Map();
+  snapshot.docs.forEach(d => taggedCache.set(d.id, d.data()));
+
+  grid.innerHTML = snapshot.docs.map(docSnap => renderFullPostCardUser(docSnap.data(), docSnap.id)).join('');
+
+  lucide.createIcons();
+  attachGenericGridListenersUser('#userTaggedGrid', taggedCache);
+  await attachRepostAndTagListeners('#userTaggedGrid', taggedCache);
+  attachCarouselListeners();
+}

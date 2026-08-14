@@ -1609,8 +1609,7 @@ storyEditorPublishBtn.addEventListener('click', async () => {
       viewedBy: [],
       likes: [],
       expiresAt,
-      taggedUids: storyPendingTaggedUsers.map(t => t.uid),
-      taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
+      mentions: extractStoryMentions(),
       createdAt: serverTimestamp()
     });
     storyEditor.classList.add('hidden');
@@ -1662,6 +1661,7 @@ if (sharedPostCard) sharedPostCard.remove();
 if (story.type === 'post_share' && story.sharedPostAuthor) {
   storyViewerImage.src = '';
   storyViewerImage.style.display = 'none';
+  renderStoryMentionOverlays(story);
 
   const card = document.createElement('div');
   card.id = 'sharedPostStoryCard';
@@ -1794,6 +1794,7 @@ function closeStoryViewer() {
   storyViewer.classList.add('hidden');
   storyViewersPanel.classList.add('hidden');
   if (unsubscribeStoryComments) unsubscribeStoryComments();
+  document.querySelectorAll('.story-mention-overlay').forEach(el => el.remove());
 }
 
 storyViewerClose.addEventListener('click', closeStoryViewer);
@@ -1932,6 +1933,7 @@ storyViewer.addEventListener('touchend', (e) => {
 let mouseStartY = 0;
 let isMouseSwipe = false;
 storyViewer.addEventListener('mousedown', (e) => {
+  if (e.target.closest('#storyEditorCanvas') || e.target.closest('.camera-edit-toolbar') || e.target.closest('.camera-text-input')) return;
   mouseStartY = e.clientY;
   isMouseSwipe = true;
 });
@@ -2241,3 +2243,51 @@ addTagsChoiceBtn.addEventListener('click', () => {
   tagResultsList.innerHTML = '';
   renderTaggedSelected();
 });
+function extractStoryMentions() {
+  const mentions = [];
+  const cw = storyEditorCanvas.width;
+  const ch = storyEditorCanvas.height;
+  storyTextLayers.forEach(t => {
+    const match = t.text.match(/^@([a-zA-Z0-9_]+)/);
+    if (!match) return;
+    const username = match[1];
+    const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
+    storyCtx.font = style.font;
+    const width = storyCtx.measureText(t.text).width;
+    mentions.push({
+      username,
+      xPercent: (t.x - 10) / cw,
+      yPercent: (t.y - 40) / ch,
+      wPercent: (width + 20) / cw,
+      hPercent: 50 / ch
+    });
+  });
+  return mentions;
+}
+
+function renderStoryMentionOverlays(story) {
+  document.querySelectorAll('.story-mention-overlay').forEach(el => el.remove());
+  const mentions = story.mentions || [];
+  if (mentions.length === 0 || story.type === 'post_share') return;
+
+  const applyOverlays = () => {
+    const rect = storyViewerImage.getBoundingClientRect();
+    mentions.forEach(m => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'story-mention-overlay';
+      btn.style.left = `${rect.left + m.xPercent * rect.width}px`;
+      btn.style.top = `${rect.top + m.yPercent * rect.height}px`;
+      btn.style.width = `${m.wPercent * rect.width}px`;
+      btn.style.height = `${m.hPercent * rect.height}px`;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.href = `user.html?u=${encodeURIComponent(m.username)}`;
+      });
+      document.body.appendChild(btn);
+    });
+  };
+
+  if (storyViewerImage.complete) applyOverlays();
+  else storyViewerImage.onload = applyOverlays;
+}
