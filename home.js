@@ -1592,8 +1592,6 @@ storyEditorPublishBtn.addEventListener('click', async () => {
 
     const durationHours = parseInt(currentProfile.storyDuration || '24');
     const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
-    taggedUids: storyPendingTaggedUsers.map(t => t.uid),
-    taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
 
     await addDoc(collection(db, 'stories'), {
       uid: currentUser.uid,
@@ -1604,9 +1602,10 @@ storyEditorPublishBtn.addEventListener('click', async () => {
       viewedBy: [],
       likes: [],
       expiresAt,
+      taggedUids: storyPendingTaggedUsers.map(t => t.uid),
+      taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
       createdAt: serverTimestamp()
     });
-
     storyEditor.classList.add('hidden');
   } catch (error) {
     console.error('Errore pubblicazione storia:', error);

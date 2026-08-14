@@ -277,43 +277,21 @@ async function attachRepostAndTagListeners(scopeSelector, cache) {
     });
   });
 
-  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
-  btn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    closeAllProfileMenus();
-
-    const postId = btn.dataset.id;
-    const post = postsCacheProfile.get(postId);
-    if (!post) return;
-
-    const media = getPostMedia(post);
-    if (media.length === 0) return;
-
-    try {
-      const durationHours = 24;
-      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
-
-      await addDoc(collection(db, 'stories'), {
-        uid: currentUser.uid,
-        username: currentUsername || currentUser.email.split('@')[0],
-        logoUrl: currentLogoUrl || '',
-        mediaUrl: media[0].url,
-        type: 'post_share',
-        sharedPostId: postId,
-        sharedPostAuthor: post.authorName || '',
-        sharedPostCaption: post.caption || '',
-        viewedBy: [],
-        likes: [],
-        expiresAt,
-        createdAt: serverTimestamp()
-      });
-
-      alert('Post pubblicato nelle tue storie!');
-    } catch (error) {
-      console.error('Errore pubblicazione post nelle storie:', error);
-    }
+  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+      }
+    });
   });
-});
+}
 
 function updateAvatarDisplay(url, imgEl, placeholderEl) {
   if (url) {
@@ -512,7 +490,7 @@ document.querySelectorAll('.profile-tab').forEach(tab => {
   });
 });
 
-function renderFullPostCard(post, id, isOwnerCard) {
+function renderFullPostCard(post, id) {
   const likes = post.likes || [];
   const isLiked = currentUser && likes.includes(currentUser.uid);
   const commentCount = post.commentCount || 0;
@@ -611,7 +589,7 @@ async function loadReposts() {
   const repostsCache = new Map();
   validPosts.forEach(p => repostsCache.set(p.id, p));
 
-  grid.innerHTML = validPosts.map(post => renderFullPostCard(post, post.id, false)).join('');
+  grid.innerHTML = validPosts.map(post => renderFullPostCard(post, post.id)).join('');
 
   lucide.createIcons();
   attachGenericGridListeners('#repostsGrid', repostsCache);
@@ -636,7 +614,7 @@ async function loadTaggedPosts() {
   const taggedCache = new Map();
   snapshot.docs.forEach(d => taggedCache.set(d.id, d.data()));
 
-  grid.innerHTML = snapshot.docs.map(docSnap => renderFullPostCard(docSnap.data(), docSnap.id, false)).join('');
+  grid.innerHTML = snapshot.docs.map(docSnap => renderFullPostCard(docSnap.data(), docSnap.id)).join('');
 
   lucide.createIcons();
   attachGenericGridListeners('#taggedGrid', taggedCache);
@@ -719,6 +697,9 @@ function renderProfilePosts() {
               </button>
               <button class="menu-item edit-post-btn" data-id="${id}">
                 <i data-lucide="pencil"></i> Modifica
+              </button>
+              <button class="menu-item repost-story-btn" data-id="${id}">
+                <i data-lucide="clapperboard"></i> Pubblica nelle storie
               </button>
               <button class="menu-item tag-view-btn" data-id="${id}">
                 <i data-lucide="users"></i> Persone taggate
@@ -811,6 +792,44 @@ function attachProfilePostListeners() {
       e.stopPropagation();
       closeAllProfileMenus();
       openEditModal(btn.dataset.id);
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+
+      const postId = btn.dataset.id;
+      const post = postsCacheProfile.get(postId);
+      if (!post) return;
+
+      const media = getPostMedia(post);
+      if (media.length === 0) return;
+
+      try {
+        const durationHours = 24;
+        const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+        await addDoc(collection(db, 'stories'), {
+          uid: currentUser.uid,
+          username: currentUsername || currentUser.email.split('@')[0],
+          logoUrl: currentLogoUrl || '',
+          mediaUrl: media[0].url,
+          type: 'post_share',
+          sharedPostId: postId,
+          sharedPostAuthor: post.authorName || '',
+          sharedPostCaption: post.caption || '',
+          viewedBy: [],
+          likes: [],
+          expiresAt,
+          createdAt: serverTimestamp()
+        });
+
+        alert('Post pubblicato nelle tue storie!');
+      } catch (error) {
+        console.error('Errore pubblicazione post nelle storie:', error);
+      }
     });
   });
 
