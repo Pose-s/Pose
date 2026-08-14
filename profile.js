@@ -79,6 +79,78 @@ function conversationIdFor(uidA, uidB) {
   return [uidA, uidB].sort().join('_');
 }
 
+function getPostMedia(post) {
+  if (post.media && post.media.length > 0) return post.media;
+  if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
+  return [];
+}
+
+function renderMediaCarousel(mediaItems, postId) {
+  if (mediaItems.length === 0) return '';
+
+  const slides = mediaItems.map(m =>
+    m.type === 'video'
+      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
+      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
+  ).join('');
+
+  const dots = mediaItems.length > 1
+    ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
+    : '';
+
+  const arrows = mediaItems.length > 1
+    ? `
+      <button type="button" class="carousel-arrow carousel-arrow-left" data-carousel-nav="prev"><i data-lucide="chevron-left"></i></button>
+      <button type="button" class="carousel-arrow carousel-arrow-right" data-carousel-nav="next"><i data-lucide="chevron-right"></i></button>
+    `
+    : '';
+
+  return `
+    <div class="carousel-container" data-carousel-id="${postId}">
+      <div class="carousel-track">${slides}</div>
+      ${arrows}
+      ${dots}
+    </div>
+  `;
+}
+
+function attachCarouselListeners() {
+  document.querySelectorAll('.carousel-container').forEach(container => {
+    const track = container.querySelector('.carousel-track');
+    const dots = container.querySelectorAll('.carousel-dot');
+
+    if (dots.length > 0) {
+      track.addEventListener('scroll', () => {
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      });
+    }
+
+    const prevBtn = container.querySelector('[data-carousel-nav="prev"]');
+    const nextBtn = container.querySelector('[data-carousel-nav="next"]');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+      });
+    }
+
+    track.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        track.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  });
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = 'login.html';
@@ -134,6 +206,88 @@ function attachSaveListeners(scopeSelector) {
         }
       } catch (error) {
         console.error('Errore salvataggio post:', error);
+      }
+    });
+  });
+}
+
+// ===== Repost + Tag =====
+async function attachRepostAndTagListeners(scopeSelector, cache) {
+  const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
+
+  for (const btn of repostBtns) {
+    const postId = btn.dataset.id;
+    const existingRepostQuery = query(
+      collection(db, 'reposts'),
+      where('uid', '==', currentUser.uid),
+      where('postId', '==', postId)
+    );
+    const existingSnap = await getDocs(existingRepostQuery);
+    if (!existingSnap.empty) {
+      btn.classList.add('reposted');
+      btn.dataset.repostDocId = existingSnap.docs[0].id;
+    }
+  }
+
+  document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      if (!post) return;
+
+      if (post.uid === currentUser.uid) {
+        alert('Non puoi repostare i tuoi stessi post.');
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        if (btn.classList.contains('reposted')) {
+          await deleteDoc(doc(db, 'reposts', btn.dataset.repostDocId));
+          btn.classList.remove('reposted');
+          delete btn.dataset.repostDocId;
+        } else {
+          const docRef = await addDoc(collection(db, 'reposts'), {
+            uid: currentUser.uid,
+            postId,
+            originalAuthorUid: post.uid,
+            createdAt: serverTimestamp()
+          });
+          btn.classList.add('reposted');
+          btn.dataset.repostDocId = docRef.id;
+
+          await addDoc(collection(db, 'notifications'), {
+            toUid: post.uid,
+            fromUid: currentUser.uid,
+            fromUsername: currentUsername || 'Utente',
+            fromLogoUrl: currentLogoUrl || '',
+            type: 'repost',
+            postId,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error('Errore repost:', error);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
       }
     });
   });
@@ -322,79 +476,153 @@ postForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Lista post del profilo =====
-function getPostMedia(post) {
-  if (post.media && post.media.length > 0) return post.media;
-  if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
-  return [];
-}
+// ===== Tab profilo =====
+document.querySelectorAll('.profile-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tabPosts').classList.toggle('hidden', tab.dataset.tab !== 'posts');
+    document.getElementById('tabReposts').classList.toggle('hidden', tab.dataset.tab !== 'reposts');
+    document.getElementById('tabTagged').classList.toggle('hidden', tab.dataset.tab !== 'tagged');
 
-function renderMediaCarousel(mediaItems, postId) {
-  if (mediaItems.length === 0) return '';
+    if (tab.dataset.tab === 'reposts') loadReposts();
+    if (tab.dataset.tab === 'tagged') loadTaggedPosts();
+  });
+});
 
-  const slides = mediaItems.map(m =>
-    m.type === 'video'
-      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
-      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
-  ).join('');
-
-  const dots = mediaItems.length > 1
-    ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
-    : '';
-
-  const arrows = mediaItems.length > 1
-    ? `
-      <button type="button" class="carousel-arrow carousel-arrow-left" data-carousel-nav="prev"><i data-lucide="chevron-left"></i></button>
-      <button type="button" class="carousel-arrow carousel-arrow-right" data-carousel-nav="next"><i data-lucide="chevron-right"></i></button>
-    `
-    : '';
+function renderFullPostCard(post, id, isOwnerCard) {
+  const likes = post.likes || [];
+  const isLiked = currentUser && likes.includes(currentUser.uid);
+  const commentCount = post.commentCount || 0;
+  const isSaved = savedPostIds.has(id);
 
   return `
-    <div class="carousel-container" data-carousel-id="${postId}">
-      <div class="carousel-track">${slides}</div>
-      ${arrows}
-      ${dots}
-    </div>
+    <article class="post-card">
+      <div class="post-header">
+        ${post.logoUrl
+          ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+          : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+        }
+        <div class="post-header-info">
+          <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
+          <span class="post-date">${formatDate(post.createdAt)}</span>
+        </div>
+      </div>
+      <div class="post-media-clickable" data-id="${id}">
+        ${renderMediaCarousel(getPostMedia(post), id)}
+      </div>
+      ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
+      <div class="post-actions">
+        <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
+          <i data-lucide="heart"></i>
+          <span>${likes.length}</span>
+        </button>
+        <button class="action-btn comment-btn" data-id="${id}">
+          <i data-lucide="message-circle"></i>
+          <span>${commentCount}</span>
+        </button>
+        <button class="action-btn share-btn" data-id="${id}">
+          <i data-lucide="send"></i>
+        </button>
+        <button class="action-btn repost-action-btn" data-id="${id}">
+          <i data-lucide="repeat"></i>
+        </button>
+        <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+          <i data-lucide="bookmark"></i>
+        </button>
+      </div>
+    </article>
   `;
 }
 
-function attachCarouselListeners() {
-  document.querySelectorAll('.carousel-container').forEach(container => {
-    const track = container.querySelector('.carousel-track');
-    const dots = container.querySelectorAll('.carousel-dot');
-
-    if (dots.length > 0) {
-      track.addEventListener('scroll', () => {
-        const idx = Math.round(track.scrollLeft / track.clientWidth);
-        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-      });
-    }
-
-    const prevBtn = container.querySelector('[data-carousel-nav="prev"]');
-    const nextBtn = container.querySelector('[data-carousel-nav="next"]');
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
-      });
-    }
-
-    track.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        track.scrollLeft += e.deltaY;
-      }
-    }, { passive: false });
+function attachGenericGridListeners(gridSelector, cache) {
+  document.querySelectorAll(`${gridSelector} .post-media-clickable`).forEach(el => {
+    el.addEventListener('click', () => openComments(el.dataset.id, cache));
   });
+  document.querySelectorAll(`${gridSelector} .like-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = cache.get(postId);
+      const likes = post?.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+      });
+    });
+  });
+  document.querySelectorAll(`${gridSelector} .comment-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openComments(btn.dataset.id, cache); });
+  });
+  document.querySelectorAll(`${gridSelector} .share-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openShareModal(btn.dataset.id, cache); });
+  });
+  attachSaveListeners(gridSelector);
 }
 
+async function loadReposts() {
+  const loader = document.getElementById('repostsLoader');
+  const grid = document.getElementById('repostsGrid');
+  loader.classList.remove('hidden');
+
+  const repostsQuery = query(collection(db, 'reposts'), where('uid', '==', currentUser.uid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(repostsQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
+    return;
+  }
+
+  const posts = await Promise.all(snapshot.docs.map(async (d) => {
+    const postDoc = await getDoc(doc(db, 'posts', d.data().postId));
+    return postDoc.exists() ? { id: postDoc.id, ...postDoc.data() } : null;
+  }));
+
+  const validPosts = posts.filter(p => p);
+
+  if (validPosts.length === 0) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
+    return;
+  }
+
+  const repostsCache = new Map();
+  validPosts.forEach(p => repostsCache.set(p.id, p));
+
+  grid.innerHTML = validPosts.map(post => renderFullPostCard(post, post.id, false)).join('');
+
+  lucide.createIcons();
+  attachGenericGridListeners('#repostsGrid', repostsCache);
+  await attachRepostAndTagListeners('#repostsGrid', repostsCache);
+  attachCarouselListeners();
+}
+
+async function loadTaggedPosts() {
+  const loader = document.getElementById('taggedLoader');
+  const grid = document.getElementById('taggedGrid');
+  loader.classList.remove('hidden');
+
+  const taggedQuery = query(collection(db, 'posts'), where('taggedUids', 'array-contains', currentUser.uid), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(taggedQuery);
+  loader.classList.add('hidden');
+
+  if (snapshot.empty) {
+    grid.innerHTML = '<p style="color:#94a3b8;">Nessuna foto o video in cui sei taggato.</p>';
+    return;
+  }
+
+  const taggedCache = new Map();
+  snapshot.docs.forEach(d => taggedCache.set(d.id, d.data()));
+
+  grid.innerHTML = snapshot.docs.map(docSnap => renderFullPostCard(docSnap.data(), docSnap.id, false)).join('');
+
+  lucide.createIcons();
+  attachGenericGridListeners('#taggedGrid', taggedCache);
+  await attachRepostAndTagListeners('#taggedGrid', taggedCache);
+  attachCarouselListeners();
+}
+
+// ===== Lista post del profilo (propri) =====
 function startListeningToOwnPosts(uid) {
   const postsQuery = query(
     collection(db, 'posts'),
@@ -470,11 +698,8 @@ function renderProfilePosts() {
               <button class="menu-item edit-post-btn" data-id="${id}">
                 <i data-lucide="pencil"></i> Modifica
               </button>
-              <button class="menu-item repost-story-btn" data-id="${id}">
-                <i data-lucide="clapperboard"></i> Pubblica nelle storie
-              </button>
-              <button class="menu-item repost-btn" data-id="${id}">
-                <i data-lucide="repeat"></i> Reposta
+              <button class="menu-item tag-view-btn" data-id="${id}">
+                <i data-lucide="users"></i> Persone taggate
               </button>
               <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
                 <i data-lucide="trash-2"></i> Elimina
@@ -498,25 +723,18 @@ function renderProfilePosts() {
           <button class="action-btn share-btn" data-id="${id}">
             <i data-lucide="send"></i>
           </button>
-          <button class="action-btn repost-action-btn ${/* opzionale: repostato-da-te */''}" data-id="${id}">
-  <i data-lucide="repeat"></i>
-</button>
           <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
             <i data-lucide="bookmark"></i>
           </button>
-          <button class="menu-item tag-view-btn" data-id="${id}">
-  <i data-lucide="users"></i> Persone taggate
-</button>
         </div>
       </article>
     `;
   }).join('');
 
   lucide.createIcons();
-attachProfilePostListeners();
-attachCarouselListeners();
-attachSaveListeners('#profilePostsGrid');
-await attachRepostAndTagListeners('#profilePostsGrid', postsCacheProfile);
+  attachProfilePostListeners();
+  attachCarouselListeners();
+  attachSaveListeners('#profilePostsGrid');
 }
 
 async function savePostOrder() {
@@ -525,7 +743,7 @@ async function savePostOrder() {
 
 function attachProfilePostListeners() {
   document.querySelectorAll('#profilePostsGrid .post-media-clickable').forEach(el => {
-    el.addEventListener('click', () => openComments(el.dataset.id));
+    el.addEventListener('click', () => openComments(el.dataset.id, postsCacheProfile));
   });
 
   document.querySelectorAll('#profilePostsGrid .post-menu-btn').forEach(btn => {
@@ -574,19 +792,18 @@ function attachProfilePostListeners() {
     });
   });
 
-  document.querySelectorAll('#profilePostsGrid .repost-story-btn').forEach(btn => {
+  document.querySelectorAll('#profilePostsGrid .tag-view-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       closeAllProfileMenus();
-      alert('Funzione "Pubblica nelle storie" in arrivo!');
-    });
-  });
-
-  document.querySelectorAll('#profilePostsGrid .repost-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllProfileMenus();
-      alert('Funzione "Reposta" in arrivo!');
+      const postId = btn.dataset.id;
+      const post = postsCacheProfile.get(postId);
+      const tags = post?.taggedUsernames || [];
+      if (tags.length === 0) {
+        alert('Nessuna persona taggata in questo post.');
+      } else {
+        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+      }
     });
   });
 
@@ -628,30 +845,30 @@ function attachProfilePostListeners() {
   document.querySelectorAll('#profilePostsGrid .comment-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      openComments(btn.dataset.id);
+      openComments(btn.dataset.id, postsCacheProfile);
     });
   });
 
   document.querySelectorAll('#profilePostsGrid .share-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      openShareModal(btn.dataset.id);
+      openShareModal(btn.dataset.id, postsCacheProfile);
     });
   });
 }
 
 function closeAllProfileMenus() {
-  document.querySelectorAll('#profilePostsGrid .post-menu-dropdown').forEach(d => d.classList.add('hidden'));
+  document.querySelectorAll('.post-menu-dropdown').forEach(d => d.classList.add('hidden'));
 }
 
 document.addEventListener('click', closeAllProfileMenus);
 
 // ===== Dettaglio post + Commenti =====
-function openComments(postId) {
+function openComments(postId, cache) {
   activeCommentsPostId = postId;
   commentsModal.classList.remove('hidden');
 
-  const post = postsCacheProfile.get(postId);
+  const post = (cache || postsCacheProfile).get(postId);
   if (post) {
     commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
     if (post.caption) {
@@ -733,7 +950,6 @@ const notificationsPanel = document.getElementById('notificationsPanel');
 const notificationsList = document.getElementById('notificationsList');
 const msgBadgeDot = document.getElementById('msgBadgeDot');
 const messagesBtn = document.getElementById('messagesBtn');
-const msgIcon = document.getElementById('msgIcon');
 
 let unreadNotifIds = [];
 
@@ -773,11 +989,8 @@ onAuthStateChanged(auth, (user) => {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha messo like alla tua storia`;
       } else if (n.type === 'story_comment') {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
-        } else if (n.type === 'repost') {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha repostato un tuo post`;
-} else if (n.type === 'story_comment') {
-  text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha commentato la tua storia`;
-} else {
+      } else if (n.type === 'repost') {
+        text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha repostato un tuo post`;
       } else {
         text = `<strong>@${escapeHtml(n.fromUsername)}</strong> ha iniziato a seguirti`;
       }
@@ -844,7 +1057,7 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== Invia post nei messaggi =====
-async function openShareModal(postId) {
+async function openShareModal(postId, cache) {
   sharingPostId = postId;
   shareModal.classList.remove('hidden');
   shareSearchInput.value = '';
@@ -869,10 +1082,10 @@ async function openShareModal(postId) {
     return { uid, data: d.exists() ? d.data() : {} };
   }));
 
-  renderShareFriends(allShareFriends);
+  renderShareFriends(allShareFriends, cache);
 }
 
-function renderShareFriends(users) {
+function renderShareFriends(users, cache) {
   if (users.length === 0) {
     shareFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
     return;
@@ -887,7 +1100,7 @@ function renderShareFriends(users) {
 
   document.querySelectorAll('#shareFriendsList .conversation-item').forEach(item => {
     item.addEventListener('click', async () => {
-      await sendPostToChat(item.dataset.uid, sharingPostId);
+      await sendPostToChat(item.dataset.uid, sharingPostId, cache);
       shareModal.classList.add('hidden');
     });
   });
@@ -902,8 +1115,8 @@ shareSearchInput.addEventListener('input', () => {
 closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
 shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
 
-async function sendPostToChat(otherUid, postId) {
-  const post = postsCacheProfile.get(postId);
+async function sendPostToChat(otherUid, postId, cache) {
+  const post = (cache || postsCacheProfile).get(postId);
   if (!post) return;
   const media = getPostMedia(post);
 
@@ -926,7 +1139,7 @@ async function sendPostToChat(otherUid, postId) {
     postId,
     postPhotoUrl: media[0]?.url || '',
     postCaption: post.caption || '',
-    postAuthor: currentUsername || '',
+    postAuthor: post.authorName || currentUsername || '',
     createdAt: serverTimestamp()
   });
 
@@ -934,197 +1147,5 @@ async function sendPostToChat(otherUid, postId) {
     lastMessage: '📤 Post condiviso',
     lastMessageAt: serverTimestamp(),
     [`unread.${otherUid}`]: increment(1)
-  });
-}
-document.querySelectorAll('.profile-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tabPosts').classList.toggle('hidden', tab.dataset.tab !== 'posts');
-    document.getElementById('tabReposts').classList.toggle('hidden', tab.dataset.tab !== 'reposts');
-    document.getElementById('tabTagged').classList.toggle('hidden', tab.dataset.tab !== 'tagged');
-
-    if (tab.dataset.tab === 'reposts') loadReposts();
-    if (tab.dataset.tab === 'tagged') loadTaggedPosts();
-  });
-});
-
-async function loadReposts() {
-  const loader = document.getElementById('repostsLoader');
-  const grid = document.getElementById('repostsGrid');
-  loader.classList.remove('hidden');
-
-  const repostsQuery = query(collection(db, 'reposts'), where('uid', '==', currentUser.uid), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(repostsQuery);
-  loader.classList.add('hidden');
-
-  if (snapshot.empty) {
-    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
-    return;
-  }
-
-  const posts = await Promise.all(snapshot.docs.map(async (d) => {
-    const postDoc = await getDoc(doc(db, 'posts', d.data().postId));
-    return postDoc.exists() ? { id: postDoc.id, ...postDoc.data() } : null;
-  }));
-
-  const validPosts = posts.filter(p => p);
-
-  if (validPosts.length === 0) {
-    grid.innerHTML = '<p style="color:#94a3b8;">Nessun repost ancora.</p>';
-    return;
-  }
-
-  validPosts.forEach(p => postsCacheProfile.set(p.id, p));
-
-  grid.innerHTML = validPosts.map(post => {
-    const id = post.id;
-    const likes = post.likes || [];
-    const isLiked = likes.includes(currentUser.uid);
-    const commentCount = post.commentCount || 0;
-    const isSaved = savedPostIds.has(id);
-
-    return `
-      <article class="post-card">
-        <div class="post-header">
-          ${post.logoUrl
-            ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-            : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-          }
-          <div class="post-header-info">
-            <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
-            <span class="post-date">${formatDate(post.createdAt)}</span>
-          </div>
-        </div>
-        <div class="post-media-clickable" data-id="${id}">
-          ${renderMediaCarousel(getPostMedia(post), id)}
-        </div>
-        ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
-        <div class="post-actions">
-          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
-            <i data-lucide="heart"></i>
-            <span>${likes.length}</span>
-          </button>
-          <button class="action-btn comment-btn" data-id="${id}">
-            <i data-lucide="message-circle"></i>
-            <span>${commentCount}</span>
-          </button>
-          <button class="action-btn share-btn" data-id="${id}">
-            <i data-lucide="send"></i>
-          </button>
-          <button class="action-btn repost-action-btn reposted" data-id="${id}">
-            <i data-lucide="repeat"></i>
-          </button>
-          <button class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
-            <i data-lucide="bookmark"></i>
-          </button>
-        </div>
-      </article>
-    `;
-  }).join('');
-
-  lucide.createIcons();
-  document.querySelectorAll('#repostsGrid .post-media-clickable').forEach(el => {
-    el.addEventListener('click', () => openComments(el.dataset.id));
-  });
-  document.querySelectorAll('#repostsGrid .like-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const postId = btn.dataset.id;
-      const post = postsCacheProfile.get(postId);
-      const likes = post?.likes || [];
-      const isLiked = likes.includes(currentUser.uid);
-      await updateDoc(doc(db, 'posts', postId), {
-        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-      });
-    });
-  });
-  document.querySelectorAll('#repostsGrid .comment-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); openComments(btn.dataset.id); });
-  });
-  document.querySelectorAll('#repostsGrid .share-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); openShareModal(btn.dataset.id); });
-  });
-  attachSaveListeners('#repostsGrid');
-  async function attachRepostAndTagListeners(scopeSelector, cache) {
-  const repostBtns = document.querySelectorAll(`${scopeSelector} .repost-action-btn`);
-
-  for (const btn of repostBtns) {
-    const postId = btn.dataset.id;
-    const existingRepostQuery = query(
-      collection(db, 'reposts'),
-      where('uid', '==', currentUser.uid),
-      where('postId', '==', postId)
-    );
-    const existingSnap = await getDocs(existingRepostQuery);
-    if (!existingSnap.empty) {
-      btn.classList.add('reposted');
-      btn.dataset.repostDocId = existingSnap.docs[0].id;
-    }
-  }
-
-  document.querySelectorAll(`${scopeSelector} .repost-action-btn`).forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const postId = btn.dataset.id;
-      const post = cache.get(postId);
-      if (!post) return;
-
-      if (post.uid === currentUser.uid) {
-        alert('Non puoi repostare i tuoi stessi post.');
-        return;
-      }
-
-      btn.disabled = true;
-
-      try {
-        if (btn.classList.contains('reposted')) {
-          // Rimuovi il repost
-          await deleteDoc(doc(db, 'reposts', btn.dataset.repostDocId));
-          btn.classList.remove('reposted');
-          delete btn.dataset.repostDocId;
-        } else {
-          // Aggiungi il repost
-          const docRef = await addDoc(collection(db, 'reposts'), {
-            uid: currentUser.uid,
-            postId,
-            originalAuthorUid: post.uid,
-            createdAt: serverTimestamp()
-          });
-          btn.classList.add('reposted');
-          btn.dataset.repostDocId = docRef.id;
-
-          await addDoc(collection(db, 'notifications'), {
-            toUid: post.uid,
-            fromUid: currentUser.uid,
-            fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
-            fromLogoUrl: currentProfile.logoUrl || '',
-            type: 'repost',
-            postId,
-            read: false,
-            createdAt: serverTimestamp()
-          });
-        }
-      } catch (error) {
-        console.error('Errore repost:', error);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
-
-  document.querySelectorAll(`${scopeSelector} .tag-view-btn`).forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllMenus();
-      const postId = btn.dataset.id;
-      const post = cache.get(postId);
-      const tags = post?.taggedUsernames || [];
-      if (tags.length === 0) {
-        alert('Nessuna persona taggata in questo post.');
-      } else {
-        alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-      }
-    });
   });
 }
