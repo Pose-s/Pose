@@ -1471,11 +1471,13 @@ function renderTextStyleBar() {
   `).join('');
 
   textStyleBar.querySelectorAll('.text-style-option').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
+    // Impedisce che il click sposti il focus fuori dal campo di testo
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
+    btn.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+
+    btn.addEventListener('click', () => {
       storyCurrentTextStyle = btn.dataset.style;
       renderTextStyleBar();
-      storyTextInput.focus();
 
       if (storyEditingTextIdx !== null) {
         storyTextLayers[storyEditingTextIdx].styleId = storyCurrentTextStyle;
@@ -1484,6 +1486,9 @@ function renderTextStyleBar() {
     });
   });
 }
+
+// Impedisce che il colore rubi il focus dal campo di testo
+colorPickerBtn.addEventListener('mousedown', (e) => e.preventDefault());
 
 storyColorInput.addEventListener('input', () => {
   storyCurrentColor = storyColorInput.value;
@@ -1494,6 +1499,7 @@ storyColorInput.addEventListener('input', () => {
   }
 });
 
+storyUndoBtn.addEventListener('mousedown', (e) => e.preventDefault());
 storyUndoBtn.addEventListener('click', () => {
   if (storyUndoStack.length <= 1) return;
   storyUndoStack.pop();
@@ -1529,14 +1535,13 @@ function findTextAt(pos) {
 }
 
 function openStoryTextInputAt(pos) {
-  storyTextCommitted = false;
   storyPendingTextPos = pos;
   storyEditingTextIdx = null;
   storyTextInput.style.left = `${pos.clientX}px`;
   storyTextInput.style.top = `${pos.clientY}px`;
   storyTextInput.style.color = storyCurrentColor;
-  storyTextInput.classList.remove('hidden');
   storyTextInput.value = '';
+  storyTextInput.classList.remove('hidden');
   renderTextStyleBar();
   textStyleBar.classList.remove('hidden');
   storyTextInput.focus();
@@ -1613,14 +1618,8 @@ function storyPointerUp() {
   }
 }
 
-storyEditorCanvas.style.touchAction = 'none';
-storyEditorCanvas.addEventListener('pointerdown', storyPointerDown);
-storyEditorCanvas.addEventListener('pointermove', storyPointerMove);
-storyEditorCanvas.addEventListener('pointerup', storyPointerUp);
-
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
-  storyTextCommitted = false;
   storyEditingTextIdx = idx;
   storyPendingTextPos = { x: t.x, y: t.y };
   storyCurrentColor = t.color;
@@ -1636,8 +1635,8 @@ function openTextEditMode(idx) {
   storyTextInput.style.left = `${rect.left + t.x * scaleX}px`;
   storyTextInput.style.top = `${rect.top + t.y * scaleY}px`;
   storyTextInput.style.color = t.color;
-  storyTextInput.classList.remove('hidden');
   storyTextInput.value = t.text;
+  storyTextInput.classList.remove('hidden');
   storyTextInput.focus();
   storyTextInput.select();
 
@@ -1646,7 +1645,6 @@ function openTextEditMode(idx) {
 }
 
 function commitStoryText() {
-  if (storyTextCommitted) return;
   if (!storyPendingTextPos) return;
 
   const value = storyTextInput.value.trim();
@@ -1669,7 +1667,6 @@ function commitStoryText() {
     });
   }
 
-  storyTextCommitted = true;
   redrawStoryCanvas();
   storyTextInput.classList.add('hidden');
   textStyleBar.classList.add('hidden');
@@ -1685,13 +1682,17 @@ storyTextInput.addEventListener('keydown', (e) => {
   }
 });
 
+let storyTextBlurTimeout;
 storyTextInput.addEventListener('blur', () => {
-  commitStoryText();
+  storyTextBlurTimeout = setTimeout(() => {
+    commitStoryText();
+  }, 200);
 });
 
 storyTextInput.addEventListener('focus', () => {
-  storyTextCommitted = false;
+  clearTimeout(storyTextBlurTimeout);
 });
+  
 
 // ===== Notifica via messaggio quando qualcuno viene taggato in una storia =====
 async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
