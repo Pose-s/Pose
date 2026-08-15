@@ -815,14 +815,40 @@ async function attachRepostersDisplay() {
   lucide.createIcons();
 }
 
+function renderProductTagsForSlide(tags, slideIdx) {
+  if (!tags || !Array.isArray(tags)) return '';
+  const filtered = tags.filter(t => (t.slideIndex !== undefined ? t.slideIndex === slideIdx : slideIdx === 0));
+  if (filtered.length === 0) return '';
+
+  return `
+    <div class="product-tags-overlay hidden">
+      ${filtered.map(tag => `
+        <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
+          <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
+            <span class="product-tag-pulse"></span>
+            <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderMediaCarousel(mediaItems, postId) {
   if (mediaItems.length === 0) return '';
 
-  const slides = mediaItems.map(m =>
-    m.type === 'video'
-      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
-      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
-  ).join('');
+  const post = postsCache.get(postId);
+  const tags = post?.productTags || [];
+
+  const slides = mediaItems.map((m, i) => `
+    <div class="carousel-slide" data-slide-index="${i}" style="position: relative;">
+      ${m.type === 'video'
+        ? `<video src="${m.url}" class="post-photo" controls></video>`
+        : `<img src="${m.url}" class="post-photo" alt="Post" loading="lazy" />`
+      }
+      ${renderProductTagsForSlide(tags, i)}
+    </div>
+  `).join('');
 
   const dots = mediaItems.length > 1
     ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
@@ -835,17 +861,11 @@ function renderMediaCarousel(mediaItems, postId) {
     `
     : '';
 
-  const post = postsCache.get(postId);
-  const productTagsHtml = renderProductTags(post?.productTags || []);
-
   return `
-    <div class="carousel-container" data-carousel-id="${postId}" style="position: relative;">
+    <div class="carousel-container" data-carousel-id="${postId}">
       <div class="carousel-track">${slides}</div>
       ${arrows}
       ${dots}
-      <div class="product-tags-overlay">
-        ${productTagsHtml}
-      </div>
     </div>
   `;
 }
@@ -889,16 +909,18 @@ function attachCarouselListeners() {
 
 function attachPostListeners() {
   document.querySelectorAll('.post-media-clickable').forEach(el => {
-    el.addEventListener('click', () => openComments(el.dataset.id));
-  });
+    el.addEventListener('click', (e) => {
+      // Non fa nulla se si clicca sulle frecce o sui tag già aperti
+      if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots') || e.target.closest('.product-tag-dot')) return;
 
-  document.querySelectorAll('.post-menu-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
-      closeAllMenus();
-      dropdown.classList.toggle('hidden');
+      // Trova l'overlay dei tag dentro la slide cliccata e ne alterna la visibilità (toggle)
+      const slide = e.target.closest('.carousel-slide');
+      if (slide) {
+        const overlay = slide.querySelector('.product-tags-overlay');
+        if (overlay) {
+          overlay.classList.toggle('hidden');
+        }
+      }
     });
   });
 
@@ -2415,8 +2437,15 @@ function enableProductTaggingMode(postId) {
   container.style.cursor = 'crosshair';
 
   const clickHandler = async (e) => {
-    const rect = container.getBoundingClientRect();
+    // Evita di registrare il click sui pulsanti di navigazione
+    if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots')) return;
 
+    const track = container.querySelector('.carousel-track');
+    const activeSlideIndex = track ? Math.round(track.scrollLeft / track.clientWidth) : 0;
+    const slides = container.querySelectorAll('.carousel-slide');
+    const currentSlide = slides[activeSlideIndex] || container;
+
+    const rect = currentSlide.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -2441,6 +2470,7 @@ function enableProductTaggingMode(postId) {
       url: url.trim(),
       x: Math.round(x * 100) / 100,
       y: Math.round(y * 100) / 100,
+      slideIndex: activeSlideIndex, // Collega il tag alla slide specifica
       addedBy: currentProfile.username || currentUser.email.split('@')[0],
       createdAt: new Date().toISOString()
     };
