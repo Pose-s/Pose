@@ -1379,7 +1379,7 @@ function drawStyledText(ctx, t) {
   ctx.fillText(text, t.x, t.y);
 }
 
-function redrawStoryCanvas() {
+function redrawStoryCanvas(excludeIdx = null) {
   const cw = storyEditorCanvas.width;
   const ch = storyEditorCanvas.height;
 
@@ -1387,17 +1387,24 @@ function redrawStoryCanvas() {
   storyCtx.fillStyle = '#000000';
   storyCtx.fillRect(0, 0, cw, ch);
 
-  const iw = storyBaseImage.width;
-  const ih = storyBaseImage.height;
-  const scale = Math.min(cw / iw, ch / ih);
-  const dw = iw * scale;
-  const dh = ih * scale;
-  const dx = (cw - dw) / 2;
-  const dy = (ch - dh) / 2;
-  storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
+  if (storyBaseImage) {
+    const iw = storyBaseImage.width;
+    const ih = storyBaseImage.height;
+    const scale = Math.min(cw / iw, ch / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+    storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
+  }
 
   if (storyDrawingLayer) storyCtx.drawImage(storyDrawingLayer, 0, 0);
-  storyTextLayers.forEach(t => drawStyledText(storyCtx, t));
+  
+  storyTextLayers.forEach((t, i) => {
+    if (i !== excludeIdx) {
+      drawStyledText(storyCtx, t);
+    }
+  });
 }
 
 function captureStoryState() {
@@ -1522,7 +1529,14 @@ function findTextAt(pos) {
     const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
     storyCtx.font = style.font;
     const width = storyCtx.measureText(t.text).width;
-    if (pos.x >= t.x - 20 && pos.x <= t.x + width + 20 && pos.y <= t.y + 20 && pos.y >= t.y - 55) {
+    
+    // Area di interazione ampliata per facilitare il tocco
+    const minX = t.x - 25;
+    const maxX = t.x + width + 25;
+    const minY = t.y - 50;
+    const maxY = t.y + 20;
+
+    if (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY) {
       return i;
     }
   }
@@ -1637,10 +1651,15 @@ function openTextEditMode(idx) {
   const scaleX = rect.width / storyEditorCanvas.width;
   const scaleY = rect.height / storyEditorCanvas.height;
 
+  // Calcolo preciso includendo la posizione assoluta nella finestra
   storyTextInput.style.left = `${rect.left + t.x * scaleX}px`;
-  storyTextInput.style.top = `${rect.top + t.y * scaleY}px`;
+  storyTextInput.style.top = `${rect.top + (t.y - 30) * scaleY}px`;
   storyTextInput.style.color = t.color;
   storyTextInput.value = t.text;
+  
+  // Ridisegna il canvas escludendo temporaneamente la scritta in modifica per evitare sovrapposizioni
+  redrawStoryCanvas(idx);
+
   storyTextInput.classList.remove('hidden');
   storyTextInput.focus();
   storyTextInput.select();
