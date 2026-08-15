@@ -174,7 +174,6 @@ let storyDragMoved = false;
 let storyDragStartPos = null;
 let storyEditingTextIdx = null;
 let storyPendingTextPos = null;
-let storyTextCommitted = false;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -1484,11 +1483,10 @@ function renderTextStyleBar() {
   });
 }
 
-// Impedisce che il colore rubi il focus dal campo di testo
 colorPickerBtn.addEventListener('mousedown', (e) => e.preventDefault());
 
 storyColorInput.addEventListener('input', () => {
- storyCurrentColor = storyColorInput.value;
+  storyCurrentColor = storyColorInput.value;
   colorPickerBtn.style.background = storyCurrentColor;
   if (storyEditingTextIdx !== null) {
     storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
@@ -1599,10 +1597,10 @@ function storyPointerMove(e) {
     }
   }
 }
+
 function storyPointerUp() {
   if (storyIsDrawing) {
     saveStoryUndo();
-    // Disattiva lo strumento dopo un tratto, così il tocco successivo può selezionare/creare testo
     storyCurrentTool = null;
     storyDrawToolBtn.classList.remove('active');
     storyEraserToolBtn.classList.remove('active');
@@ -1619,6 +1617,11 @@ function storyPointerUp() {
     storyDragMoved = false;
   }
 }
+
+storyEditorCanvas.style.touchAction = 'none';
+storyEditorCanvas.addEventListener('pointerdown', storyPointerDown);
+storyEditorCanvas.addEventListener('pointermove', storyPointerMove);
+storyEditorCanvas.addEventListener('pointerup', storyPointerUp);
 
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
@@ -1694,7 +1697,6 @@ storyTextInput.addEventListener('blur', () => {
 storyTextInput.addEventListener('focus', () => {
   clearTimeout(storyTextBlurTimeout);
 });
-  
 
 // ===== Notifica via messaggio quando qualcuno viene taggato in una storia =====
 async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
