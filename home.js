@@ -924,11 +924,27 @@ function attachPostListeners() {
     });
   });
 
-  document.querySelectorAll('.edit-post-btn').forEach(btn => {
+ // Nel blocco attachPostListeners():
+  document.querySelectorAll('.post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
+      const id = btn.dataset.id;
+      const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
+      
+      const wasHidden = dropdown ? dropdown.classList.contains('hidden') : true;
       closeAllMenus();
-      openEditModal(btn.dataset.id);
+      
+      if (dropdown && wasHidden) {
+        dropdown.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Impedisce che cliccando dentro il menu si chiuda da solo
+  document.querySelectorAll('.post-menu-dropdown').forEach(dropdown => {
+    dropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
   });
 

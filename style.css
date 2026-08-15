@@ -3410,3 +3410,14 @@ html, body {
   border-radius: 50%;
   display: inline-block;
 }
+.post-menu {
+  position: relative;
+  z-index: 30;
+}
+
+.post-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 50;
+}
