@@ -1588,7 +1588,7 @@ function storyPointerMove(e) {
 
   if (storyDraggingTextIdx !== null) {
     const dist = Math.hypot(pos.x - storyDragStartPos.x, pos.y - storyDragStartPos.y);
-    if (dist > 6) storyDragMoved = true;
+    if (dist > 15) storyDragMoved = true;
 
     if (storyDragMoved) {
       storyTextLayers[storyDraggingTextIdx].x = pos.x - storyDragOffset.x;
