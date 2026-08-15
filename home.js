@@ -702,10 +702,6 @@ function startListeningToPosts() {
                   <i data-lucide="tag"></i> Tag
                 </button>
                 ${isOwner ? `
-// Nel post-menu-dropdown:
-<button class="menu-item add-product-tag-btn" data-id="${id}">
-  <i data-lucide="shopping-bag"></i> Tagga prodotto/link
-</button>
                   <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
                     <i data-lucide="trash-2"></i> Elimina
                   </button>
@@ -800,19 +796,6 @@ async function attachRepostersDisplay() {
   lucide.createIcons();
 }
 
-function renderProductTags(tags) {
-  if (!tags || !Array.isArray(tags) || tags.length === 0) return '';
-
-  return tags.map(tag => `
-    <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
-      <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
-        <span class="product-tag-pulse"></span>
-        <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
-      </button>
-    </div>
-  `).join('');
-}
-
 function renderMediaCarousel(mediaItems, postId) {
   if (mediaItems.length === 0) return '';
 
@@ -833,17 +816,11 @@ function renderMediaCarousel(mediaItems, postId) {
     `
     : '';
 
-  const post = postsCache.get(postId);
-  const productTagsHtml = renderProductTags(post?.productTags || []);
-
   return `
-    <div class="carousel-container" data-carousel-id="${postId}" style="position: relative;">
+    <div class="carousel-container" data-carousel-id="${postId}">
       <div class="carousel-track">${slides}</div>
       ${arrows}
       ${dots}
-      <div class="product-tags-overlay">
-        ${productTagsHtml}
-      </div>
     </div>
   `;
 }
@@ -1036,14 +1013,10 @@ function openComments(postId) {
       commentsPostCaption.classList.add('hidden');
     }
     lucide.createIcons();
-    attachPostListeners();
     attachCarouselListeners();
-    attachProductTagListeners(); // <-- INCOLLA QUESTA RIGA QUI
-    attachSaveListeners('#postsGrid');
-    await attachRepostAndTagListeners('#postsGrid', postsCache);
-    await attachRepostersDisplay();
+  }
+
   commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
-   }
 
   const commentsQuery = query(
     collection(db, 'posts', postId, 'comments'),
@@ -2364,7 +2337,6 @@ shareSearchInput.addEventListener('input', () => {
 closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
 shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
 
-// ===== Invia post nei messaggi =====
 async function sendPostToChat(otherUid, postId) {
   const postDoc = await getDoc(doc(db, 'posts', postId));
   if (!postDoc.exists()) return;
@@ -2399,75 +2371,4 @@ async function sendPostToChat(otherUid, postId) {
     lastMessageAt: serverTimestamp(),
     [`unread.${otherUid}`]: increment(1)
   });
-}
-
-// ===== Gestione Tag Prodotti sui Post =====
-function attachProductTagListeners() {
-  document.querySelectorAll('.add-product-tag-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAllMenus();
-      const postId = btn.dataset.id;
-      enableProductTaggingMode(postId);
-    });
-  });
-}
-
-function enableProductTaggingMode(postId) {
-  const container = document.querySelector(`.carousel-container[data-carousel-id="${postId}"]`);
-  if (!container) return;
-
-  alert('Tocca il punto della foto in cui vuoi inserire il link!');
-  container.style.cursor = 'crosshair';
-
-  const clickHandler = async (e) => {
-    const rect = container.getBoundingClientRect();
-    
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    const label = prompt('Nome del prodotto (es: Maglia Zara):');
-    if (!label) {
-      cleanup();
-      return;
-    }
-
-    let url = prompt('Inserisci il link del sito web (es: https://...):');
-    if (!url) {
-      cleanup();
-      return;
-    }
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-
-    const newTag = {
-      label: label.trim(),
-      url: url.trim(),
-      x: Math.round(x * 100) / 100,
-      y: Math.round(y * 100) / 100,
-      addedBy: currentProfile.username || currentUser.email.split('@')[0],
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      await updateDoc(doc(db, 'posts', postId), {
-        productTags: arrayUnion(newTag)
-      });
-      alert('Tag prodotto aggiunto!');
-    } catch (err) {
-      console.error('Errore salvataggio tag prodotto:', err);
-      alert('Errore durante il salvataggio.');
-    } finally {
-      cleanup();
-    }
-  };
-
-  function cleanup() {
-    container.style.cursor = 'default';
-    container.removeEventListener('click', clickHandler);
-  }
-
-  container.addEventListener('click', clickHandler, { once: true });
 }
