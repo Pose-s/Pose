@@ -2364,6 +2364,7 @@ shareSearchInput.addEventListener('input', () => {
 closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
 shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
 
+// ===== Invia post nei messaggi =====
 async function sendPostToChat(otherUid, postId) {
   const postDoc = await getDoc(doc(db, 'posts', postId));
   if (!postDoc.exists()) return;
@@ -2399,6 +2400,7 @@ async function sendPostToChat(otherUid, postId) {
     [`unread.${otherUid}`]: increment(1)
   });
 }
+
 // ===== Gestione Tag Prodotti sui Post =====
 function attachProductTagListeners() {
   document.querySelectorAll('.add-product-tag-btn').forEach(btn => {
@@ -2418,7 +2420,6 @@ function enableProductTaggingMode(postId) {
   alert('Tocca il punto della foto in cui vuoi inserire il link!');
   container.style.cursor = 'crosshair';
 
-  // Assicurati che qui ci sia "async (e) =>"
   const clickHandler = async (e) => {
     const rect = container.getBoundingClientRect();
     
