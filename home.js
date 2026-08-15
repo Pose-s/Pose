@@ -2418,6 +2418,7 @@ function enableProductTaggingMode(postId) {
   alert('Tocca il punto della foto in cui vuoi inserire il link!');
   container.style.cursor = 'crosshair';
 
+  // Assicurati che qui ci sia "async (e) =>"
   const clickHandler = async (e) => {
     const rect = container.getBoundingClientRect();
     
