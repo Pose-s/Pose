@@ -1471,11 +1471,8 @@ function renderTextStyleBar() {
   `).join('');
 
   textStyleBar.querySelectorAll('.text-style-option').forEach(btn => {
-    // Impedisce che il click sposti il focus fuori dal campo di testo
-    btn.addEventListener('mousedown', (e) => e.preventDefault());
-    btn.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-
-    btn.addEventListener('click', () => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       storyCurrentTextStyle = btn.dataset.style;
       renderTextStyleBar();
 
@@ -1491,7 +1488,7 @@ function renderTextStyleBar() {
 colorPickerBtn.addEventListener('mousedown', (e) => e.preventDefault());
 
 storyColorInput.addEventListener('input', () => {
-  storyCurrentColor = storyColorInput.value;
+ storyCurrentColor = storyColorInput.value;
   colorPickerBtn.style.background = storyCurrentColor;
   if (storyEditingTextIdx !== null) {
     storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
@@ -1602,9 +1599,14 @@ function storyPointerMove(e) {
     }
   }
 }
-
 function storyPointerUp() {
-  if (storyIsDrawing) saveStoryUndo();
+  if (storyIsDrawing) {
+    saveStoryUndo();
+    // Disattiva lo strumento dopo un tratto, così il tocco successivo può selezionare/creare testo
+    storyCurrentTool = null;
+    storyDrawToolBtn.classList.remove('active');
+    storyEraserToolBtn.classList.remove('active');
+  }
   storyIsDrawing = false;
 
   if (storyDraggingTextIdx !== null) {
