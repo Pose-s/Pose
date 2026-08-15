@@ -1521,7 +1521,7 @@ function findTextAt(pos) {
     const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
     storyCtx.font = style.font;
     const width = storyCtx.measureText(t.text).width;
-    if (pos.x >= t.x - 10 && pos.x <= t.x + width + 10 && pos.y <= t.y + 10 && pos.y >= t.y - 40) {
+    if (pos.x >= t.x - 20 && pos.x <= t.x + width + 20 && pos.y <= t.y + 20 && pos.y >= t.y - 55) {
       return i;
     }
   }
