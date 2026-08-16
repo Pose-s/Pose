@@ -496,13 +496,18 @@ function openEditModal(postId) {
   editingPostId = postId;
   pendingNewFiles = [];
   existingEditMedia = getPostMedia(post).map(m => ({ ...m }));
-  pendingTaggedUsers = (post.taggedUids || []).map((uid, i) => ({ uid, username: (post.taggedUsernames || [])[i] || '' }));
+  pendingTaggedUsers = (post.taggedUids || []).map((uid, i) => ({ 
+    uid, 
+    username: (post.taggedUsernames || [])[i] || '' 
+  }));
+  
   postModalTitle.textContent = 'Modifica post';
   publishBtn.textContent = 'Salva modifiche';
   captionInput.value = post.caption || '';
   if (locationInput) locationInput.value = post.location || '';
   if (productLabelInput) productLabelInput.value = post.productTags?.[0]?.label || '';
   if (productUrlInput) productUrlInput.value = post.productTags?.[0]?.url || '';
+  
   renderMediaPreview();
   renderTaggedPreview();
   postModal.classList.remove('hidden');
@@ -954,26 +959,28 @@ function attachPostListeners() {
   });
 
  // Nel blocco attachPostListeners():
+  // Toggle del menu a discesa
   document.querySelectorAll('.post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      e.preventDefault();
       const id = btn.dataset.id;
       const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
+      const isHidden = dropdown ? dropdown.classList.contains('hidden') : true;
       
-      const wasHidden = dropdown ? dropdown.classList.contains('hidden') : true;
       closeAllMenus();
       
-      if (dropdown && wasHidden) {
+      if (dropdown && isHidden) {
         dropdown.classList.remove('hidden');
       }
     });
   });
 
-  // Impedisce che cliccando dentro il menu si chiuda da solo
-  document.querySelectorAll('.post-menu-dropdown').forEach(dropdown => {
-    dropdown.addEventListener('click', (e) => {
+  // Tasto Modifica
+  document.querySelectorAll('.edit-post-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      closeAllMenus();
+      openEditModal(btn.dataset.id);
     });
   });
 

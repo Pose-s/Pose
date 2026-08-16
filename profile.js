@@ -10,6 +10,7 @@ import { compressImage, escapeHtml, formatDate } from './utils.js';
 
 lucide.createIcons();
 
+const locationInput = document.getElementById('locationInput');
 const profileUsername = document.getElementById('profileUsername');
 const currentLogo = document.getElementById('currentLogo');
 const logoPlaceholder = document.getElementById('logoPlaceholder');
@@ -449,20 +450,10 @@ postModal.addEventListener('click', (e) => { if (e.target === postModal) closeMo
 function closeModal() {
   postModal.classList.add('hidden');
   postForm.reset();
+  if (locationInput) locationInput.value = '';
   photoPreview.classList.add('hidden');
   editingPostId = null;
 }
-
-photoInput.addEventListener('change', () => {
-  const file = photoInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    photoPreview.src = e.target.result;
-    photoPreview.classList.remove('hidden');
-  };
-  reader.readAsDataURL(file);
-});
 
 function openEditModal(postId) {
   const post = postsCacheProfile.get(postId);
@@ -470,7 +461,8 @@ function openEditModal(postId) {
 
   editingPostId = postId;
   captionInput.value = post.caption || '';
-  photoPreview.src = post.photoUrl;
+  if (locationInput) locationInput.value = post.location || '';
+  photoPreview.src = post.photoUrl || (post.media && post.media[0]?.url) || '';
   photoPreview.classList.remove('hidden');
   photoInput.value = '';
   postModal.classList.remove('hidden');
@@ -484,7 +476,10 @@ postForm.addEventListener('submit', async (e) => {
   publishBtn.textContent = 'Salvataggio...';
 
   try {
-    const updateData = { caption: captionInput.value.trim() };
+    const updateData = { 
+      caption: captionInput.value.trim(),
+      location: locationInput ? locationInput.value.trim() : ''
+    };
     const photoFile = photoInput.files[0];
 
     if (photoFile) {
@@ -538,9 +533,10 @@ function renderFullPostCard(post, id) {
           : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
         }
         <div class="post-header-info">
-          <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
-          <span class="post-date">${formatDate(post.createdAt)}</span>
-        </div>
+            <a href="profile.html" class="post-author" onclick="event.stopPropagation()">${escapeHtml(currentUsername || 'Tu')}</a>
+            ${post.location ? `<span class="post-location" style="display: block; font-size: 12px; color: #64748b;"><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 2px;"></i>${escapeHtml(post.location)}</span>` : ''}
+            <span class="post-date">${formatDate(post.createdAt)}</span>
+          </div>
       </div>
       <div class="post-media-clickable" data-id="${id}">
         ${renderMediaCarousel(getPostMedia(post), id, post)}
