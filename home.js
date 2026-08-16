@@ -22,6 +22,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app, 'default');
 const storage = getStorage(app);
+const locationInput = document.getElementById('locationInput');
+const productLabelInput = document.getElementById('productLabelInput');
+const productUrlInput = document.getElementById('productUrlInput');
 
 const addPostBtn = document.getElementById('addPostBtn');
 const postModal = document.getElementById('postModal');
@@ -466,6 +469,9 @@ function openCreateModal() {
   postModalTitle.textContent = 'Crea un nuovo post';
   publishBtn.textContent = 'Pubblica';
   postForm.reset();
+  if (locationInput) locationInput.value = '';
+  if (productLabelInput) productLabelInput.value = '';
+  if (productUrlInput) productUrlInput.value = '';
   renderMediaPreview();
   renderTaggedPreview();
   postModal.classList.remove('hidden');
@@ -474,6 +480,9 @@ function openCreateModal() {
 function closeModal() {
   postModal.classList.add('hidden');
   postForm.reset();
+  if (locationInput) locationInput.value = '';
+  if (productLabelInput) productLabelInput.value = '';
+  if (productUrlInput) productUrlInput.value = '';
   pendingNewFiles = [];
   existingEditMedia = [];
   renderMediaPreview();
@@ -491,20 +500,13 @@ function openEditModal(postId) {
   postModalTitle.textContent = 'Modifica post';
   publishBtn.textContent = 'Salva modifiche';
   captionInput.value = post.caption || '';
+  if (locationInput) locationInput.value = post.location || '';
+  if (productLabelInput) productLabelInput.value = post.productTags?.[0]?.label || '';
+  if (productUrlInput) productUrlInput.value = post.productTags?.[0]?.url || '';
   renderMediaPreview();
   renderTaggedPreview();
   postModal.classList.remove('hidden');
 }
-
-photoInput.addEventListener('change', () => {
-  const files = Array.from(photoInput.files);
-  files.forEach(file => {
-    if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
-    pendingNewFiles.push(file);
-  });
-  photoInput.value = '';
-  renderMediaPreview();
-});
 
 function renderMediaPreview() {
   const existingHtml = existingEditMedia.map((m, idx) => `
@@ -604,6 +606,29 @@ postForm.addEventListener('submit', async (e) => {
 
     const finalMedia = [...existingEditMedia, ...uploadedNew];
 
+    // ==========================================
+    // QUI: Prepara il tag prodotto inserito nel form
+    // ==========================================
+    let initialProductTags = [];
+    const pLabel = productLabelInput?.value.trim();
+    let pUrl = productUrlInput?.value.trim();
+
+    if (pLabel && pUrl) {
+      if (!pUrl.startsWith('http://') && !pUrl.startsWith('https://')) {
+        pUrl = 'https://' + pUrl;
+      }
+      initialProductTags.push({
+        label: pLabel,
+        url: pUrl,
+        x: 50,
+        y: 50,
+        slideIndex: 0,
+        addedBy: currentProfile.username || currentUser.email.split('@')[0],
+        createdAt: new Date().toISOString()
+      });
+    }
+    // ==========================================
+
     if (editingPostId) {
       const oldPost = postsCache.get(editingPostId);
       const oldMedia = getPostMedia(oldPost);
@@ -613,29 +638,32 @@ postForm.addEventListener('submit', async (e) => {
       });
 
       await updateDoc(doc(db, 'posts', editingPostId), {
-        caption: captionInput.value.trim(),
-        media: finalMedia,
-        photoUrl: finalMedia[0]?.url || '',
-        photoPath: finalMedia[0]?.path || '',
-        taggedUids: pendingTaggedUsers.map(t => t.uid),
-        taggedUsernames: pendingTaggedUsers.map(t => t.username)
-      });
+  caption: captionInput.value.trim(),
+  location: locationInput ? locationInput.value.trim() : '',
+  media: finalMedia,
+  photoUrl: finalMedia[0]?.url || '',
+  photoPath: finalMedia[0]?.path || '',
+  taggedUids: pendingTaggedUsers.map(t => t.uid),
+  taggedUsernames: pendingTaggedUsers.map(t => t.username),
+  ...(initialProductTags.length > 0 ? { productTags: initialProductTags } : {})
+});
     } else {
-      await addDoc(collection(db, 'posts'), {
-        uid: currentUser.uid,
-        authorName: currentProfile.username || currentUser.email.split('@')[0],
-        logoUrl: currentProfile.logoUrl || '',
-        media: finalMedia,
-        photoUrl: finalMedia[0]?.url || '',
-        photoPath: finalMedia[0]?.path || '',
-        caption: captionInput.value.trim(),
-        likes: [],
-        commentCount: 0,
-        taggedUids: pendingTaggedUsers.map(t => t.uid),
-        taggedUsernames: pendingTaggedUsers.map(t => t.username),
-        productTags: [],
-        createdAt: serverTimestamp()
-      });
+    await addDoc(collection(db, 'posts'), {
+  uid: currentUser.uid,
+  authorName: currentProfile.username || currentUser.email.split('@')[0],
+  logoUrl: currentProfile.logoUrl || '',
+  location: locationInput ? locationInput.value.trim() : '',
+  media: finalMedia,
+  photoUrl: finalMedia[0]?.url || '',
+  photoPath: finalMedia[0]?.path || '',
+  caption: captionInput.value.trim(),
+  likes: [],
+  commentCount: 0,
+  taggedUids: pendingTaggedUsers.map(t => t.uid),
+  taggedUsernames: pendingTaggedUsers.map(t => t.username),
+  productTags: initialProductTags,
+  createdAt: serverTimestamp()
+});  
     }
 
     closeModal();
@@ -698,6 +726,7 @@ function startListeningToPosts() {
             }
             <div class="post-header-info">
               <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
+              ${post.location ? `<span class="post-location" style="display: block; font-size: 12px; color: #64748b;"><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 2px;"></i>${escapeHtml(post.location)}</span>` : ''}
               <span class="post-date">${formatDate(post.createdAt)}</span>
             </div>
             <div class="post-menu">
