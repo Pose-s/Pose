@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pose - News Feed</title>
   
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo.png.png">
+  
   <!-- Font Google Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,59 +24,61 @@
 <body>
 
   <div class="app-container">
-     <button class="menu-toggle-btn" id="menuToggleBtn">
-    <i data-lucide="menu"></i>
-  </button>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <button class="menu-toggle-btn" id="menuToggleBtn">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-     <div class="logo">
-  <img src="logo.png.png" class="logo-img" alt="Pose" />
-  <span>Pose</span>
-</div> 
+      <div class="logo">
+        <img src="logo.png.png" class="logo-img" alt="Pose" />
+        <span>Pose</span>
+      </div> 
       <nav class="sidebar-nav">
-  <a href="index.html" class="nav-item active">
-    <i data-lucide="newspaper"></i>
-    <span data-i18n="nav_news">News</span>
-  </a>
-  <a href="home.html" class="nav-item">
-    <i data-lucide="home"></i>
-    <span data-i18n="nav_home">Home</span>
-  </a>
-  <a href="profile.html" class="nav-item">
-    <i data-lucide="user"></i>
-    <span data-i18n="nav_profile">Profilo</span>
-  </a>
-</nav>
-<div class="sidebar-footer">
-  <button id="logoutBtn" class="logout-btn">
-    <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
-  </button>
-</div>
+        <a href="index.html" class="nav-item active">
+          <i data-lucide="newspaper"></i>
+          <span data-i18n="nav_news">News</span>
+        </a>
+        <a href="home.html" class="nav-item">
+          <i data-lucide="home"></i>
+          <span data-i18n="nav_home">Home</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+          <i data-lucide="user"></i>
+          <span data-i18n="nav_profile">Profilo</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="logout-btn">
+          <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
+        </button>
+      </div>
+    </aside>
 
     <!-- Contenuto Principale -->
     <main class="main-content">
       <header class="page-header">
-        <h1>News Feed</h1>
-        <p>Le ultime notizie aggiornate in tempo reale da BBC News</p>
+        <h1 data-i18n="news_feed_title">News Feed</h1>
+        <p data-i18n="news_feed_desc">Le ultime notizie aggiornate in tempo reale da BBC News</p>
       </header>
 
       <!-- Pulsanti Categorie -->
       <div class="categories-bar" id="categoriesBar">
         <button class="category-btn active" data-category="top">
-          <i data-lucide="flame"></i> Top News
+          <i data-lucide="flame"></i> <span data-i18n="cat_top">Top News</span>
         </button>
         <button class="category-btn" data-category="tech">
-          <i data-lucide="laptop"></i> Tech
+          <i data-lucide="laptop"></i> <span data-i18n="cat_tech">Tech</span>
         </button>
         <button class="category-btn" data-category="science">
-          <i data-lucide="flask-conical"></i> Science
+          <i data-lucide="flask-conical"></i> <span data-i18n="cat_science">Science</span>
         </button>
         <button class="category-btn" data-category="business">
-          <i data-lucide="trending-up"></i> Business
+          <i data-lucide="trending-up"></i> <span data-i18n="cat_business">Business</span>
         </button>
         <button class="category-btn" data-category="world">
-          <i data-lucide="globe"></i> World
+          <i data-lucide="globe"></i> <span data-i18n="cat_world">World</span>
         </button>
       </div>
 
@@ -89,16 +94,16 @@
 
   <script src="script.js"></script>
   <script type="module">
-  import { auth } from './firebase-config.js';
-  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+    import { auth } from './firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = 'login.html';
-    }
-  });
-</script>
-<script src="sidebar-toggle.js"></script>
-<script src="cookie-banner.js"></script>
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+  <script src="sidebar-toggle.js"></script>
+  <script src="cookie-banner.js"></script>
 </body>
 </html>
