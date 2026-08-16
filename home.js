@@ -196,10 +196,12 @@ onAuthStateChanged(auth, async (user) => {
   startListeningToStories(user.uid);
 });
 
-logoutBtn.addEventListener('click', async () => {
-  await signOut(auth);
-  window.location.href = 'login.html';
-});
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = 'login.html';
+  });
+}
 
 function conversationIdFor(uidA, uidB) {
   return [uidA, uidB].sort().join('_');
@@ -321,111 +323,130 @@ async function attachRepostAndTagListeners(scopeSelector, cache) {
 function openTagChoiceModal(postId, cache) {
   activeTagPostId = postId;
   activeTagCache = cache;
-  tagChoiceModal.classList.remove('hidden');
+  if (tagChoiceModal) tagChoiceModal.classList.remove('hidden');
 }
 
-closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
-tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+if (closeTagChoiceBtn) {
+  closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
+}
+if (tagChoiceModal) {
+  tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+}
 
-viewTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  const tags = post?.taggedUsernames || [];
-  if (tags.length === 0) {
-    alert('Nessuna persona taggata in questo post.');
-  } else {
-    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-  }
-});
+if (viewTagsChoiceBtn) {
+  viewTagsChoiceBtn.addEventListener('click', () => {
+    tagChoiceModal.classList.add('hidden');
+    const post = activeTagCache.get(activeTagPostId);
+    const tags = post?.taggedUsernames || [];
+    if (tags.length === 0) {
+      alert('Nessuna persona taggata in questo post.');
+    } else {
+      alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+    }
+  });
+}
 
-addTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
+if (addTagsChoiceBtn) {
+  addTagsChoiceBtn.addEventListener('click', () => {
+    tagChoiceModal.classList.add('hidden');
+    const post = activeTagCache.get(activeTagPostId);
+    pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
 
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderTaggedSelected();
-});
+    tagModal.classList.remove('hidden');
+    tagSearchInput.value = '';
+    tagResultsList.innerHTML = '';
+    renderTaggedSelected();
+  });
+}
 
 // ===== Modale tag persone =====
-openTagModalBtn.addEventListener('click', () => {
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderTaggedSelected();
-});
+if (openTagModalBtn) {
+  openTagModalBtn.addEventListener('click', () => {
+    tagModal.classList.remove('hidden');
+    tagSearchInput.value = '';
+    tagResultsList.innerHTML = '';
+    renderTaggedSelected();
+  });
+}
 
-closeTagModalBtn.addEventListener('click', () => tagModal.classList.add('hidden'));
-tagModal.addEventListener('click', (e) => { if (e.target === tagModal) tagModal.classList.add('hidden'); });
+if (closeTagModalBtn) {
+  closeTagModalBtn.addEventListener('click', () => tagModal.classList.add('hidden'));
+}
+if (tagModal) {
+  tagModal.addEventListener('click', (e) => { if (e.target === tagModal) tagModal.classList.add('hidden'); });
+}
 
-tagModalDoneBtn.addEventListener('click', async () => {
-  tagModal.classList.add('hidden');
+if (tagModalDoneBtn) {
+  tagModalDoneBtn.addEventListener('click', async () => {
+    tagModal.classList.add('hidden');
 
-  if (activeTagPostId) {
-    try {
-      await updateDoc(doc(db, 'posts', activeTagPostId), {
-        taggedUids: pendingTaggedUsers.map(t => t.uid),
-        taggedUsernames: pendingTaggedUsers.map(t => t.username)
-      });
-      alert('Tag aggiornati!');
-    } catch (error) {
-      console.error('Errore aggiornamento tag:', error);
+    if (activeTagPostId) {
+      try {
+        await updateDoc(doc(db, 'posts', activeTagPostId), {
+          taggedUids: pendingTaggedUsers.map(t => t.uid),
+          taggedUsernames: pendingTaggedUsers.map(t => t.username)
+        });
+        alert('Tag aggiornati!');
+      } catch (error) {
+        console.error('Errore aggiornamento tag:', error);
+      }
+      activeTagPostId = null;
+    } else {
+      renderTaggedPreview();
     }
-    activeTagPostId = null;
-  } else {
-    renderTaggedPreview();
-  }
-});
+  });
+}
 
 let tagSearchTimeout;
-tagSearchInput.addEventListener('input', () => {
-  clearTimeout(tagSearchTimeout);
-  const term = tagSearchInput.value.trim().toLowerCase();
-  if (!term) { tagResultsList.innerHTML = ''; return; }
+if (tagSearchInput) {
+  tagSearchInput.addEventListener('input', () => {
+    clearTimeout(tagSearchTimeout);
+    const term = tagSearchInput.value.trim().toLowerCase();
+    if (!term) { tagResultsList.innerHTML = ''; return; }
 
-  tagSearchTimeout = setTimeout(async () => {
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('username', '>=', term),
-      where('username', '<=', term + '\uf8ff'),
-      limit(8)
-    );
-    const snapshot = await getDocs(usersQuery);
+    tagSearchTimeout = setTimeout(async () => {
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('username', '>=', term),
+        where('username', '<=', term + '\uf8ff'),
+        limit(8)
+      );
+      const snapshot = await getDocs(usersQuery);
 
-    const activeTagList = !storyEditor.classList.contains('hidden') ? storyPendingTaggedUsers : pendingTaggedUsers;
+      const activeTagList = !storyEditor.classList.contains('hidden') ? storyPendingTaggedUsers : pendingTaggedUsers;
 
-    tagResultsList.innerHTML = snapshot.docs
-      .filter(d => d.id !== currentUser.uid && !activeTagList.some(t => t.uid === d.id))
-      .map(docSnap => {
-        const u = docSnap.data();
-        return `
-          <div class="conversation-item" data-uid="${docSnap.id}" data-username="${escapeHtml(u.username || '')}">
-            ${u.logoUrl ? `<img src="${u.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
-            <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.username || '')}</span></div>
-          </div>
-        `;
-      }).join('');
-    lucide.createIcons();
+      tagResultsList.innerHTML = snapshot.docs
+        .filter(d => d.id !== currentUser.uid && !activeTagList.some(t => t.uid === d.id))
+        .map(docSnap => {
+          const u = docSnap.data();
+          return `
+            <div class="conversation-item" data-uid="${docSnap.id}" data-username="${escapeHtml(u.username || '')}">
+              ${u.logoUrl ? `<img src="${u.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+              <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.username || '')}</span></div>
+            </div>
+          `;
+        }).join('');
+      lucide.createIcons();
 
-    tagResultsList.querySelectorAll('.conversation-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (!storyEditor.classList.contains('hidden')) {
-          storyPendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
-          renderStoryTaggedSelected();
-        } else {
-          pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
-          renderTaggedSelected();
-        }
-        tagSearchInput.value = '';
-        tagResultsList.innerHTML = '';
+      tagResultsList.querySelectorAll('.conversation-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (!storyEditor.classList.contains('hidden')) {
+            storyPendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+            renderStoryTaggedSelected();
+          } else {
+            pendingTaggedUsers.push({ uid: item.dataset.uid, username: item.dataset.username });
+            renderTaggedSelected();
+          }
+          tagSearchInput.value = '';
+          tagResultsList.innerHTML = '';
+        });
       });
-    });
-  }, 300);
-});
+    }, 300);
+  });
+}
 
 function renderTaggedSelected() {
+  if (!taggedSelectedList) return;
   taggedSelectedList.innerHTML = pendingTaggedUsers.map(t => `
     <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove">×</button></span>
   `).join('');
@@ -439,6 +460,7 @@ function renderTaggedSelected() {
 }
 
 function renderTaggedPreview() {
+  if (!taggedPreview) return;
   if (pendingTaggedUsers.length === 0) {
     taggedPreview.innerHTML = '';
     return;
@@ -447,6 +469,7 @@ function renderTaggedPreview() {
 }
 
 function renderStoryTaggedSelected() {
+  if (!taggedSelectedList) return;
   taggedSelectedList.innerHTML = storyPendingTaggedUsers.map(t => `
     <span class="tagged-chip">@${escapeHtml(t.username)} <button type="button" data-uid="${t.uid}" class="tagged-chip-remove-story">×</button></span>
   `).join('');
@@ -460,29 +483,35 @@ function renderStoryTaggedSelected() {
 }
 
 // ===== Modale Crea/Modifica Post =====
-addPostBtn.addEventListener('click', () => openCreateModal());
-closeModalBtn.addEventListener('click', closeModal);
-postModal.addEventListener('click', (e) => { if (e.target === postModal) closeModal(); });
+if (addPostBtn) {
+  addPostBtn.addEventListener('click', () => openCreateModal());
+}
+if (closeModalBtn) {
+  closeModalBtn.addEventListener('click', closeModal);
+}
+if (postModal) {
+  postModal.addEventListener('click', (e) => { if (e.target === postModal) closeModal(); });
+}
 
 function openCreateModal() {
   editingPostId = null;
   pendingNewFiles = [];
   existingEditMedia = [];
   pendingTaggedUsers = [];
-  postModalTitle.textContent = 'Crea un nuovo post';
-  publishBtn.textContent = 'Pubblica';
-  postForm.reset();
+  if (postModalTitle) postModalTitle.textContent = 'Crea un nuovo post';
+  if (publishBtn) publishBtn.textContent = 'Pubblica';
+  if (postForm) postForm.reset();
   if (locationInput) locationInput.value = '';
   if (productLabelInput) productLabelInput.value = '';
   if (productUrlInput) productUrlInput.value = '';
   renderMediaPreview();
   renderTaggedPreview();
-  postModal.classList.remove('hidden');
+  if (postModal) postModal.classList.remove('hidden');
 }
 
 function closeModal() {
-  postModal.classList.add('hidden');
-  postForm.reset();
+  if (postModal) postModal.classList.add('hidden');
+  if (postForm) postForm.reset();
   if (locationInput) locationInput.value = '';
   if (productLabelInput) productLabelInput.value = '';
   if (productUrlInput) productUrlInput.value = '';
@@ -501,29 +530,32 @@ function openEditModal(postId) {
   existingEditMedia = getPostMedia(post).map(m => ({ ...m }));
   pendingTaggedUsers = (post.taggedUids || []).map((uid, i) => ({ uid, username: (post.taggedUsernames || [])[i] || '' }));
   
-  postModalTitle.textContent = 'Modifica post';
-  publishBtn.textContent = 'Salva modifiche';
-  captionInput.value = post.caption || '';
+  if (postModalTitle) postModalTitle.textContent = 'Modifica post';
+  if (publishBtn) publishBtn.textContent = 'Salva modifiche';
+  if (captionInput) captionInput.value = post.caption || '';
   if (locationInput) locationInput.value = post.location || '';
   if (productLabelInput) productLabelInput.value = post.productTags?.[0]?.label || '';
   if (productUrlInput) productUrlInput.value = post.productTags?.[0]?.url || '';
   
   renderMediaPreview();
   renderTaggedPreview();
-  postModal.classList.remove('hidden');
+  if (postModal) postModal.classList.remove('hidden');
 }
 
-photoInput.addEventListener('change', () => {
-  const files = Array.from(photoInput.files);
-  files.forEach(file => {
-    if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
-    pendingNewFiles.push(file);
+if (photoInput) {
+  photoInput.addEventListener('change', () => {
+    const files = Array.from(photoInput.files);
+    files.forEach(file => {
+      if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
+      pendingNewFiles.push(file);
+    });
+    photoInput.value = '';
+    renderMediaPreview();
   });
-  photoInput.value = '';
-  renderMediaPreview();
-});
+}
 
 function renderMediaPreview() {
+  if (!mediaPreviewStrip) return;
   const existingHtml = existingEditMedia.map((m, idx) => `
     <div class="media-thumb" data-existing-idx="${idx}">
       ${m.type === 'video'
@@ -600,92 +632,94 @@ async function uploadSingleMedia(file) {
   }
 }
 
-postForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!currentUser) return;
+if (postForm) {
+  postForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
 
-  const totalMedia = existingEditMedia.length + pendingNewFiles.length;
-  if (totalMedia === 0) {
-    alert('Aggiungi almeno una foto o un video.');
-    return;
-  }
-
-  publishBtn.disabled = true;
-  publishBtn.textContent = editingPostId ? 'Salvataggio...' : 'Pubblicazione in corso...';
-
-  try {
-    const uploadedNew = [];
-    for (const file of pendingNewFiles) {
-      uploadedNew.push(await uploadSingleMedia(file));
+    const totalMedia = existingEditMedia.length + pendingNewFiles.length;
+    if (totalMedia === 0) {
+      alert('Aggiungi almeno una foto o un video.');
+      return;
     }
 
-    const finalMedia = [...existingEditMedia, ...uploadedNew];
+    publishBtn.disabled = true;
+    publishBtn.textContent = editingPostId ? 'Salvataggio...' : 'Pubblicazione in corso...';
 
-    let initialProductTags = [];
-    const pLabel = productLabelInput?.value.trim();
-    let pUrl = productUrlInput?.value.trim();
-
-    if (pLabel && pUrl) {
-      if (!pUrl.startsWith('http://') && !pUrl.startsWith('https://')) {
-        pUrl = 'https://' + pUrl;
+    try {
+      const uploadedNew = [];
+      for (const file of pendingNewFiles) {
+        uploadedNew.push(await uploadSingleMedia(file));
       }
-      initialProductTags.push({
-        label: pLabel,
-        url: pUrl,
-        x: 50,
-        y: 50,
-        slideIndex: 0,
-        addedBy: currentProfile.username || currentUser.email.split('@')[0],
-        createdAt: new Date().toISOString()
-      });
+
+      const finalMedia = [...existingEditMedia, ...uploadedNew];
+
+      let initialProductTags = [];
+      const pLabel = productLabelInput?.value.trim();
+      let pUrl = productUrlInput?.value.trim();
+
+      if (pLabel && pUrl) {
+        if (!pUrl.startsWith('http://') && !pUrl.startsWith('https://')) {
+          pUrl = 'https://' + pUrl;
+        }
+        initialProductTags.push({
+          label: pLabel,
+          url: pUrl,
+          x: 50,
+          y: 50,
+          slideIndex: 0,
+          addedBy: currentProfile.username || currentUser.email.split('@')[0],
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      if (editingPostId) {
+        const oldPost = postsCache.get(editingPostId);
+        const oldMedia = getPostMedia(oldPost);
+        const removedMedia = oldMedia.filter(om => !finalMedia.some(fm => fm.path === om.path));
+        removedMedia.forEach(m => {
+          if (m.path) deleteObject(ref(storage, m.path)).catch(() => {});
+        });
+
+        await updateDoc(doc(db, 'posts', editingPostId), {
+          caption: captionInput.value.trim(),
+          location: locationInput ? locationInput.value.trim() : '',
+          media: finalMedia,
+          photoUrl: finalMedia[0]?.url || '',
+          photoPath: finalMedia[0]?.path || '',
+          taggedUids: pendingTaggedUsers.map(t => t.uid),
+          taggedUsernames: pendingTaggedUsers.map(t => t.username),
+          ...(initialProductTags.length > 0 ? { productTags: initialProductTags } : {})
+        });
+      } else {
+        await addDoc(collection(db, 'posts'), {
+          uid: currentUser.uid,
+          authorName: currentProfile.username || currentUser.email.split('@')[0],
+          logoUrl: currentProfile.logoUrl || '',
+          location: locationInput ? locationInput.value.trim() : '',
+          media: finalMedia,
+          photoUrl: finalMedia[0]?.url || '',
+          photoPath: finalMedia[0]?.path || '',
+          caption: captionInput.value.trim(),
+          likes: [],
+          commentCount: 0,
+          taggedUids: pendingTaggedUsers.map(t => t.uid),
+          taggedUsernames: pendingTaggedUsers.map(t => t.username),
+          productTags: initialProductTags,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      closeModal();
+    } catch (error) {
+      console.error('Errore:', error);
+      alert('Si è verificato un errore. Riprova.');
+    } finally {
+      publishBtn.disabled = false;
+      publishBtn.textContent = editingPostId ? 'Salva modifiche' : 'Pubblica';
     }
-
-    if (editingPostId) {
-      const oldPost = postsCache.get(editingPostId);
-      const oldMedia = getPostMedia(oldPost);
-      const removedMedia = oldMedia.filter(om => !finalMedia.some(fm => fm.path === om.path));
-      removedMedia.forEach(m => {
-        if (m.path) deleteObject(ref(storage, m.path)).catch(() => {});
-      });
-
-      await updateDoc(doc(db, 'posts', editingPostId), {
-        caption: captionInput.value.trim(),
-        location: locationInput ? locationInput.value.trim() : '',
-        media: finalMedia,
-        photoUrl: finalMedia[0]?.url || '',
-        photoPath: finalMedia[0]?.path || '',
-        taggedUids: pendingTaggedUsers.map(t => t.uid),
-        taggedUsernames: pendingTaggedUsers.map(t => t.username),
-        ...(initialProductTags.length > 0 ? { productTags: initialProductTags } : {})
-      });
-    } else {
-      await addDoc(collection(db, 'posts'), {
-        uid: currentUser.uid,
-        authorName: currentProfile.username || currentUser.email.split('@')[0],
-        logoUrl: currentProfile.logoUrl || '',
-        location: locationInput ? locationInput.value.trim() : '',
-        media: finalMedia,
-        photoUrl: finalMedia[0]?.url || '',
-        photoPath: finalMedia[0]?.path || '',
-        caption: captionInput.value.trim(),
-        likes: [],
-        commentCount: 0,
-        taggedUids: pendingTaggedUsers.map(t => t.uid),
-        taggedUsernames: pendingTaggedUsers.map(t => t.username),
-        productTags: initialProductTags,
-        createdAt: serverTimestamp()
-      });
-    }
-
-    closeModal();
-  } catch (error) {
-    console.error('Errore:', error);
-    alert('Si è verificato un errore. Riprova.');
-  } finally {
-    publishBtn.disabled = false;
-    publishBtn.textContent = editingPostId ? 'Salva modifiche' : 'Pubblica';
-  }
-});
+  });
+}
 
 // ===== Ricerca Luoghi OpenStreetMap =====
 let locationSearchTimeout;
@@ -773,10 +807,12 @@ function renderProductTagsForSlide(tags, slideIdx) {
 // ===== Lista Post =====
 function startListeningToPosts() {
   const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(30));
-  postsLoader.classList.remove('hidden');
+  if (postsLoader) postsLoader.classList.remove('hidden');
 
   onSnapshot(postsQuery, async (snapshot) => {
-    postsLoader.classList.add('hidden');
+    if (postsLoader) postsLoader.classList.add('hidden');
+
+    if (!postsGrid) return;
 
     if (snapshot.empty) {
       postsGrid.innerHTML = '<p style="color:#94a3b8;">Nessun post ancora. Clicca su "+" per crearne uno!</p>';
@@ -871,9 +907,9 @@ function startListeningToPosts() {
     await attachRepostAndTagListeners('#postsGrid', postsCache);
     await attachRepostersDisplay();
   }, (error) => {
-    postsLoader.classList.add('hidden');
+    if (postsLoader) postsLoader.classList.add('hidden');
     console.error('Errore nel caricamento dei post:', error);
-    postsGrid.innerHTML = '<p style="color:#ef4444;">Errore nel caricamento dei post.</p>';
+    if (postsGrid) postsGrid.innerHTML = '<p style="color:#ef4444;">Errore nel caricamento dei post.</p>';
   });
 }
 
@@ -1148,22 +1184,24 @@ document.addEventListener('click', closeAllMenus);
 // ===== Dettaglio post + Commenti =====
 function openComments(postId) {
   activeCommentsPostId = postId;
-  commentsModal.classList.remove('hidden');
+  if (commentsModal) commentsModal.classList.remove('hidden');
 
   const post = postsCache.get(postId);
   if (post) {
-    commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
+    if (commentsPostMedia) commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
     if (post.caption) {
-      commentsPostCaption.textContent = post.caption;
-      commentsPostCaption.classList.remove('hidden');
+      if (commentsPostCaption) {
+        commentsPostCaption.textContent = post.caption;
+        commentsPostCaption.classList.remove('hidden');
+      }
     } else {
-      commentsPostCaption.classList.add('hidden');
+      if (commentsPostCaption) commentsPostCaption.classList.add('hidden');
     }
     lucide.createIcons();
     attachCarouselListeners();
   }
 
-  commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
+  if (commentsList) commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Caricamento...</p>';
 
   const commentsQuery = query(
     collection(db, 'posts', postId, 'comments'),
@@ -1171,6 +1209,7 @@ function openComments(postId) {
   );
 
   unsubscribeComments = onSnapshot(commentsQuery, (snapshot) => {
+    if (!commentsList) return;
     if (snapshot.empty) {
       commentsList.innerHTML = '<p style="color:#94a3b8; text-align:center;">Nessun commento ancora. Scrivi il primo!</p>';
       return;
@@ -1190,96 +1229,108 @@ function openComments(postId) {
   });
 }
 
-closeCommentsBtn.addEventListener('click', closeComments);
-commentsModal.addEventListener('click', (e) => { if (e.target === commentsModal) closeComments(); });
-
-function closeComments() {
-  commentsModal.classList.add('hidden');
-  if (unsubscribeComments) unsubscribeComments();
-  activeCommentsPostId = null;
-  commentInput.value = '';
+if (closeCommentsBtn) {
+  closeCommentsBtn.addEventListener('click', closeComments);
+}
+if (commentsModal) {
+  commentsModal.addEventListener('click', (e) => { if (e.target === commentsModal) closeComments(); });
 }
 
-commentForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!activeCommentsPostId || !currentUser) return;
+function closeComments() {
+  if (commentsModal) commentsModal.classList.add('hidden');
+  if (unsubscribeComments) unsubscribeComments();
+  activeCommentsPostId = null;
+  if (commentInput) commentInput.value = '';
+}
 
-  const text = commentInput.value.trim();
-  if (!text) return;
+if (commentForm) {
+  commentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeCommentsPostId || !currentUser) return;
 
-  try {
-    await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
-      uid: currentUser.uid,
-      authorName: currentProfile.username || currentUser.email.split('@')[0],
-      text,
-      createdAt: serverTimestamp()
-    });
+    const text = commentInput.value.trim();
+    if (!text) return;
 
-    await updateDoc(doc(db, 'posts', activeCommentsPostId), {
-      commentCount: increment(1)
-    });
+    try {
+      await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
+        uid: currentUser.uid,
+        authorName: currentProfile.username || currentUser.email.split('@')[0],
+        text,
+        createdAt: serverTimestamp()
+      });
 
-    commentInput.value = '';
-  } catch (error) {
-    console.error('Errore nell\'invio del commento:', error);
-  }
-});
+      await updateDoc(doc(db, 'posts', activeCommentsPostId), {
+        commentCount: increment(1)
+      });
+
+      commentInput.value = '';
+    } catch (error) {
+      console.error('Errore nell\'invio del commento:', error);
+    }
+  });
+}
 
 // ===== Ricerca Utenti =====
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimeout);
-  const term = searchInput.value.trim().toLowerCase();
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const term = searchInput.value.trim().toLowerCase();
 
-  if (!term) {
-    searchResults.classList.add('hidden');
-    searchResults.innerHTML = '';
-    return;
-  }
-
-  searchTimeout = setTimeout(async () => {
-    try {
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('username', '>=', term),
-        where('username', '<=', term + '\uf8ff'),
-        limit(8)
-      );
-
-      const snapshot = await getDocs(usersQuery);
-
-      const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const myBlocked = (myDoc.exists() ? myDoc.data().blockedUsers : []) || [];
-
-      const filteredDocs = snapshot.docs.filter(d => !myBlocked.includes(d.id));
-
-      if (filteredDocs.length === 0) {
-        searchResults.innerHTML = '<p class="search-empty">Nessun utente trovato</p>';
-      } else {
-        searchResults.innerHTML = filteredDocs.map(docSnap => {
-          const u = docSnap.data();
-          return `
-            <a href="user.html?u=${encodeURIComponent(u.username)}" class="search-result-item">
-              ${u.logoUrl
-                ? `<img src="${u.logoUrl}" class="search-result-avatar" alt="${u.username}" />`
-                : `<div class="search-result-avatar-placeholder"><i data-lucide="user"></i></div>`
-              }
-              <span>@${escapeHtml(u.username)}</span>
-            </a>
-          `;
-        }).join('');
-        lucide.createIcons();
+    if (!term) {
+      if (searchResults) {
+        searchResults.classList.add('hidden');
+        searchResults.innerHTML = '';
       }
-
-      searchResults.classList.remove('hidden');
-    } catch (error) {
-      console.error('Errore nella ricerca:', error);
+      return;
     }
-  }, 300);
-});
+
+    searchTimeout = setTimeout(async () => {
+      try {
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('username', '>=', term),
+          where('username', '<=', term + '\uf8ff'),
+          limit(8)
+        );
+
+        const snapshot = await getDocs(usersQuery);
+
+        const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const myBlocked = (myDoc.exists() ? myDoc.data().blockedUsers : []) || [];
+
+        const filteredDocs = snapshot.docs.filter(d => !myBlocked.includes(d.id));
+
+        if (!searchResults) return;
+
+        if (filteredDocs.length === 0) {
+          searchResults.innerHTML = '<p class="search-empty">Nessun utente trovato</p>';
+        } else {
+          searchResults.innerHTML = filteredDocs.map(docSnap => {
+            const u = docSnap.data();
+            return `
+              <a href="user.html?u=${encodeURIComponent(u.username)}" class="search-result-item">
+                ${u.logoUrl
+                  ? `<img src="${u.logoUrl}" class="search-result-avatar" alt="${u.username}" />`
+                  : `<div class="search-result-avatar-placeholder"><i data-lucide="user"></i></div>`
+                }
+                <span>@${escapeHtml(u.username)}</span>
+              </a>
+            `;
+          }).join('');
+          lucide.createIcons();
+        }
+
+        searchResults.classList.remove('hidden');
+      } catch (error) {
+        console.error('Errore nella ricerca:', error);
+      }
+    }, 300);
+  });
+}
 
 document.addEventListener('click', (e) => {
-  if (!searchBarContainer.contains(e.target)) {
-    searchResults.classList.add('hidden');
+  if (searchBarContainer && !searchBarContainer.contains(e.target)) {
+    if (searchResults) searchResults.classList.add('hidden');
   }
 });
 
@@ -1334,7 +1385,7 @@ function startListeningToStories(myUid) {
 
       renderStoriesBar(myUid);
 
-      if (!storyViewer.classList.contains('hidden')) {
+      if (storyViewer && !storyViewer.classList.contains('hidden')) {
         refreshCurrentStoryLiveData();
       }
     });
@@ -1342,6 +1393,7 @@ function startListeningToStories(myUid) {
 }
 
 function renderStoriesBar(myUid) {
+  if (!storiesBar) return;
   const myGroup = groupedStories.find(g => g.uid === myUid);
   const others = groupedStories.filter(g => g.uid !== myUid);
 
@@ -1383,13 +1435,15 @@ function renderStoriesBar(myUid) {
   lucide.createIcons();
 
   const myCircleBtn = document.getElementById('myStoryCircle');
-  myCircleBtn.addEventListener('click', () => {
-    if (myGroup) {
-      openStoryViewer(groupedStories.indexOf(myGroup));
-    } else {
-      storyPhotoInput.click();
-    }
-  });
+  if (myCircleBtn) {
+    myCircleBtn.addEventListener('click', () => {
+      if (myGroup) {
+        openStoryViewer(groupedStories.indexOf(myGroup));
+      } else {
+        storyPhotoInput.click();
+      }
+    });
+  }
 
   const addStoryBtnStory = document.getElementById('addStoryBtnStory');
   if (addStoryBtnStory) {
@@ -1410,16 +1464,18 @@ function allSeen(group, myUid) {
   return group.stories.every(s => (s.viewedBy || []).includes(myUid));
 }
 
-storyPhotoInput.addEventListener('change', () => {
-  const file = storyPhotoInput.files[0];
-  if (!file) return;
+if (storyPhotoInput) {
+  storyPhotoInput.addEventListener('change', () => {
+    const file = storyPhotoInput.files[0];
+    if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => openStoryEditor(e.target.result);
-  reader.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = (e) => openStoryEditor(e.target.result);
+    reader.readAsDataURL(file);
 
-  storyPhotoInput.value = '';
-});
+    storyPhotoInput.value = '';
+  });
+}
 
 // ===== Editor Storie =====
 function getContrastColor(hex) {
@@ -1443,8 +1499,8 @@ function openStoryEditor(imageDataUrl) {
     storyPendingTaggedUsers = [];
     redrawStoryCanvas();
     storyUndoStack = [captureStoryState()];
-    storyEditor.classList.remove('hidden');
-    textStyleBar.classList.add('hidden');
+    if (storyEditor) storyEditor.classList.remove('hidden');
+    if (textStyleBar) textStyleBar.classList.add('hidden');
   };
   img.src = imageDataUrl;
 }
@@ -1529,6 +1585,7 @@ function drawStyledText(ctx, t) {
 }
 
 function redrawStoryCanvas() {
+  if (!storyEditorCanvas || !storyCtx) return;
   const cw = storyEditorCanvas.width;
   const ch = storyEditorCanvas.height;
 
@@ -1536,14 +1593,16 @@ function redrawStoryCanvas() {
   storyCtx.fillStyle = '#000000';
   storyCtx.fillRect(0, 0, cw, ch);
 
-  const iw = storyBaseImage.width;
-  const ih = storyBaseImage.height;
-  const scale = Math.min(cw / iw, ch / ih);
-  const dw = iw * scale;
-  const dh = ih * scale;
-  const dx = (cw - dw) / 2;
-  const dy = (ch - dh) / 2;
-  storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
+  if (storyBaseImage) {
+    const iw = storyBaseImage.width;
+    const ih = storyBaseImage.height;
+    const scale = Math.min(cw / iw, ch / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+    storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
+  }
 
   if (storyDrawingLayer) storyCtx.drawImage(storyDrawingLayer, 0, 0);
   storyTextLayers.forEach(t => drawStyledText(storyCtx, t));
@@ -1579,41 +1638,54 @@ function saveStoryUndo() {
   if (storyUndoStack.length > 20) storyUndoStack.shift();
 }
 
-storyEditorCloseBtn.addEventListener('click', () => storyEditor.classList.add('hidden'));
-storyEditorDiscardBtn.addEventListener('click', () => storyEditor.classList.add('hidden'));
+if (storyEditorCloseBtn) {
+  storyEditorCloseBtn.addEventListener('click', () => storyEditor.classList.add('hidden'));
+}
+if (storyEditorDiscardBtn) {
+  storyEditorDiscardBtn.addEventListener('click', () => storyEditor.classList.add('hidden'));
+}
 
-storyDrawToolBtn.addEventListener('click', () => {
-  storyCurrentTool = storyCurrentTool === 'draw' ? null : 'draw';
-  storyDrawToolBtn.classList.toggle('active', storyCurrentTool === 'draw');
-  storyEraserToolBtn.classList.remove('active');
-  textStyleBar.classList.add('hidden');
-});
+if (storyDrawToolBtn) {
+  storyDrawToolBtn.addEventListener('click', () => {
+    storyCurrentTool = storyCurrentTool === 'draw' ? null : 'draw';
+    storyDrawToolBtn.classList.toggle('active', storyCurrentTool === 'draw');
+    if (storyEraserToolBtn) storyEraserToolBtn.classList.remove('active');
+    if (textStyleBar) textStyleBar.classList.add('hidden');
+  });
+}
 
-storyEraserToolBtn.addEventListener('click', () => {
-  storyCurrentTool = storyCurrentTool === 'erase' ? null : 'erase';
-  storyEraserToolBtn.classList.toggle('active', storyCurrentTool === 'erase');
-  storyDrawToolBtn.classList.remove('active');
-  textStyleBar.classList.add('hidden');
-});
+if (storyEraserToolBtn) {
+  storyEraserToolBtn.addEventListener('click', () => {
+    storyCurrentTool = storyCurrentTool === 'erase' ? null : 'erase';
+    storyEraserToolBtn.classList.toggle('active', storyCurrentTool === 'erase');
+    if (storyDrawToolBtn) storyDrawToolBtn.classList.remove('active');
+    if (textStyleBar) textStyleBar.classList.add('hidden');
+  });
+}
 
-storyTextToolBtn.addEventListener('click', () => {
-  const centerPos = {
-    x: storyEditorCanvas.width / 2,
-    y: storyEditorCanvas.height / 2,
-    clientX: window.innerWidth / 2,
-    clientY: window.innerHeight / 2
-  };
-  openStoryTextInputAt(centerPos);
-});
+if (storyTextToolBtn) {
+  storyTextToolBtn.addEventListener('click', () => {
+    const centerPos = {
+      x: storyEditorCanvas.width / 2,
+      y: storyEditorCanvas.height / 2,
+      clientX: window.innerWidth / 2,
+      clientY: window.innerHeight / 2
+    };
+    openStoryTextInputAt(centerPos);
+  });
+}
 
-storyTagBtn.addEventListener('click', () => {
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderStoryTaggedSelected();
-});
+if (storyTagBtn) {
+  storyTagBtn.addEventListener('click', () => {
+    tagModal.classList.remove('hidden');
+    tagSearchInput.value = '';
+    tagResultsList.innerHTML = '';
+    renderStoryTaggedSelected();
+  });
+}
 
 function renderTextStyleBar() {
+  if (!textStyleBar) return;
   textStyleBar.innerHTML = TEXT_STYLES.map(s => `
     <button type="button" class="text-style-option ${s.id === storyCurrentTextStyle ? 'active' : ''}" data-style="${s.id}">${s.label}</button>
   `).join('');
@@ -1632,23 +1704,29 @@ function renderTextStyleBar() {
   });
 }
 
-colorPickerBtn.addEventListener('mousedown', (e) => e.preventDefault());
+if (colorPickerBtn) {
+  colorPickerBtn.addEventListener('mousedown', (e) => e.preventDefault());
+}
 
-storyColorInput.addEventListener('input', () => {
-  storyCurrentColor = storyColorInput.value;
-  colorPickerBtn.style.background = storyCurrentColor;
-  if (storyEditingTextIdx !== null) {
-    storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
-    redrawStoryCanvas();
-  }
-});
+if (storyColorInput) {
+  storyColorInput.addEventListener('input', () => {
+    storyCurrentColor = storyColorInput.value;
+    if (colorPickerBtn) colorPickerBtn.style.background = storyCurrentColor;
+    if (storyEditingTextIdx !== null) {
+      storyTextLayers[storyEditingTextIdx].color = storyCurrentColor;
+      redrawStoryCanvas();
+    }
+  });
+}
 
-storyUndoBtn.addEventListener('mousedown', (e) => e.preventDefault());
-storyUndoBtn.addEventListener('click', () => {
-  if (storyUndoStack.length <= 1) return;
-  storyUndoStack.pop();
-  restoreStoryState(storyUndoStack[storyUndoStack.length - 1]);
-});
+if (storyUndoBtn) {
+  storyUndoBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  storyUndoBtn.addEventListener('click', () => {
+    if (storyUndoStack.length <= 1) return;
+    storyUndoStack.pop();
+    restoreStoryState(storyUndoStack[storyUndoStack.length - 1]);
+  });
+}
 
 function ensureDrawingLayer() {
   if (!storyDrawingLayer) {
@@ -1751,8 +1829,8 @@ function storyPointerUp() {
   if (storyIsDrawing) {
     saveStoryUndo();
     storyCurrentTool = null;
-    storyDrawToolBtn.classList.remove('active');
-    storyEraserToolBtn.classList.remove('active');
+    if (storyDrawToolBtn) storyDrawToolBtn.classList.remove('active');
+    if (storyEraserToolBtn) storyEraserToolBtn.classList.remove('active');
   }
   storyIsDrawing = false;
 
@@ -1767,10 +1845,12 @@ function storyPointerUp() {
   }
 }
 
-storyEditorCanvas.style.touchAction = 'none';
-storyEditorCanvas.addEventListener('pointerdown', storyPointerDown);
-storyEditorCanvas.addEventListener('pointermove', storyPointerMove);
-storyEditorCanvas.addEventListener('pointerup', storyPointerUp);
+if (storyEditorCanvas) {
+  storyEditorCanvas.style.touchAction = 'none';
+  storyEditorCanvas.addEventListener('pointerdown', storyPointerDown);
+  storyEditorCanvas.addEventListener('pointermove', storyPointerMove);
+  storyEditorCanvas.addEventListener('pointerup', storyPointerUp);
+}
 
 function openTextEditMode(idx) {
   const t = storyTextLayers[idx];
@@ -1779,8 +1859,8 @@ function openTextEditMode(idx) {
   storyCurrentColor = t.color;
   storyCurrentTextStyle = t.styleId;
 
-  colorPickerBtn.style.background = t.color;
-  storyColorInput.value = t.color;
+  if (colorPickerBtn) colorPickerBtn.style.background = t.color;
+  if (storyColorInput) storyColorInput.value = t.color;
 
   const rect = storyEditorCanvas.getBoundingClientRect();
   const scaleX = rect.width / storyEditorCanvas.width;
@@ -1829,23 +1909,25 @@ function commitStoryText() {
   saveStoryUndo();
 }
 
-storyTextInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    commitStoryText();
-  }
-});
+if (storyTextInput) {
+  storyTextInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitStoryText();
+    }
+  });
 
-let storyTextBlurTimeout;
-storyTextInput.addEventListener('blur', () => {
-  storyTextBlurTimeout = setTimeout(() => {
-    commitStoryText();
-  }, 200);
-});
+  let storyTextBlurTimeout;
+  storyTextInput.addEventListener('blur', () => {
+    storyTextBlurTimeout = setTimeout(() => {
+      commitStoryText();
+    }, 200);
+  });
 
-storyTextInput.addEventListener('focus', () => {
-  clearTimeout(storyTextBlurTimeout);
-});
+  storyTextInput.addEventListener('focus', () => {
+    clearTimeout(storyTextBlurTimeout);
+  });
+}
 
 // ===== Notifica via Messaggio per Tag Storia =====
 async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
@@ -1895,52 +1977,54 @@ async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
   }
 }
 
-storyEditorPublishBtn.addEventListener('click', async () => {
-  if (!currentUser) return;
-  storyEditorPublishBtn.disabled = true;
+if (storyEditorPublishBtn) {
+  storyEditorPublishBtn.addEventListener('click', async () => {
+    if (!currentUser) return;
+    storyEditorPublishBtn.disabled = true;
 
-  try {
-    const dataUrl = storyEditorCanvas.toDataURL('image/jpeg', 0.85);
-    const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
-    const storyRef = ref(storage, storyPath);
-    await uploadString(storyRef, dataUrl, 'data_url');
-    const mediaUrl = await getDownloadURL(storyRef);
+    try {
+      const dataUrl = storyEditorCanvas.toDataURL('image/jpeg', 0.85);
+      const storyPath = `stories/${currentUser.uid}_${Date.now()}.jpg`;
+      const storyRef = ref(storage, storyPath);
+      await uploadString(storyRef, dataUrl, 'data_url');
+      const mediaUrl = await getDownloadURL(storyRef);
 
-    const durationHours = parseInt(currentProfile.storyDuration || '24');
-    const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+      const durationHours = parseInt(currentProfile.storyDuration || '24');
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
 
-    await addDoc(collection(db, 'stories'), {
-      uid: currentUser.uid,
-      username: currentProfile.username || currentUser.email.split('@')[0],
-      logoUrl: currentProfile.logoUrl || '',
-      mediaUrl,
-      mediaPath: storyPath,
-      viewedBy: [],
-      likes: [],
-      expiresAt,
-      taggedUids: storyPendingTaggedUsers.map(t => t.uid),
-      taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
-      createdAt: serverTimestamp()
-    });
+      await addDoc(collection(db, 'stories'), {
+        uid: currentUser.uid,
+        username: currentProfile.username || currentUser.email.split('@')[0],
+        logoUrl: currentProfile.logoUrl || '',
+        mediaUrl,
+        mediaPath: storyPath,
+        viewedBy: [],
+        likes: [],
+        expiresAt,
+        taggedUids: storyPendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: storyPendingTaggedUsers.map(t => t.username),
+        createdAt: serverTimestamp()
+      });
 
-    if (storyPendingTaggedUsers.length > 0) {
-      await notifyTaggedUsersInStory(storyPendingTaggedUsers, mediaUrl);
+      if (storyPendingTaggedUsers.length > 0) {
+        await notifyTaggedUsersInStory(storyPendingTaggedUsers, mediaUrl);
+      }
+
+      storyPendingTaggedUsers = [];
+      storyEditor.classList.add('hidden');
+    } catch (error) {
+      console.error('Errore pubblicazione storia:', error);
+    } finally {
+      storyEditorPublishBtn.disabled = false;
     }
-
-    storyPendingTaggedUsers = [];
-    storyEditor.classList.add('hidden');
-  } catch (error) {
-    console.error('Errore pubblicazione storia:', error);
-  } finally {
-    storyEditorPublishBtn.disabled = false;
-  }
-});
+  });
+}
 
 // ===== Visualizzatore Storie =====
 function openStoryViewer(groupIdx) {
   currentStoryGroupIndex = groupIdx;
   currentStoryIndex = 0;
-  storyViewer.classList.remove('hidden');
+  if (storyViewer) storyViewer.classList.remove('hidden');
   showCurrentStory();
 }
 
@@ -1967,17 +2051,21 @@ function showCurrentStory() {
     return;
   }
 
-  storyViewerUsername.textContent = `@${group.username}`;
+  if (storyViewerUsername) storyViewerUsername.textContent = `@${group.username}`;
 
-  storyViewerImage.onclick = null;
-  storyViewerImage.style.cursor = 'default';
+  if (storyViewerImage) {
+    storyViewerImage.onclick = null;
+    storyViewerImage.style.cursor = 'default';
+  }
 
   const sharedPostCard = document.getElementById('sharedPostStoryCard');
   if (sharedPostCard) sharedPostCard.remove();
 
   if (story.type === 'post_share' && story.sharedPostAuthor) {
-    storyViewerImage.src = '';
-    storyViewerImage.style.display = 'none';
+    if (storyViewerImage) {
+      storyViewerImage.src = '';
+      storyViewerImage.style.display = 'none';
+    }
 
     const card = document.createElement('div');
     card.id = 'sharedPostStoryCard';
@@ -1994,10 +2082,14 @@ function showCurrentStory() {
     card.addEventListener('click', () => {
       window.location.href = `user.html?u=${encodeURIComponent(story.sharedPostAuthor)}`;
     });
-    storyViewerImage.parentElement.appendChild(card);
+    if (storyViewerImage && storyViewerImage.parentElement) {
+      storyViewerImage.parentElement.appendChild(card);
+    }
   } else {
-    storyViewerImage.style.display = 'block';
-    storyViewerImage.src = story.mediaUrl;
+    if (storyViewerImage) {
+      storyViewerImage.style.display = 'block';
+      storyViewerImage.src = story.mediaUrl;
+    }
   }
 
   const avatarToShow = group.uid === currentUser.uid
@@ -2005,31 +2097,32 @@ function showCurrentStory() {
     : group.logoUrl;
 
   if (avatarToShow) {
-    storyViewerAvatar.src = avatarToShow;
-    storyViewerAvatar.classList.remove('hidden');
-    storyViewerPlaceholder.classList.add('hidden');
+    if (storyViewerAvatar) {
+      storyViewerAvatar.src = avatarToShow;
+      storyViewerAvatar.classList.remove('hidden');
+    }
+    if (storyViewerPlaceholder) storyViewerPlaceholder.classList.add('hidden');
   } else {
-    storyViewerAvatar.classList.add('hidden');
-    storyViewerPlaceholder.classList.remove('hidden');
+    if (storyViewerAvatar) storyViewerAvatar.classList.add('hidden');
+    if (storyViewerPlaceholder) storyViewerPlaceholder.classList.remove('hidden');
   }
 
   const created = story.createdAt?.toDate ? story.createdAt.toDate() : new Date();
   const hoursAgo = Math.max(0, Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60)));
-  storyViewerTime.textContent = hoursAgo < 1 ? 'Ora' : `${hoursAgo}h fa`;
+  if (storyViewerTime) storyViewerTime.textContent = hoursAgo < 1 ? 'Ora' : `${hoursAgo}h fa`;
 
   renderProgressBars(group.stories.length, currentStoryIndex);
 
   const isOwner = group.uid === currentUser.uid;
 
   if (isOwner) {
-    storyOwnerBar.classList.remove('hidden');
-    storyViewerBar.classList.add('hidden');
-    storyViewersCount.textContent = (story.viewedBy || []).length;
+    if (storyOwnerBar) storyOwnerBar.classList.remove('hidden');
+    if (storyViewerBar) storyViewerBar.classList.add('hidden');
+    if (storyViewersCount) storyViewersCount.textContent = (story.viewedBy || []).length;
   } else {
-    storyOwnerBar.classList.add('hidden');
-    storyViewerBar.classList.remove('hidden');
+    if (storyOwnerBar) storyOwnerBar.classList.add('hidden');
+    if (storyViewerBar) storyViewerBar.classList.remove('hidden');
     
-    // Assicurarsi che storyLikeBtn non sia undefined (problema comune nel vecchio codice)
     if (storyLikeBtn) {
       const likes = story.likes || [];
       const isLiked = likes.includes(currentUser.uid);
@@ -2062,12 +2155,13 @@ function refreshCurrentStoryLiveData() {
   if (!data || !data.story) return;
   const { group, story } = data;
   const isOwner = group.uid === currentUser.uid;
-  if (isOwner) {
+  if (isOwner && storyViewersCount) {
     storyViewersCount.textContent = (story.viewedBy || []).length;
   }
 }
 
 function renderProgressBars(count, activeIdx) {
+  if (!storyProgressBar) return;
   storyProgressBar.innerHTML = Array.from({ length: count }, (_, i) => `
     <div class="story-progress-segment">
       <div class="story-progress-fill ${i < activeIdx ? 'filled' : ''} ${i === activeIdx ? 'active' : ''}"></div>
@@ -2078,6 +2172,7 @@ function renderProgressBars(count, activeIdx) {
 function startStoryTimer() {
   clearTimeout(storyTimer);
   isStoryPaused = false;
+  if (!storyProgressBar) return;
   const activeFill = storyProgressBar.querySelector('.story-progress-fill.active');
   if (activeFill) {
     activeFill.style.animation = 'none';
@@ -2090,6 +2185,7 @@ function startStoryTimer() {
 function pauseStoryTimer() {
   clearTimeout(storyTimer);
   isStoryPaused = true;
+  if (!storyProgressBar) return;
   const activeFill = storyProgressBar.querySelector('.story-progress-fill.active');
   if (activeFill) activeFill.style.animationPlayState = 'paused';
 }
@@ -2113,29 +2209,35 @@ function prevStory() {
 
 function closeStoryViewer() {
   clearTimeout(storyTimer);
-  storyViewer.classList.add('hidden');
-  storyViewersPanel.classList.add('hidden');
+  if (storyViewer) storyViewer.classList.add('hidden');
+  if (storyViewersPanel) storyViewersPanel.classList.add('hidden');
   if (unsubscribeStoryComments) unsubscribeStoryComments();
 }
 
-storyViewerClose.addEventListener('click', closeStoryViewer);
+if (storyViewerClose) {
+  storyViewerClose.addEventListener('click', closeStoryViewer);
+}
 
 function handleNavTap(e, action) {
   e.stopPropagation();
   action();
 }
 
-storyNavRight.addEventListener('click', (e) => handleNavTap(e, nextStory));
-storyNavRight.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  handleNavTap(e, nextStory);
-});
+if (storyNavRight) {
+  storyNavRight.addEventListener('click', (e) => handleNavTap(e, nextStory));
+  storyNavRight.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    handleNavTap(e, nextStory);
+  });
+}
 
-storyNavLeft.addEventListener('click', (e) => handleNavTap(e, prevStory));
-storyNavLeft.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  handleNavTap(e, prevStory);
-});
+if (storyNavLeft) {
+  storyNavLeft.addEventListener('click', (e) => handleNavTap(e, prevStory));
+  storyNavLeft.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    handleNavTap(e, prevStory);
+  });
+}
 
 if (storyLikeBtn) {
   storyLikeBtn.addEventListener('click', async () => {
@@ -2220,7 +2322,6 @@ if (storyRepostBtn) {
   });
 }
 
-const storyTagViewBtn2 = document.getElementById('storyTagViewBtn2');
 if (storyTagViewBtn2) {
   storyTagViewBtn2.addEventListener('click', () => {
     const data = getCurrentStoryData();
@@ -2286,8 +2387,8 @@ async function openViewersPanel() {
   if (!isOwner) return;
 
   pauseStoryTimer();
-  storyViewersPanel.classList.remove('hidden');
-  viewersSearchInput.value = '';
+  if (storyViewersPanel) storyViewersPanel.classList.remove('hidden');
+  if (viewersSearchInput) viewersSearchInput.value = '';
   switchViewersTab('views');
 
   await loadViewersList(data.story);
@@ -2317,29 +2418,31 @@ if (storyDeleteBtn) {
 
 let touchStartY = 0;
 let touchStartX = 0;
-storyViewer.addEventListener('touchstart', (e) => {
-  touchStartY = e.touches[0].clientY;
-  touchStartX = e.touches[0].clientX;
-});
-storyViewer.addEventListener('touchend', (e) => {
-  const deltaY = touchStartY - e.changedTouches[0].clientY;
-  const deltaX = Math.abs(touchStartX - e.changedTouches[0].clientX);
-  if (deltaY > 60 && deltaX < 40) openViewersPanel();
-});
+if (storyViewer) {
+  storyViewer.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  });
+  storyViewer.addEventListener('touchend', (e) => {
+    const deltaY = touchStartY - e.changedTouches[0].clientY;
+    const deltaX = Math.abs(touchStartX - e.changedTouches[0].clientX);
+    if (deltaY > 60 && deltaX < 40) openViewersPanel();
+  });
 
-let mouseStartY = 0;
-let isMouseSwipe = false;
-storyViewer.addEventListener('mousedown', (e) => {
-  if (e.target.closest('#storyEditorCanvas') || e.target.closest('.camera-edit-toolbar') || e.target.closest('.camera-text-input')) return;
-  mouseStartY = e.clientY;
-  isMouseSwipe = true;
-});
-storyViewer.addEventListener('mouseup', (e) => {
-  if (!isMouseSwipe) return;
-  isMouseSwipe = false;
-  const deltaY = mouseStartY - e.clientY;
-  if (deltaY > 60) openViewersPanel();
-});
+  let mouseStartY = 0;
+  let isMouseSwipe = false;
+  storyViewer.addEventListener('mousedown', (e) => {
+    if (e.target.closest('#storyEditorCanvas') || e.target.closest('.camera-edit-toolbar') || e.target.closest('.camera-text-input')) return;
+    mouseStartY = e.clientY;
+    isMouseSwipe = true;
+  });
+  storyViewer.addEventListener('mouseup', (e) => {
+    if (!isMouseSwipe) return;
+    isMouseSwipe = false;
+    const deltaY = mouseStartY - e.clientY;
+    if (deltaY > 60) openViewersPanel();
+  });
+}
 
 if (closeViewersPanelBtn) {
   closeViewersPanelBtn.addEventListener('click', () => {
@@ -2355,8 +2458,8 @@ document.querySelectorAll('.story-viewers-tab').forEach(tab => {
 
 function switchViewersTab(tabName) {
   document.querySelectorAll('.story-viewers-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
-  storyViewersList.classList.toggle('hidden', tabName !== 'views');
-  storyCommentsOwnerList.classList.toggle('hidden', tabName !== 'comments');
+  if (storyViewersList) storyViewersList.classList.toggle('hidden', tabName !== 'views');
+  if (storyCommentsOwnerList) storyCommentsOwnerList.classList.toggle('hidden', tabName !== 'comments');
 }
 
 async function loadViewersList(story) {
@@ -2364,7 +2467,7 @@ async function loadViewersList(story) {
 
   if (viewedBy.length === 0) {
     allViewersCache = [];
-    storyViewersList.innerHTML = '<p class="search-empty">Nessuna visualizzazione ancora.</p>';
+    if (storyViewersList) storyViewersList.innerHTML = '<p class="search-empty">Nessuna visualizzazione ancora.</p>';
     return;
   }
 
@@ -2379,6 +2482,7 @@ async function loadViewersList(story) {
 }
 
 function renderViewersList(viewers) {
+  if (!storyViewersList) return;
   if (viewers.length === 0) {
     storyViewersList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
     return;
@@ -2417,6 +2521,7 @@ function loadStoryCommentsForOwner(storyId) {
   const q = query(collection(db, 'stories', storyId, 'comments'), orderBy('createdAt', 'asc'));
 
   unsubscribeStoryComments = onSnapshot(q, (snapshot) => {
+    if (!storyCommentsOwnerList) return;
     if (snapshot.empty) {
       storyCommentsOwnerList.innerHTML = '<p class="search-empty">Nessun commento ancora.</p>';
       return;
@@ -2437,9 +2542,9 @@ function loadStoryCommentsForOwner(storyId) {
 // ===== Invia Post nei Messaggi =====
 async function openShareModal(postId) {
   sharingPostId = postId;
-  shareModal.classList.remove('hidden');
-  shareSearchInput.value = '';
-  shareFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
+  if (shareModal) shareModal.classList.remove('hidden');
+  if (shareSearchInput) shareSearchInput.value = '';
+  if (shareFriendsList) shareFriendsList.innerHTML = '<p class="search-empty">Caricamento...</p>';
 
   const freshDoc = await getDoc(doc(db, 'users', currentUser.uid));
   const freshData = freshDoc.exists() ? freshDoc.data() : {};
@@ -2448,12 +2553,12 @@ async function openShareModal(postId) {
   const mutualIds = following.filter(id => followers.includes(id));
 
   if (mutualIds.length === 0) {
-    shareFriendsList.innerHTML = '';
-    shareEmptyMsg.classList.remove('hidden');
+    if (shareFriendsList) shareFriendsList.innerHTML = '';
+    if (shareEmptyMsg) shareEmptyMsg.classList.remove('hidden');
     allShareFriends = [];
     return;
   }
-  shareEmptyMsg.classList.add('hidden');
+  if (shareEmptyMsg) shareEmptyMsg.classList.add('hidden');
 
   allShareFriends = await Promise.all(mutualIds.map(async (uid) => {
     const d = await getDoc(doc(db, 'users', uid));
@@ -2464,6 +2569,7 @@ async function openShareModal(postId) {
 }
 
 function renderShareFriends(users) {
+  if (!shareFriendsList) return;
   if (users.length === 0) {
     shareFriendsList.innerHTML = '<p class="search-empty">Nessun risultato.</p>';
     return;
@@ -2479,7 +2585,7 @@ function renderShareFriends(users) {
   document.querySelectorAll('#shareFriendsList .conversation-item').forEach(item => {
     item.addEventListener('click', async () => {
       await sendPostToChat(item.dataset.uid, sharingPostId);
-      shareModal.classList.add('hidden');
+      if (shareModal) shareModal.classList.add('hidden');
     });
   });
 }
