@@ -612,9 +612,6 @@ postForm.addEventListener('submit', async (e) => {
 
     const finalMedia = [...existingEditMedia, ...uploadedNew];
 
-    // ==========================================
-    // QUI: Prepara il tag prodotto inserito nel form
-    // ==========================================
     let initialProductTags = [];
     const pLabel = productLabelInput?.value.trim();
     let pUrl = productUrlInput?.value.trim();
@@ -633,7 +630,6 @@ postForm.addEventListener('submit', async (e) => {
         createdAt: new Date().toISOString()
       });
     }
-    // ==========================================
 
     if (editingPostId) {
       const oldPost = postsCache.get(editingPostId);
@@ -644,32 +640,32 @@ postForm.addEventListener('submit', async (e) => {
       });
 
       await updateDoc(doc(db, 'posts', editingPostId), {
-  caption: captionInput.value.trim(),
-  location: locationInput ? locationInput.value.trim() : '',
-  media: finalMedia,
-  photoUrl: finalMedia[0]?.url || '',
-  photoPath: finalMedia[0]?.path || '',
-  taggedUids: pendingTaggedUsers.map(t => t.uid),
-  taggedUsernames: pendingTaggedUsers.map(t => t.username),
-  ...(initialProductTags.length > 0 ? { productTags: initialProductTags } : {})
-});
+        caption: captionInput.value.trim(),
+        location: locationInput ? locationInput.value.trim() : '',
+        media: finalMedia,
+        photoUrl: finalMedia[0]?.url || '',
+        photoPath: finalMedia[0]?.path || '',
+        taggedUids: pendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: pendingTaggedUsers.map(t => t.username),
+        ...(initialProductTags.length > 0 ? { productTags: initialProductTags } : {})
+      });
     } else {
-    await addDoc(collection(db, 'posts'), {
-  uid: currentUser.uid,
-  authorName: currentProfile.username || currentUser.email.split('@')[0],
-  logoUrl: currentProfile.logoUrl || '',
-  location: locationInput ? locationInput.value.trim() : '',
-  media: finalMedia,
-  photoUrl: finalMedia[0]?.url || '',
-  photoPath: finalMedia[0]?.path || '',
-  caption: captionInput.value.trim(),
-  likes: [],
-  commentCount: 0,
-  taggedUids: pendingTaggedUsers.map(t => t.uid),
-  taggedUsernames: pendingTaggedUsers.map(t => t.username),
-  productTags: initialProductTags,
-  createdAt: serverTimestamp()
-});  
+      await addDoc(collection(db, 'posts'), {
+        uid: currentUser.uid,
+        authorName: currentProfile.username || currentUser.email.split('@')[0],
+        logoUrl: currentProfile.logoUrl || '',
+        location: locationInput ? locationInput.value.trim() : '',
+        media: finalMedia,
+        photoUrl: finalMedia[0]?.url || '',
+        photoPath: finalMedia[0]?.path || '',
+        caption: captionInput.value.trim(),
+        likes: [],
+        commentCount: 0,
+        taggedUids: pendingTaggedUsers.map(t => t.uid),
+        taggedUsernames: pendingTaggedUsers.map(t => t.username),
+        productTags: initialProductTags,
+        createdAt: serverTimestamp()
+      });  
     }
 
     closeModal();
@@ -681,6 +677,7 @@ postForm.addEventListener('submit', async (e) => {
     publishBtn.textContent = editingPostId ? 'Salva modifiche' : 'Pubblica';
   }
 });
+
 const locationSuggestions = document.getElementById('locationSuggestions');
 let locationSearchTimeout;
 
@@ -709,9 +706,7 @@ if (locationInput && locationSuggestions) {
         }
 
         locationSuggestions.innerHTML = results.map(item => {
-          // Nome principale del posto (es. Colosseo o Milano)
           const title = item.name || item.display_name.split(',')[0];
-          // Dettaglio secondario (es. Roma, Lazio, Italia)
           const subtitle = item.display_name;
 
           return `
@@ -728,7 +723,6 @@ if (locationInput && locationSuggestions) {
         lucide.createIcons();
         locationSuggestions.classList.remove('hidden');
 
-        // Selezione del luogo dalla lista
         locationSuggestions.querySelectorAll('.location-item').forEach(el => {
           el.addEventListener('click', () => {
             if (el.dataset.name) {
@@ -743,14 +737,13 @@ if (locationInput && locationSuggestions) {
     }, 350);
   });
 
-  // Chiude la tendina se si clicca fuori dall'input
   document.addEventListener('click', (e) => {
     if (!locationInput.contains(e.target) && !locationSuggestions.contains(e.target)) {
       locationSuggestions.classList.add('hidden');
     }
   });
 }
-// ===== Helper Rendering Tag Prodotti =====
+
 function renderProductTags(tags) {
   if (!tags || !Array.isArray(tags) || tags.length === 0) return '';
 
@@ -764,7 +757,6 @@ function renderProductTags(tags) {
   `).join('');
 }
 
-// ===== Lista Post =====
 function startListeningToPosts() {
   const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(30));
   postsLoader.classList.remove('hidden');
@@ -1013,10 +1005,8 @@ function attachCarouselListeners() {
 function attachPostListeners() {
   document.querySelectorAll('.post-media-clickable').forEach(el => {
     el.addEventListener('click', (e) => {
-      // Non fa nulla se si clicca sulle frecce o sui tag già aperti
       if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots') || e.target.closest('.product-tag-dot')) return;
 
-      // Trova l'overlay dei tag dentro la slide cliccata e ne alterna la visibilità (toggle)
       const slide = e.target.closest('.carousel-slide');
       if (slide) {
         const overlay = slide.querySelector('.product-tags-overlay');
@@ -1027,8 +1017,6 @@ function attachPostListeners() {
     });
   });
 
- // Nel blocco attachPostListeners():
-  // Toggle del menu a discesa
   document.querySelectorAll('.post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1044,7 +1032,6 @@ function attachPostListeners() {
     });
   });
 
-  // Tasto Modifica
   document.querySelectorAll('.edit-post-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2558,7 +2545,6 @@ function enableProductTaggingMode(postId) {
   container.style.cursor = 'crosshair';
 
   const clickHandler = async (e) => {
-    // Evita di registrare il click sui pulsanti di navigazione
     if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots')) return;
 
     const track = container.querySelector('.carousel-track');
@@ -2591,7 +2577,7 @@ function enableProductTaggingMode(postId) {
       url: url.trim(),
       x: Math.round(x * 100) / 100,
       y: Math.round(y * 100) / 100,
-      slideIndex: activeSlideIndex, // Collega il tag alla slide specifica
+      slideIndex: activeSlideIndex,
       addedBy: currentProfile.username || currentUser.email.split('@')[0],
       createdAt: new Date().toISOString()
     };
