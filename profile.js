@@ -59,6 +59,11 @@ const shareSearchInput = document.getElementById('shareSearchInput');
 const shareEmptyMsg = document.getElementById('shareEmptyMsg');
 const shareFriendsList = document.getElementById('shareFriendsList');
 
+const tagChoiceModal = document.getElementById('tagChoiceModal');
+const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
+const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
+const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
+
 let currentUser = null;
 let currentLogoUrl = '';
 let currentUsername = '';
@@ -70,6 +75,8 @@ let unsubscribeComments = null;
 let sharingPostId = null;
 let allShareFriends = [];
 let savedPostIds = new Set();
+let activeTagPostId = null;
+let activeTagCache = null;
 
 settingsBtn.addEventListener('click', () => {
   window.location.href = 'settings.html';
@@ -85,14 +92,41 @@ function getPostMedia(post) {
   return [];
 }
 
-function renderMediaCarousel(mediaItems, postId) {
+// ===== Rendering Tag Prodotti per singola Slide =====
+function renderProductTagsForSlide(tags, slideIdx) {
+  if (!tags || !Array.isArray(tags)) return '';
+  const filtered = tags.filter(t => (t.slideIndex !== undefined ? t.slideIndex === slideIdx : slideIdx === 0));
+  if (filtered.length === 0) return '';
+
+  return `
+    <div class="product-tags-overlay hidden">
+      ${filtered.map(tag => `
+        <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
+          <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
+            <span class="product-tag-pulse"></span>
+            <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderMediaCarousel(mediaItems, postId, postData = null) {
   if (mediaItems.length === 0) return '';
 
-  const slides = mediaItems.map(m =>
-    m.type === 'video'
-      ? `<div class="carousel-slide"><video src="${m.url}" class="post-photo" controls></video></div>`
-      : `<div class="carousel-slide"><img src="${m.url}" class="post-photo" alt="Post" loading="lazy" /></div>`
-  ).join('');
+  const post = postData || postsCacheProfile.get(postId);
+  const tags = post?.productTags || [];
+
+  const slides = mediaItems.map((m, i) => `
+    <div class="carousel-slide" data-slide-index="${i}" style="position: relative;">
+      ${m.type === 'video'
+        ? `<video src="${m.url}" class="post-photo" controls></video>`
+        : `<img src="${m.url}" class="post-photo" alt="Post" loading="lazy" />`
+      }
+      ${renderProductTagsForSlide(tags, i)}
+    </div>
+  `).join('');
 
   const dots = mediaItems.length > 1
     ? `<div class="carousel-dots">${mediaItems.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>`
@@ -509,7 +543,7 @@ function renderFullPostCard(post, id) {
         </div>
       </div>
       <div class="post-media-clickable" data-id="${id}">
-        ${renderMediaCarousel(getPostMedia(post), id)}
+        ${renderMediaCarousel(getPostMedia(post), id, post)}
       </div>
       ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
       <div class="post-actions">
@@ -537,8 +571,16 @@ function renderFullPostCard(post, id) {
 
 function attachGenericGridListeners(gridSelector, cache) {
   document.querySelectorAll(`${gridSelector} .post-media-clickable`).forEach(el => {
-    el.addEventListener('click', () => openComments(el.dataset.id, cache));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots') || e.target.closest('.product-tag-dot')) return;
+      const slide = e.target.closest('.carousel-slide');
+      if (slide) {
+        const overlay = slide.querySelector('.product-tags-overlay');
+        if (overlay) overlay.classList.toggle('hidden');
+      }
+    });
   });
+
   document.querySelectorAll(`${gridSelector} .like-btn`).forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -551,12 +593,15 @@ function attachGenericGridListeners(gridSelector, cache) {
       });
     });
   });
+
   document.querySelectorAll(`${gridSelector} .comment-btn`).forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); openComments(btn.dataset.id, cache); });
   });
+
   document.querySelectorAll(`${gridSelector} .share-btn`).forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); openShareModal(btn.dataset.id, cache); });
   });
+
   attachSaveListeners(gridSelector);
 }
 
@@ -704,6 +749,9 @@ function renderProfilePosts() {
               <button class="menu-item tag-view-btn" data-id="${id}">
                 <i data-lucide="tag"></i> Tag
               </button>
+              <button class="menu-item add-product-tag-btn" data-id="${id}">
+                <i data-lucide="shopping-bag"></i> Tagga prodotto/link
+              </button>
               <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
                 <i data-lucide="trash-2"></i> Elimina
               </button>
@@ -711,7 +759,7 @@ function renderProfilePosts() {
           </div>
         </div>
         <div class="post-media-clickable" data-id="${id}">
-          ${renderMediaCarousel(getPostMedia(post), id)}
+          ${renderMediaCarousel(getPostMedia(post), id, post)}
         </div>
         ${post.caption ? `<p class="post-caption">${escapeHtml(post.caption)}</p>` : ''}
         <div class="post-actions">
@@ -736,6 +784,7 @@ function renderProfilePosts() {
 
   lucide.createIcons();
   attachProfilePostListeners();
+  attachProductTagListeners();
   attachCarouselListeners();
   attachSaveListeners('#profilePostsGrid');
 }
@@ -746,16 +795,33 @@ async function savePostOrder() {
 
 function attachProfilePostListeners() {
   document.querySelectorAll('#profilePostsGrid .post-media-clickable').forEach(el => {
-    el.addEventListener('click', () => openComments(el.dataset.id, postsCacheProfile));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots') || e.target.closest('.product-tag-dot')) return;
+      const slide = e.target.closest('.carousel-slide');
+      if (slide) {
+        const overlay = slide.querySelector('.product-tags-overlay');
+        if (overlay) overlay.classList.toggle('hidden');
+      }
+    });
   });
 
   document.querySelectorAll('#profilePostsGrid .post-menu-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       const id = btn.dataset.id;
       const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
+      const wasHidden = dropdown ? dropdown.classList.contains('hidden') : true;
       closeAllProfileMenus();
-      dropdown.classList.toggle('hidden');
+      if (dropdown && wasHidden) {
+        dropdown.classList.remove('hidden');
+      }
+    });
+  });
+
+  document.querySelectorAll('#profilePostsGrid .post-menu-dropdown').forEach(dropdown => {
+    dropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
   });
 
@@ -911,7 +977,7 @@ function openComments(postId, cache) {
 
   const post = (cache || postsCacheProfile).get(postId);
   if (post) {
-    commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId);
+    commentsPostMedia.innerHTML = renderMediaCarousel(getPostMedia(post), 'detail-' + postId, post);
     if (post.caption) {
       commentsPostCaption.textContent = post.caption;
       commentsPostCaption.classList.remove('hidden');
@@ -1190,40 +1256,81 @@ async function sendPostToChat(otherUid, postId, cache) {
     [`unread.${otherUid}`]: increment(1)
   });
 }
-const tagChoiceModal = document.getElementById('tagChoiceModal');
-const closeTagChoiceBtn = document.getElementById('closeTagChoiceBtn');
-const viewTagsChoiceBtn = document.getElementById('viewTagsChoiceBtn');
-const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
-let activeTagPostId = null;
-let activeTagCache = null;
 
-function openTagChoiceModal(postId, cache) {
-  activeTagPostId = postId;
-  activeTagCache = cache;
-  tagChoiceModal.classList.remove('hidden');
+// ===== Gestione Tag Prodotti sui Post =====
+function attachProductTagListeners() {
+  document.querySelectorAll('#profilePostsGrid .add-product-tag-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllProfileMenus();
+      const postId = btn.dataset.id;
+      enableProductTaggingMode(postId);
+    });
+  });
 }
 
-closeTagChoiceBtn.addEventListener('click', () => tagChoiceModal.classList.add('hidden'));
-tagChoiceModal.addEventListener('click', (e) => { if (e.target === tagChoiceModal) tagChoiceModal.classList.add('hidden'); });
+function enableProductTaggingMode(postId) {
+  const container = document.querySelector(`.carousel-container[data-carousel-id="${postId}"]`);
+  if (!container) return;
 
-viewTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  const tags = post?.taggedUsernames || [];
-  if (tags.length === 0) {
-    alert('Nessuna persona taggata in questo post.');
-  } else {
-    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
+  alert('Tocca il punto della foto in cui vuoi inserire il link!');
+  container.style.cursor = 'crosshair';
+
+  const clickHandler = async (e) => {
+    if (e.target.closest('.carousel-arrow') || e.target.closest('.carousel-dots')) return;
+
+    const track = container.querySelector('.carousel-track');
+    const activeSlideIndex = track ? Math.round(track.scrollLeft / track.clientWidth) : 0;
+    const slides = container.querySelectorAll('.carousel-slide');
+    const currentSlide = slides[activeSlideIndex] || container;
+
+    const rect = currentSlide.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const label = prompt('Nome del prodotto (es: Maglia Zara):');
+    if (!label) {
+      cleanup();
+      return;
+    }
+
+    let url = prompt('Inserisci il link del sito web (es: https://...):');
+    if (!url) {
+      cleanup();
+      return;
+    }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    const newTag = {
+      label: label.trim(),
+      url: url.trim(),
+      x: Math.round(x * 100) / 100,
+      y: Math.round(y * 100) / 100,
+      slideIndex: activeSlideIndex,
+      addedBy: currentUsername || currentUser.email.split('@')[0],
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        productTags: arrayUnion(newTag)
+      });
+      alert('Tag prodotto aggiunto!');
+    } catch (err) {
+      console.error('Errore salvataggio tag prodotto:', err);
+      alert('Errore durante il salvataggio.');
+    } finally {
+      cleanup();
+    }
+  };
+
+  function cleanup() {
+    container.style.cursor = 'default';
+    container.removeEventListener('click', clickHandler);
   }
-});
 
-addTagsChoiceBtn.addEventListener('click', () => {
-  tagChoiceModal.classList.add('hidden');
-  const post = activeTagCache.get(activeTagPostId);
-  pendingTaggedUsers = (post?.taggedUids || []).map((uid, i) => ({ uid, username: (post?.taggedUsernames || [])[i] || '' }));
-
-  tagModal.classList.remove('hidden');
-  tagSearchInput.value = '';
-  tagResultsList.innerHTML = '';
-  renderTaggedSelected();
-});
+  container.addEventListener('click', clickHandler, { once: true });
+}
