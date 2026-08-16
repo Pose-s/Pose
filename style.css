@@ -3476,3 +3476,55 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Stile base Icona Messaggi Personalizzata */
+.msg-custom-icon {
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+  transition: all 0.3s ease;
+}
+
+/* STATO 1: Nessun messaggio non letto (Monocromatico / Foto 1) */
+.messages-btn .msg-bubble-back {
+  fill: var(--card-bg, #ffffff);
+  stroke: var(--text-color, #334155);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.messages-btn .msg-dot-back {
+  fill: var(--text-color, #334155);
+}
+
+.messages-btn .msg-bubble-front {
+  fill: var(--card-bg, #ffffff);
+  stroke: var(--text-color, #334155);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.messages-btn .msg-dots-front circle {
+  fill: var(--text-color, #334155);
+}
+
+/* STATO 2: Con messaggi non letti (Colorata / Foto 2) */
+.messages-btn.has-notifications .msg-bubble-back {
+  fill: #ffffff;
+  stroke: #d90479; /* Bordo Fucsia */
+  stroke-width: 4.5;
+}
+
+.messages-btn.has-notifications .msg-dot-back {
+  fill: #d90479; /* Pallino Fucsia */
+}
+
+.messages-btn.has-notifications .msg-bubble-front {
+  fill: #00a651; /* Riempimento Verde */
+  stroke: #008f45;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 4px 10px rgba(0, 166, 81, 0.25));
+}
+
+.messages-btn.has-notifications .msg-dots-front circle {
+  fill: #ffffff; /* 3 Pallini Bianchi */
+}

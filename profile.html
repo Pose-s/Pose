@@ -49,17 +49,19 @@
       <div class="profile-page">
 
         <div class="profile-header-bar">
-           <a href="messages.html" class="notification-bell-btn messages-btn" id="messagesBtn">
-  <svg viewBox="0 0 400 400" class="notif-icon">
-    <rect class="notif-outline notif-liquid-fill" x="150" y="90" width="200" height="150" rx="24" ry="24" />
-    <path class="notif-outline notif-liquid-fill" d="M230 240 L230 290 L280 240 Z" />
-    <circle class="notif-dot" cx="205" cy="165" r="9" />
-    <circle class="notif-dot" cx="250" cy="165" r="9" />
-    <circle class="notif-dot" cx="295" cy="165" r="9" />
+   <a href="messages.html" class="notification-bell-btn messages-btn" id="messagesBtn">
+  <svg viewBox="0 0 100 100" class="msg-custom-icon">
+    <!-- Fumetto posteriore (fucsia con notifiche) -->
+    <path class="msg-bubble-back" d="M 28 35 H 56 A 9 9 0 0 1 65 44 V 62 A 9 9 0 0 1 56 71 H 28 L 22 84 L 22 71 A 9 9 0 0 1 14 62 V 44 A 9 9 0 0 1 23 35 Z" />
+    <circle class="msg-dot-back" cx="28" cy="53" r="3.5" />
 
-    <rect class="notif-outline notif-olive-fill" x="60" y="170" width="180" height="140" rx="22" ry="22" />
-    <path class="notif-outline notif-olive-fill" d="M150 310 L150 350 L108 310 Z" />
-    <circle class="notif-dot" cx="110" cy="235" r="8" />
+    <!-- Fumetto anteriore (verde con notifiche) -->
+    <path class="msg-bubble-front" d="M 45 15 H 81 A 10 10 0 0 1 91 25 V 47 A 10 10 0 0 1 81 57 H 77 L 77 70 L 66 57 H 45 A 10 10 0 0 1 35 47 V 25 A 10 10 0 0 1 45 15 Z" />
+    <g class="msg-dots-front">
+      <circle cx="53" cy="36" r="3.5" />
+      <circle cx="63" cy="36" r="3.5" />
+      <circle cx="73" cy="36" r="3.5" />
+    </g>
   </svg>
   <span class="notif-badge-dot hidden" id="msgBadgeDot"></span>
 </a>
