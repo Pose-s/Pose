@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="lang.js"></script>
 </head>
 <body>
 
@@ -27,20 +28,20 @@
       <nav class="sidebar-nav">
         <a href="index.html" class="nav-item">
           <i data-lucide="newspaper"></i>
-          <span>News</span>
+          <span data-i18n="nav_news">News</span>
         </a>
         <a href="home.html" class="nav-item">
           <i data-lucide="home"></i>
-          <span>Home</span>
+          <span data-i18n="nav_home">Home</span>
         </a>
         <a href="profile.html" class="nav-item">
           <i data-lucide="user"></i>
-          <span>Profilo</span>
+          <span data-i18n="nav_profile">Profilo</span>
         </a>
       </nav>
       <div class="sidebar-footer">
         <button id="logoutBtn" class="logout-btn">
-          <i data-lucide="log-out"></i> Esci
+          <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
         </button>
       </div>
     </aside>
@@ -50,7 +51,7 @@
 
         <div class="conversations-panel">
           <div class="conversations-header">
-            <h2>Messaggi</h2>
+            <h2 data-i18n="messages_title">Messaggi</h2>
             <button class="new-message-btn" id="newMessageBtn">
               <i data-lucide="square-pen"></i>
             </button>
@@ -147,6 +148,6 @@
 
   <script type="module" src="messages.js"></script>
   <script src="sidebar-toggle.js"></script>
-<script src="cookie-banner.js"></script>
+  <script src="cookie-banner.js"></script>
 </body>
 </html>

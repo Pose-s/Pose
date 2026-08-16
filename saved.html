@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="lang.js"></script>
 </head>
 <body>
 
@@ -27,20 +28,20 @@
       <nav class="sidebar-nav">
         <a href="index.html" class="nav-item">
           <i data-lucide="newspaper"></i>
-          <span>News</span>
+          <span data-i18n="nav_news">News</span>
         </a>
         <a href="home.html" class="nav-item">
           <i data-lucide="home"></i>
-          <span>Home</span>
+          <span data-i18n="nav_home">Home</span>
         </a>
         <a href="profile.html" class="nav-item">
           <i data-lucide="user"></i>
-          <span>Profilo</span>
+          <span data-i18n="nav_profile">Profilo</span>
         </a>
       </nav>
       <div class="sidebar-footer">
         <button id="logoutBtn" class="logout-btn">
-          <i data-lucide="log-out"></i> Esci
+          <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
         </button>
       </div>
     </aside>
@@ -48,7 +49,7 @@
     <main class="main-content">
       <header class="home-header">
         <a href="settings.html" class="btn-compact">← Indietro</a>
-        <h1 style="font-size:20px; margin-left:12px;">Salvati</h1>
+        <h1 style="font-size:20px; margin-left:12px;" data-i18n="saved_title">Salvati</h1>
       </header>
 
       <div id="savedLoader" class="loader hidden">

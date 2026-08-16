@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="lang.js"></script>
 </head>
 <body>
 
@@ -27,20 +28,20 @@
       <nav class="sidebar-nav">
         <a href="index.html" class="nav-item">
           <i data-lucide="newspaper"></i>
-          <span>News</span>
+          <span data-i18n="nav_news">News</span>
         </a>
         <a href="home.html" class="nav-item">
           <i data-lucide="home"></i>
-          <span>Home</span>
+          <span data-i18n="nav_home">Home</span>
         </a>
         <a href="profile.html" class="nav-item active">
           <i data-lucide="user"></i>
-          <span>Profilo</span>
+          <span data-i18n="nav_profile">Profilo</span>
         </a>
       </nav>
       <div class="sidebar-footer">
         <button id="logoutBtn" class="logout-btn">
-          <i data-lucide="log-out"></i> Esci
+          <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
         </button>
       </div>
     </aside>
@@ -49,22 +50,22 @@
       <div class="profile-page">
 
         <div class="profile-header-bar">
-   <a href="messages.html" class="notification-bell-btn messages-btn" id="messagesBtn">
-  <svg viewBox="0 0 100 100" class="msg-custom-icon">
-    <!-- Fumetto posteriore (fucsia con notifiche) -->
-    <path class="msg-bubble-back" d="M 28 35 H 56 A 9 9 0 0 1 65 44 V 62 A 9 9 0 0 1 56 71 H 28 L 22 84 L 22 71 A 9 9 0 0 1 14 62 V 44 A 9 9 0 0 1 23 35 Z" />
-    <circle class="msg-dot-back" cx="28" cy="53" r="3.5" />
+          <!-- Icona Messaggi con SVG personalizzato -->
+          <a href="messages.html" class="notification-bell-btn messages-btn" id="messagesBtn">
+            <svg viewBox="0 0 100 100" class="msg-custom-icon">
+              <path class="msg-bubble-back" d="M 28 35 H 56 A 9 9 0 0 1 65 44 V 62 A 9 9 0 0 1 56 71 H 28 L 22 84 L 22 71 A 9 9 0 0 1 14 62 V 44 A 9 9 0 0 1 23 35 Z" />
+              <circle class="msg-dot-back" cx="28" cy="53" r="3.5" />
+              <path class="msg-bubble-front" d="M 45 15 H 81 A 10 10 0 0 1 91 25 V 47 A 10 10 0 0 1 81 57 H 77 L 77 70 L 66 57 H 45 A 10 10 0 0 1 35 47 V 25 A 10 10 0 0 1 45 15 Z" />
+              <g class="msg-dots-front">
+                <circle cx="53" cy="36" r="3.5" />
+                <circle cx="63" cy="36" r="3.5" />
+                <circle cx="73" cy="36" r="3.5" />
+              </g>
+            </svg>
+            <span class="notif-badge-dot hidden" id="msgBadgeDot"></span>
+          </a>
 
-    <!-- Fumetto anteriore (verde con notifiche) -->
-    <path class="msg-bubble-front" d="M 45 15 H 81 A 10 10 0 0 1 91 25 V 47 A 10 10 0 0 1 81 57 H 77 L 77 70 L 66 57 H 45 A 10 10 0 0 1 35 47 V 25 A 10 10 0 0 1 45 15 Z" />
-    <g class="msg-dots-front">
-      <circle cx="53" cy="36" r="3.5" />
-      <circle cx="63" cy="36" r="3.5" />
-      <circle cx="73" cy="36" r="3.5" />
-    </g>
-  </svg>
-  <span class="notif-badge-dot hidden" id="msgBadgeDot"></span>
-</a>
+          <!-- Icona Notifiche -->
           <button type="button" class="notification-bell-btn" id="notificationBtn">
             <svg viewBox="0 0 48 48" class="notif-icon">
               <path class="notif-liquid-fill" d="M10 16 L38 16 L24 34 Z" />
@@ -79,7 +80,7 @@
           </button>
 
           <div class="notifications-panel hidden" id="notificationsPanel">
-            <h3>Notifiche</h3>
+            <h3 data-i18n="notif_title">Notifiche</h3>
             <div id="notificationsList"></div>
           </div>
         </div>
@@ -99,15 +100,15 @@
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-number" id="statPosts">0</span>
-              <span class="stat-label">Post</span>
+              <span class="stat-label" data-i18n="profile_posts">Post</span>
             </div>
             <div class="stat-item">
               <span class="stat-number" id="statFollowers">0</span>
-              <span class="stat-label">Follower</span>
+              <span class="stat-label" data-i18n="profile_followers">Follower</span>
             </div>
             <div class="stat-item">
               <span class="stat-number" id="statFollowing">0</span>
-              <span class="stat-label">Seguiti</span>
+              <span class="stat-label" data-i18n="profile_following">Seguiti</span>
             </div>
           </div>
         </div>
@@ -115,11 +116,11 @@
         <p class="profile-bio" id="profileBio"></p>
 
         <div class="profile-action-row">
-          <button type="button" class="btn-compact" id="editProfileToggleBtn">Modifica profilo</button>
-          <button type="button" class="btn-compact" id="settingsBtn">Impostazioni</button>
+          <button type="button" class="btn-compact" id="editProfileToggleBtn" data-i18n="btn_edit_profile">Modifica profilo</button>
+          <button type="button" class="btn-compact" id="settingsBtn" data-i18n="btn_settings">Impostazioni</button>
         </div>
 
-        <!-- Form di modifica, nascosto finché non si clicca il pulsante sopra -->
+        <!-- Form modifica profilo -->
         <div class="profile-card hidden" id="editProfileCard">
           <button type="button" class="avatar-upload-btn" id="avatarUploadBtn">
             <img id="editLogoPreview" class="preview-circle hidden" alt="Logo profilo" />
@@ -147,45 +148,42 @@
               <textarea id="bioEditInput" placeholder="Parlaci un po' di te..."></textarea>
             </div>
             <p id="profileMsg" class="auth-error hidden"></p>
-            <button type="submit" class="publish-btn" id="saveProfileBtn">Salva modifiche</button>
+            <button type="submit" class="publish-btn" id="saveProfileBtn" data-i18n="btn_save">Salva modifiche</button>
           </form>
         </div>
 
-        <!-- Post dell'utente -->
+        <!-- Tab Post del Profilo -->
         <div class="profile-tabs">
-  <button type="button" class="profile-tab active" data-tab="posts"><i data-lucide="grid-3x3"></i></button>
-  <button type="button" class="profile-tab" data-tab="reposts"><i data-lucide="repeat"></i></button>
-  <button type="button" class="profile-tab" data-tab="tagged"><i data-lucide="user-square"></i></button>
-</div>
+          <button type="button" class="profile-tab active" data-tab="posts"><i data-lucide="grid-3x3"></i></button>
+          <button type="button" class="profile-tab" data-tab="reposts"><i data-lucide="repeat"></i></button>
+          <button type="button" class="profile-tab" data-tab="tagged"><i data-lucide="user-square"></i></button>
+        </div>
 
-<div class="profile-posts-section" id="tabPosts">
-  <div id="profilePostsLoader" class="loader hidden"><div class="spinner"></div></div>
-  <div class="posts-grid" id="profilePostsGrid"></div>
-</div>
+        <div class="profile-posts-section" id="tabPosts">
+          <div id="profilePostsLoader" class="loader hidden"><div class="spinner"></div></div>
+          <div class="posts-grid" id="profilePostsGrid"></div>
+        </div>
 
-<div class="profile-posts-section hidden" id="tabReposts">
-  <div id="repostsLoader" class="loader hidden"><div class="spinner"></div></div>
-  <div class="posts-grid" id="repostsGrid"></div>
-</div>
+        <div class="profile-posts-section hidden" id="tabReposts">
+          <div id="repostsLoader" class="loader hidden"><div class="spinner"></div></div>
+          <div class="posts-grid" id="repostsGrid"></div>
+        </div>
 
-<div class="profile-posts-section hidden" id="tabTagged">
-  <div id="taggedLoader" class="loader hidden"><div class="spinner"></div></div>
-  <div class="posts-grid" id="taggedGrid"></div>
-</div>
+        <div class="profile-posts-section hidden" id="tabTagged">
+          <div id="taggedLoader" class="loader hidden"><div class="spinner"></div></div>
+          <div class="posts-grid" id="taggedGrid"></div>
+        </div>
 
       </div>
     </main>
   </div>
 
-  <!-- Modale Modifica Post -->
-  <!-- Modale Modifica Post -->
+  <!-- MODALE MODIFICA POST PROFILO -->
   <div class="modal-overlay hidden" id="postModal">
     <div class="modal">
       <div class="modal-header">
-        <h2>Modifica post</h2>
-        <button class="modal-close" id="closeModalBtn">
-          <i data-lucide="x"></i>
-        </button>
+        <h2 data-i18n="modal_edit_title">Modifica post</h2>
+        <button class="modal-close" id="closeModalBtn"><i data-lucide="x"></i></button>
       </div>
 
       <form id="postForm">
@@ -196,55 +194,49 @@
         </div>
 
         <div class="form-group">
-          <label for="captionInput">Didascalia</label>
-          <textarea id="captionInput" placeholder="Scrivi una didascalia..."></textarea>
+          <label for="captionInput" data-i18n="caption_placeholder">Didascalia</label>
+          <textarea id="captionInput" placeholder="Scrivi una didascalia..." data-i18n="caption_placeholder"></textarea>
         </div>
 
-        <!-- ========================================== -->
-        <!-- CAMPO LUOGO INSERITO QUI                   -->
-        <!-- ========================================== -->
+        <!-- Campo Luogo con Ricerca e Tendina Suggestions -->
         <div class="form-group location-input-group" style="position: relative;">
-  <label for="locationInput">Luogo (opzionale)</label>
-  <div style="position: relative;">
-    <input 
-      type="text" 
-      id="locationInput" 
-      placeholder="Cerca un luogo (es: Duomo di Milano, Roma...)" 
-      class="form-input" 
-      autocomplete="off" 
-    />
-    <div id="locationSuggestions" class="location-suggestions-dropdown hidden"></div>
-  </div>
-</div>
-        <!-- ========================================== -->
+          <label for="locationInput" data-i18n="location_label">Luogo (opzionale)</label>
+          <div style="position: relative;">
+            <input 
+              type="text" 
+              id="locationInput" 
+              placeholder="Aggiungi luogo (es: Roma, Italia)" 
+              data-i18n="location_placeholder" 
+              class="form-input" 
+              autocomplete="off" 
+            />
+            <div id="locationSuggestions" class="location-suggestions-dropdown hidden"></div>
+          </div>
+        </div>
 
-        <button type="submit" class="publish-btn" id="publishBtn">Salva modifiche</button>
+        <button type="submit" class="publish-btn" id="publishBtn" data-i18n="btn_save">Salva modifiche</button>
       </form>
     </div>
   </div>
 
-  <!-- Modale Commenti -->
+  <!-- MODALE COMMENTI -->
   <div class="modal-overlay hidden" id="commentsModal">
-  <div class="modal modal-post-detail">
-    <div class="modal-header">
-      <h2>Post</h2>
-      <button class="modal-close" id="closeCommentsBtn">
-        <i data-lucide="x"></i>
-      </button>
+    <div class="modal modal-post-detail">
+      <div class="modal-header">
+        <h2 data-i18n="comments_title">Post</h2>
+        <button class="modal-close" id="closeCommentsBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div id="commentsPostMedia"></div>
+      <p id="commentsPostCaption" class="post-caption hidden"></p>
+      <div class="comments-list" id="commentsList"></div>
+      <form id="commentForm" class="comment-form">
+        <input type="text" id="commentInput" placeholder="Scrivi un commento..." data-i18n="comment_placeholder" required />
+        <button type="submit" class="comment-send-btn"><i data-lucide="send"></i></button>
+      </form>
     </div>
-    <div id="commentsPostMedia"></div>
-    <p id="commentsPostCaption" class="post-caption hidden"></p>
-    <div class="comments-list" id="commentsList"></div>
-    <form id="commentForm" class="comment-form">
-      <input type="text" id="commentInput" placeholder="Scrivi un commento..." required />
-      <button type="submit" class="comment-send-btn">
-        <i data-lucide="send"></i>
-      </button>
-    </form>
   </div>
-</div>
 
-  <!-- Modale Invia post -->
+  <!-- MODALE CONDIVIDI POST -->
   <div class="modal-overlay hidden" id="shareModal">
     <div class="modal">
       <div class="modal-header">
@@ -257,21 +249,23 @@
     </div>
   </div>
 
+  <!-- MODALE SCELTA TAG -->
+  <div class="modal-overlay hidden" id="tagChoiceModal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h2>Tag</h2>
+        <button class="modal-close" id="closeTagChoiceBtn"><i data-lucide="x"></i></button>
+      </div>
+      <button type="button" class="menu-item" id="viewTagsChoiceBtn">
+        <i data-lucide="eye"></i> Vedi persone taggate
+      </button>
+      <button type="button" class="menu-item" id="addTagsChoiceBtn">
+        <i data-lucide="user-plus"></i> Aggiungi tag
+      </button>
+    </div>
+  </div>
+
   <script type="module" src="profile.js"></script>
   <script src="sidebar-toggle.js"></script>
-  <div class="modal-overlay hidden" id="tagChoiceModal">
-  <div class="modal modal-small">
-    <div class="modal-header">
-      <h2>Tag</h2>
-      <button class="modal-close" id="closeTagChoiceBtn"><i data-lucide="x"></i></button>
-    </div>
-    <button type="button" class="menu-item" id="viewTagsChoiceBtn">
-      <i data-lucide="eye"></i> Vedi persone taggate
-    </button>
-    <button type="button" class="menu-item" id="addTagsChoiceBtn">
-      <i data-lucide="user-plus"></i> Aggiungi tag
-    </button>
-  </div>
-</div>
 </body>
 </html>

@@ -16,6 +16,7 @@
   
   <!-- Fogli di Stile -->
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="lang.js"></script>
 </head>
 <body>
 
@@ -31,23 +32,24 @@
   <span>Pose</span>
 </div> 
       <nav class="sidebar-nav">
-      <a href="#" class="nav-item active">
+  <a href="index.html" class="nav-item active">
     <i data-lucide="newspaper"></i>
-    <span>News</span>
-  </a>  
+    <span data-i18n="nav_news">News</span>
+  </a>
   <a href="home.html" class="nav-item">
     <i data-lucide="home"></i>
-    <span>Home</span>
+    <span data-i18n="nav_home">Home</span>
   </a>
   <a href="profile.html" class="nav-item">
     <i data-lucide="user"></i>
-    <span>Profilo</span>
+    <span data-i18n="nav_profile">Profilo</span>
   </a>
 </nav>
-      <div class="sidebar-footer">
-        © 2026 Pose
-      </div>
-    </aside>
+<div class="sidebar-footer">
+  <button id="logoutBtn" class="logout-btn">
+    <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
+  </button>
+</div>
 
     <!-- Contenuto Principale -->
     <main class="main-content">

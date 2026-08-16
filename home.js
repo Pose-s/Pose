@@ -7,6 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { getStorage, ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
+import { t } from './lang.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD5nn41jQU8Vk_ujlTO5t4r125zyq4p1z0",
@@ -808,22 +809,22 @@ function startListeningToPosts() {
               </button>
               <div class="post-menu-dropdown hidden" data-menu-for="${id}">
                 ${isOwner ? `
-                  <button class="menu-item edit-post-btn" data-id="${id}">
-                    <i data-lucide="pencil"></i> Modifica
+                 <button class="menu-item edit-post-btn" data-id="${id}">
+                    <i data-lucide="pencil"></i> ${t('menu_edit')}
                   </button>
                 ` : ''}
                 <button class="menu-item repost-story-btn" data-id="${id}">
-                  <i data-lucide="clapperboard"></i> Pubblica nelle storie
+                  <i data-lucide="clapperboard"></i> ${t('menu_share_story')}
                 </button>
                 <button class="menu-item tag-view-btn" data-id="${id}">
                   <i data-lucide="tag"></i> Tag
                 </button>
                 <button class="menu-item add-product-tag-btn" data-id="${id}">
-                  <i data-lucide="shopping-bag"></i> Tagga prodotto/link
+                  <i data-lucide="shopping-bag"></i> ${t('tag_products')}
                 </button>
                 ${isOwner ? `
                   <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
-                    <i data-lucide="trash-2"></i> Elimina
+                    <i data-lucide="trash-2"></i> ${t('menu_delete')}
                   </button>
                 ` : ''}
               </div>
@@ -1094,7 +1095,7 @@ function attachPostListeners() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       closeAllMenus();
-      if (!confirm('Vuoi eliminare questo post?')) return;
+      if (!confirm(t('confirm_delete_post'))) return;
 
       const postId = btn.dataset.id;
       const post = postsCache.get(postId);

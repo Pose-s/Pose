@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
-
+import { t } from './lang.js';
 lucide.createIcons();
 
 const locationInput = document.getElementById('locationInput');
@@ -805,19 +805,19 @@ function renderProfilePosts() {
                 <i data-lucide="arrow-right"></i> Sposta dopo
               </button>
               <button class="menu-item edit-post-btn" data-id="${id}">
-                <i data-lucide="pencil"></i> Modifica
+                <i data-lucide="pencil"></i> ${t('menu_edit')}
               </button>
               <button class="menu-item repost-story-btn" data-id="${id}">
-                <i data-lucide="clapperboard"></i> Pubblica nelle storie
+                <i data-lucide="clapperboard"></i> ${t('menu_share_story')}
               </button>
               <button class="menu-item tag-view-btn" data-id="${id}">
                 <i data-lucide="tag"></i> Tag
               </button>
               <button class="menu-item add-product-tag-btn" data-id="${id}">
-                <i data-lucide="shopping-bag"></i> Tagga prodotto/link
+                <i data-lucide="shopping-bag"></i> ${t('tag_products')}
               </button>
               <button class="menu-item menu-item-danger delete-post-btn" data-id="${id}" data-photopath="${post.photoPath || ''}">
-                <i data-lucide="trash-2"></i> Elimina
+                <i data-lucide="trash-2"></i> ${t('menu_delete')}
               </button>
             </div>
           </div>
@@ -982,7 +982,7 @@ function attachProfilePostListeners() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       closeAllProfileMenus();
-      if (!confirm('Vuoi eliminare questo post?')) return;
+      if (!confirm(t('confirm_delete_post'))) return;
 
       const postId = btn.dataset.id;
       const photoPath = btn.dataset.photopath;
