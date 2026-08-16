@@ -27,115 +27,130 @@
       <nav class="sidebar-nav">
         <a href="index.html" class="nav-item">
           <i data-lucide="newspaper"></i>
-          <span>News</span>
+          <span data-i18n="nav_news">News</span>
         </a>
         <a href="home.html" class="nav-item">
           <i data-lucide="home"></i>
-          <span>Home</span>
+          <span data-i18n="nav_home">Home</span>
         </a>
         <a href="profile.html" class="nav-item">
           <i data-lucide="user"></i>
-          <span>Profilo</span>
+          <span data-i18n="nav_profile">Profilo</span>
         </a>
       </nav>
       <div class="sidebar-footer">
         <button id="logoutBtn" class="logout-btn">
-          <i data-lucide="log-out"></i> Esci
+          <i data-lucide="log-out"></i> <span data-i18n="btn_logout">Esci</span>
         </button>
       </div>
     </aside>
 
     <main class="main-content">
       <div class="settings-page">
-        <h1>Impostazioni</h1>
+        <h1 data-i18n="settings_title">Impostazioni</h1>
 
-        <!-- Tema -->
+        <!-- Aspetto & Lingua -->
         <section class="settings-section">
-          <h2>Aspetto</h2>
+          <h2 data-i18n="appearance">Aspetto</h2>
+          
           <div class="settings-row">
-            <span>Tema scuro</span>
+            <span data-i18n="dark_theme">Tema scuro</span>
             <label class="theme-switch">
               <input type="checkbox" id="themeToggle" />
               <span class="theme-slider"></span>
             </label>
           </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label for="langSelect" data-i18n="language_label">Lingua dell'app</label>
+            <select id="langSelect" class="report-select" style="margin-top: 4px;">
+              <option value="it">Italiano</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+              <option value="es">Español</option>
+            </select>
+          </div>
         </section>
 
         <!-- Account -->
         <section class="settings-section">
-          <h2>Gestione account</h2>
-          <p class="settings-current">Email attuale: <strong id="currentEmailDisplay">-</strong></p>
+          <h2 data-i18n="account_mgmt">Gestione account</h2>
+          <p class="settings-current"><span data-i18n="current_email">Email attuale:</span> <strong id="currentEmailDisplay">-</strong></p>
 
           <form id="changeEmailForm" class="settings-form">
             <div class="form-group">
-              <label for="newEmailInput">Nuova email</label>
+              <label for="newEmailInput" data-i18n="new_email">Nuova email</label>
               <input type="email" id="newEmailInput" required />
             </div>
             <div class="form-group">
-              <label for="emailCurrentPasswordInput">Password attuale (per conferma)</label>
+              <label for="emailCurrentPasswordInput" data-i18n="curr_pwd_confirm">Password attuale (per conferma)</label>
               <input type="password" id="emailCurrentPasswordInput" required />
             </div>
             <p id="emailMsg" class="auth-error hidden"></p>
-            <button type="submit" class="btn-compact">Cambia email</button>
+            <button type="submit" class="btn-compact" data-i18n="btn_change_email">Cambia email</button>
           </form>
 
           <form id="changePasswordForm" class="settings-form">
             <div class="form-group">
-              <label for="currentPasswordInput">Password attuale</label>
+              <label for="currentPasswordInput" data-i18n="curr_pwd">Password attuale</label>
               <input type="password" id="currentPasswordInput" required />
             </div>
             <div class="form-group">
-              <label for="newPasswordInput">Nuova password</label>
+              <label for="newPasswordInput" data-i18n="new_pwd">Nuova password</label>
               <input type="password" id="newPasswordInput" required minlength="6" />
             </div>
             <p id="passwordMsg" class="auth-error hidden"></p>
-            <button type="submit" class="btn-compact">Cambia password</button>
+            <button type="submit" class="btn-compact" data-i18n="btn_change_pwd">Cambia password</button>
           </form>
 
-          <a href="profile.html" class="settings-link">Modifica bio, foto e username →</a>
+          <a href="profile.html" class="settings-link" data-i18n="edit_profile_link">Modifica bio, foto e username →</a>
         </section>
 
         <!-- Utenti bloccati -->
         <section class="settings-section">
-          <h2>Utenti bloccati</h2>
+          <h2 data-i18n="blocked_users">Utenti bloccati</h2>
           <div id="blockedUsersList">
             <p class="search-empty">Caricamento...</p>
           </div>
         </section>
+
+        <!-- Storie -->
         <section class="settings-section">
-  <h2>Storie</h2>
-  <div class="form-group">
-    <label for="storyDurationSelect">Durata di visualizzazione</label>
-    <select id="storyDurationSelect" class="report-select">
-      <option value="3">3 ore</option>
-      <option value="12">12 ore</option>
-      <option value="24">24 ore</option>
-      <option value="48">48 ore</option>
-    </select>
-  </div>
-  <p id="storyDurationMsg" class="auth-error hidden"></p>
-  <button type="button" class="btn-compact" id="saveStoryDurationBtn">Salva</button>
-</section>
-<section class="settings-section">
-  <h2>Salvati</h2>
-  <p class="settings-current">Post e storie che hai salvato.</p>
-  <a href="saved.html" class="settings-link">Apri i salvati →</a>
-</section>
+          <h2 data-i18n="stories">Storie</h2>
+          <div class="form-group">
+            <label for="storyDurationSelect" data-i18n="story_duration">Durata di visualizzazione</label>
+            <select id="storyDurationSelect" class="report-select">
+              <option value="3">3 ore</option>
+              <option value="12">12 ore</option>
+              <option value="24">24 ore</option>
+              <option value="48">48 ore</option>
+            </select>
+          </div>
+          <p id="storyDurationMsg" class="auth-error hidden"></p>
+          <button type="button" class="btn-compact" id="saveStoryDurationBtn" data-i18n="btn_save">Salva</button>
+        </section>
+
+        <!-- Salvati -->
+        <section class="settings-section">
+          <h2 data-i18n="saved_title">Salvati</h2>
+          <p class="settings-current" data-i18n="saved_desc">Post e storie che hai salvato.</p>
+          <a href="saved.html" class="settings-link" data-i18n="open_saved">Apri i salvati →</a>
+        </section>
 
         <!-- Legali -->
         <section class="settings-section">
-          <h2>Legali e Privacy</h2>
+          <h2 data-i18n="legal_privacy">Legali e Privacy</h2>
           <div class="settings-links-list">
             <a href="privacy.html" class="settings-link">Privacy Policy</a>
             <a href="terms.html" class="settings-link">Termini di Servizio</a>
-            <button type="button" class="settings-link settings-link-btn" id="cookieSettingsBtn">Gestione Cookie</button>
+            <button type="button" class="settings-link settings-link-btn" id="cookieSettingsBtn" data-i18n="cookie_mgmt">Gestione Cookie</button>
           </div>
         </section>
 
         <!-- Login/Logout -->
         <section class="settings-section">
-          <h2>Sessione</h2>
-          <button type="button" class="btn-compact btn-danger" id="settingsLogoutBtn">Esci dall'account</button>
+          <h2 data-i18n="session_title">Sessione</h2>
+          <button type="button" class="btn-compact btn-danger" id="settingsLogoutBtn" data-i18n="logout_account">Esci dall'account</button>
         </section>
 
       </div>

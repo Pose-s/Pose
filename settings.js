@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { doc, getDoc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { escapeHtml } from './utils.js';
+import { applyLanguage } from './lang.js';
 
 const logoutBtn = document.getElementById('logoutBtn');
 const settingsLogoutBtn = document.getElementById('settingsLogoutBtn');
@@ -23,7 +24,25 @@ const passwordMsg = document.getElementById('passwordMsg');
 const blockedUsersList = document.getElementById('blockedUsersList');
 const cookieSettingsBtn = document.getElementById('cookieSettingsBtn');
 
+const storyDurationSelect = document.getElementById('storyDurationSelect');
+const saveStoryDurationBtn = document.getElementById('saveStoryDurationBtn');
+const storyDurationMsg = document.getElementById('storyDurationMsg');
+
+const langSelect = document.getElementById('langSelect');
+
 lucide.createIcons();
+
+// ===== Gestione Cambio Lingua =====
+const savedLang = localStorage.getItem('app_lang') || 'it';
+if (langSelect) {
+  langSelect.value = savedLang;
+  langSelect.addEventListener('change', () => {
+    const chosen = langSelect.value;
+    localStorage.setItem('app_lang', chosen);
+    applyLanguage(chosen);
+  });
+}
+applyLanguage();
 
 let currentUser = null;
 
@@ -44,6 +63,10 @@ onAuthStateChanged(auth, async (user) => {
   currentEmailDisplay.textContent = user.email || '-';
 
   loadBlockedUsers();
+
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+  const data = userDoc.exists() ? userDoc.data() : {};
+  storyDurationSelect.value = data.storyDuration || '24';
 });
 
 async function reauthenticate(password) {
@@ -154,17 +177,8 @@ cookieSettingsBtn.addEventListener('click', () => {
   localStorage.removeItem('pose_cookie_consent');
   alert('Le preferenze sui cookie sono state reimpostate. Ricarica la pagina per rivedere il banner.');
 });
-const storyDurationSelect = document.getElementById('storyDurationSelect');
-const saveStoryDurationBtn = document.getElementById('saveStoryDurationBtn');
-const storyDurationMsg = document.getElementById('storyDurationMsg');
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-  const userDoc = await getDoc(doc(db, 'users', user.uid));
-  const data = userDoc.exists() ? userDoc.data() : {};
-  storyDurationSelect.value = data.storyDuration || '24';
-});
-
+// ===== Durata Storie =====
 saveStoryDurationBtn.addEventListener('click', async () => {
   if (!currentUser) return;
   saveStoryDurationBtn.disabled = true;
