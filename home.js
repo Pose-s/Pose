@@ -680,7 +680,75 @@ postForm.addEventListener('submit', async (e) => {
     publishBtn.textContent = editingPostId ? 'Salva modifiche' : 'Pubblica';
   }
 });
+const locationSuggestions = document.getElementById('locationSuggestions');
+let locationSearchTimeout;
 
+if (locationInput && locationSuggestions) {
+  locationInput.addEventListener('input', () => {
+    clearTimeout(locationSearchTimeout);
+    const query = locationInput.value.trim();
+
+    if (query.length < 2) {
+      locationSuggestions.innerHTML = '';
+      locationSuggestions.classList.add('hidden');
+      return;
+    }
+
+    locationSearchTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`
+        );
+        const results = await response.json();
+
+        if (!results || results.length === 0) {
+          locationSuggestions.innerHTML = '<div class="location-item" style="color:#94a3b8; cursor:default;">Nessun luogo trovato</div>';
+          locationSuggestions.classList.remove('hidden');
+          return;
+        }
+
+        locationSuggestions.innerHTML = results.map(item => {
+          // Nome principale del posto (es. Colosseo o Milano)
+          const title = item.name || item.display_name.split(',')[0];
+          // Dettaglio secondario (es. Roma, Lazio, Italia)
+          const subtitle = item.display_name;
+
+          return `
+            <div class="location-item" data-name="${escapeHtml(title)}">
+              <i data-lucide="map-pin"></i>
+              <div style="overflow:hidden;">
+                <span class="location-item-title">${escapeHtml(title)}</span>
+                <span class="location-item-subtitle">${escapeHtml(subtitle)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        lucide.createIcons();
+        locationSuggestions.classList.remove('hidden');
+
+        // Selezione del luogo dalla lista
+        locationSuggestions.querySelectorAll('.location-item').forEach(el => {
+          el.addEventListener('click', () => {
+            if (el.dataset.name) {
+              locationInput.value = el.dataset.name;
+            }
+            locationSuggestions.classList.add('hidden');
+          });
+        });
+      } catch (error) {
+        console.error('Errore ricerca luoghi:', error);
+      }
+    }, 350);
+  });
+
+  // Chiude la tendina se si clicca fuori dall'input
+  document.addEventListener('click', (e) => {
+    if (!locationInput.contains(e.target) && !locationSuggestions.contains(e.target)) {
+      locationSuggestions.classList.add('hidden');
+    }
+  });
+}
 // ===== Helper Rendering Tag Prodotti =====
 function renderProductTags(tags) {
   if (!tags || !Array.isArray(tags) || tags.length === 0) return '';

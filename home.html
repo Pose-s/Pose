@@ -93,18 +93,19 @@
         <!-- ==================================================== -->
         <!-- NUOVI CAMPI: LUOGO E LINK PRODOTTO                   -->
         <!-- ==================================================== -->
-        <div class="form-group">
-          <label for="locationInput">Luogo (opzionale)</label>
-          <input type="text" id="locationInput" placeholder="Aggiungi luogo (es: Roma, Italia)" class="form-input" />
-        </div>
-
-        <div class="form-group">
-          <label>Link Prodotto/Capo (opzionale)</label>
-          <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <input type="text" id="productLabelInput" placeholder="Nome prodotto (es: Maglia Zara)" class="form-input" style="flex: 1;" />
-            <input type="text" id="productUrlInput" placeholder="Link (es: https://...)" class="form-input" style="flex: 1;" />
-          </div>
-        </div>
+       <div class="form-group location-input-group" style="position: relative;">
+  <label for="locationInput">Luogo (opzionale)</label>
+  <div style="position: relative;">
+    <input 
+      type="text" 
+      id="locationInput" 
+      placeholder="Cerca un luogo (es: Duomo di Milano, Roma...)" 
+      class="form-input" 
+      autocomplete="off" 
+    />
+    <div id="locationSuggestions" class="location-suggestions-dropdown hidden"></div>
+  </div>
+</div>
         <!-- ==================================================== -->
 
         <button type="button" class="btn-compact" id="openTagModalBtn">
