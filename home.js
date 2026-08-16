@@ -23,7 +23,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app, 'default');
 const storage = getStorage(app);
+
 const locationInput = document.getElementById('locationInput');
+const locationSuggestions = document.getElementById('locationSuggestions');
 const productLabelInput = document.getElementById('productLabelInput');
 const productUrlInput = document.getElementById('productUrlInput');
 
@@ -347,7 +349,7 @@ addTagsChoiceBtn.addEventListener('click', () => {
   renderTaggedSelected();
 });
 
-// ===== Modale tag persone (condiviso: post + storie) =====
+// ===== Modale tag persone =====
 openTagModalBtn.addEventListener('click', () => {
   tagModal.classList.remove('hidden');
   tagSearchInput.value = '';
@@ -497,10 +499,7 @@ function openEditModal(postId) {
   editingPostId = postId;
   pendingNewFiles = [];
   existingEditMedia = getPostMedia(post).map(m => ({ ...m }));
-  pendingTaggedUsers = (post.taggedUids || []).map((uid, i) => ({ 
-    uid, 
-    username: (post.taggedUsernames || [])[i] || '' 
-  }));
+  pendingTaggedUsers = (post.taggedUids || []).map((uid, i) => ({ uid, username: (post.taggedUsernames || [])[i] || '' }));
   
   postModalTitle.textContent = 'Modifica post';
   publishBtn.textContent = 'Salva modifiche';
@@ -513,6 +512,16 @@ function openEditModal(postId) {
   renderTaggedPreview();
   postModal.classList.remove('hidden');
 }
+
+photoInput.addEventListener('change', () => {
+  const files = Array.from(photoInput.files);
+  files.forEach(file => {
+    if (existingEditMedia.length + pendingNewFiles.length >= 10) return;
+    pendingNewFiles.push(file);
+  });
+  photoInput.value = '';
+  renderMediaPreview();
+});
 
 function renderMediaPreview() {
   const existingHtml = existingEditMedia.map((m, idx) => `
@@ -665,7 +674,7 @@ postForm.addEventListener('submit', async (e) => {
         taggedUsernames: pendingTaggedUsers.map(t => t.username),
         productTags: initialProductTags,
         createdAt: serverTimestamp()
-      });  
+      });
     }
 
     closeModal();
@@ -678,9 +687,8 @@ postForm.addEventListener('submit', async (e) => {
   }
 });
 
-const locationSuggestions = document.getElementById('locationSuggestions');
+// ===== Ricerca Luoghi OpenStreetMap =====
 let locationSearchTimeout;
-
 if (locationInput && locationSuggestions) {
   locationInput.addEventListener('input', () => {
     clearTimeout(locationSearchTimeout);
@@ -708,7 +716,6 @@ if (locationInput && locationSuggestions) {
         locationSuggestions.innerHTML = results.map(item => {
           const title = item.name || item.display_name.split(',')[0];
           const subtitle = item.display_name;
-
           return `
             <div class="location-item" data-name="${escapeHtml(title)}">
               <i data-lucide="map-pin"></i>
@@ -744,19 +751,26 @@ if (locationInput && locationSuggestions) {
   });
 }
 
-function renderProductTags(tags) {
-  if (!tags || !Array.isArray(tags) || tags.length === 0) return '';
+function renderProductTagsForSlide(tags, slideIdx) {
+  if (!tags || !Array.isArray(tags)) return '';
+  const filtered = tags.filter(t => (t.slideIndex !== undefined ? t.slideIndex === slideIdx : slideIdx === 0));
+  if (filtered.length === 0) return '';
 
-  return tags.map(tag => `
-    <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
-      <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
-        <span class="product-tag-pulse"></span>
-        <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
-      </button>
+  return `
+    <div class="product-tags-overlay hidden">
+      ${filtered.map(tag => `
+        <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
+          <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
+            <span class="product-tag-pulse"></span>
+            <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
+          </button>
+        </div>
+      `).join('')}
     </div>
-  `).join('');
+  `;
 }
 
+// ===== Lista Post =====
 function startListeningToPosts() {
   const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(30));
   postsLoader.classList.remove('hidden');
@@ -801,7 +815,7 @@ function startListeningToPosts() {
               </button>
               <div class="post-menu-dropdown hidden" data-menu-for="${id}">
                 ${isOwner ? `
-                 <button class="menu-item edit-post-btn" data-id="${id}">
+                  <button class="menu-item edit-post-btn" data-id="${id}">
                     <i data-lucide="pencil"></i> ${t('menu_edit')}
                   </button>
                 ` : ''}
@@ -852,8 +866,8 @@ function startListeningToPosts() {
     lucide.createIcons();
     attachPostListeners();
     attachCarouselListeners();
-    attachProductTagListeners();
     attachSaveListeners('#postsGrid');
+    attachProductTagListeners();
     await attachRepostAndTagListeners('#postsGrid', postsCache);
     await attachRepostersDisplay();
   }, (error) => {
@@ -908,25 +922,6 @@ async function attachRepostersDisplay() {
   }
 
   lucide.createIcons();
-}
-
-function renderProductTagsForSlide(tags, slideIdx) {
-  if (!tags || !Array.isArray(tags)) return '';
-  const filtered = tags.filter(t => (t.slideIndex !== undefined ? t.slideIndex === slideIdx : slideIdx === 0));
-  if (filtered.length === 0) return '';
-
-  return `
-    <div class="product-tags-overlay hidden">
-      ${filtered.map(tag => `
-        <div class="product-tag-pin" style="left: ${tag.x}%; top: ${tag.y}%;">
-          <button type="button" class="product-tag-dot" onclick="event.stopPropagation(); window.open('${tag.url}', '_blank')">
-            <span class="product-tag-pulse"></span>
-            <span class="product-tag-label">${escapeHtml(tag.label)} <i data-lucide="external-link"></i></span>
-          </button>
-        </div>
-      `).join('')}
-    </div>
-  `;
 }
 
 function renderMediaCarousel(mediaItems, postId) {
@@ -1012,8 +1007,10 @@ function attachPostListeners() {
         const overlay = slide.querySelector('.product-tags-overlay');
         if (overlay) {
           overlay.classList.toggle('hidden');
+          return; 
         }
       }
+      openComments(el.dataset.id);
     });
   });
 
@@ -1022,13 +1019,8 @@ function attachPostListeners() {
       e.stopPropagation();
       const id = btn.dataset.id;
       const dropdown = document.querySelector(`.post-menu-dropdown[data-menu-for="${id}"]`);
-      const isHidden = dropdown ? dropdown.classList.contains('hidden') : true;
-      
       closeAllMenus();
-      
-      if (dropdown && isHidden) {
-        dropdown.classList.remove('hidden');
-      }
+      if (dropdown) dropdown.classList.toggle('hidden');
     });
   });
 
@@ -1233,7 +1225,7 @@ commentForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ===== Ricerca utenti (con filtro bloccati) =====
+// ===== Ricerca Utenti =====
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   const term = searchInput.value.trim().toLowerCase();
@@ -1364,7 +1356,7 @@ function renderStoriesBar(myUid) {
             : `<div class="story-avatar-placeholder"><i data-lucide="user"></i></div>`
           }
         </button>
-        <button type="button" class="story-add-btn" id="addStoryBtn">
+        <button type="button" class="story-add-btn" id="addStoryBtnStory">
           <i data-lucide="plus"></i>
         </button>
       </div>
@@ -1399,11 +1391,13 @@ function renderStoriesBar(myUid) {
     }
   });
 
-  const addStoryBtn = document.getElementById('addStoryBtn');
-  addStoryBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    storyPhotoInput.click();
-  });
+  const addStoryBtnStory = document.getElementById('addStoryBtnStory');
+  if (addStoryBtnStory) {
+    addStoryBtnStory.addEventListener('click', (e) => {
+      e.stopPropagation();
+      storyPhotoInput.click();
+    });
+  }
 
   document.querySelectorAll('.story-circle[data-group-idx]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1427,7 +1421,7 @@ storyPhotoInput.addEventListener('change', () => {
   storyPhotoInput.value = '';
 });
 
-// ===== Editor storia =====
+// ===== Editor Storie =====
 function getContrastColor(hex) {
   const r = parseInt(hex.substr(1, 2), 16);
   const g = parseInt(hex.substr(3, 2), 16);
@@ -1534,7 +1528,7 @@ function drawStyledText(ctx, t) {
   ctx.fillText(text, t.x, t.y);
 }
 
-function redrawStoryCanvas(excludeIdx = null) {
+function redrawStoryCanvas() {
   const cw = storyEditorCanvas.width;
   const ch = storyEditorCanvas.height;
 
@@ -1542,24 +1536,17 @@ function redrawStoryCanvas(excludeIdx = null) {
   storyCtx.fillStyle = '#000000';
   storyCtx.fillRect(0, 0, cw, ch);
 
-  if (storyBaseImage) {
-    const iw = storyBaseImage.width;
-    const ih = storyBaseImage.height;
-    const scale = Math.min(cw / iw, ch / ih);
-    const dw = iw * scale;
-    const dh = ih * scale;
-    const dx = (cw - dw) / 2;
-    const dy = (ch - dh) / 2;
-    storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
-  }
+  const iw = storyBaseImage.width;
+  const ih = storyBaseImage.height;
+  const scale = Math.min(cw / iw, ch / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  const dx = (cw - dw) / 2;
+  const dy = (ch - dh) / 2;
+  storyCtx.drawImage(storyBaseImage, dx, dy, dw, dh);
 
   if (storyDrawingLayer) storyCtx.drawImage(storyDrawingLayer, 0, 0);
-
-  storyTextLayers.forEach((t, i) => {
-    if (i !== excludeIdx) {
-      drawStyledText(storyCtx, t);
-    }
-  });
+  storyTextLayers.forEach(t => drawStyledText(storyCtx, t));
 }
 
 function captureStoryState() {
@@ -1684,13 +1671,7 @@ function findTextAt(pos) {
     const style = TEXT_STYLES.find(s => s.id === t.styleId) || TEXT_STYLES[0];
     storyCtx.font = style.font;
     const width = storyCtx.measureText(t.text).width;
-
-    const minX = t.x - 25;
-    const maxX = t.x + width + 25;
-    const minY = t.y - 50;
-    const maxY = t.y + 20;
-
-    if (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY) {
+    if (pos.x >= t.x - 20 && pos.x <= t.x + width + 20 && pos.y <= t.y + 20 && pos.y >= t.y - 55) {
       return i;
     }
   }
@@ -1806,12 +1787,9 @@ function openTextEditMode(idx) {
   const scaleY = rect.height / storyEditorCanvas.height;
 
   storyTextInput.style.left = `${rect.left + t.x * scaleX}px`;
-  storyTextInput.style.top = `${rect.top + (t.y - 30) * scaleY}px`;
+  storyTextInput.style.top = `${rect.top + t.y * scaleY}px`;
   storyTextInput.style.color = t.color;
   storyTextInput.value = t.text;
-
-  redrawStoryCanvas(idx);
-
   storyTextInput.classList.remove('hidden');
   storyTextInput.focus();
   storyTextInput.select();
@@ -1869,7 +1847,7 @@ storyTextInput.addEventListener('focus', () => {
   clearTimeout(storyTextBlurTimeout);
 });
 
-// ===== Notifica via messaggio quando qualcuno viene taggato in una storia =====
+// ===== Notifica via Messaggio per Tag Storia =====
 async function notifyTaggedUsersInStory(taggedUsers, storyMediaUrl) {
   for (const t of taggedUsers) {
     if (t.uid === currentUser.uid) continue;
@@ -1958,7 +1936,7 @@ storyEditorPublishBtn.addEventListener('click', async () => {
   }
 });
 
-// ===== Visualizzatore storie =====
+// ===== Visualizzatore Storie =====
 function openStoryViewer(groupIdx) {
   currentStoryGroupIndex = groupIdx;
   currentStoryIndex = 0;
@@ -2050,18 +2028,24 @@ function showCurrentStory() {
   } else {
     storyOwnerBar.classList.add('hidden');
     storyViewerBar.classList.remove('hidden');
-    const likes = story.likes || [];
-    const isLiked = likes.includes(currentUser.uid);
-    storyLikeBtn.classList.toggle('liked', isLiked);
+    
+    // Assicurarsi che storyLikeBtn non sia undefined (problema comune nel vecchio codice)
+    if (storyLikeBtn) {
+      const likes = story.likes || [];
+      const isLiked = likes.includes(currentUser.uid);
+      storyLikeBtn.classList.toggle('liked', isLiked);
+    }
 
-    const repostQuery = query(
-      collection(db, 'storyReposts'),
-      where('uid', '==', currentUser.uid),
-      where('storyId', '==', story.id)
-    );
-    getDocs(repostQuery).then(snap => {
-      storyRepostBtn.classList.toggle('reposted', !snap.empty);
-    });
+    if (storyRepostBtn) {
+      const repostQuery = query(
+        collection(db, 'storyReposts'),
+        where('uid', '==', currentUser.uid),
+        where('storyId', '==', story.id)
+      );
+      getDocs(repostQuery).then(snap => {
+        storyRepostBtn.classList.toggle('reposted', !snap.empty);
+      });
+    }
 
     if (!(story.viewedBy || []).includes(currentUser.uid)) {
       updateDoc(doc(db, 'stories', story.id), {
@@ -2153,95 +2137,102 @@ storyNavLeft.addEventListener('touchend', (e) => {
   handleNavTap(e, prevStory);
 });
 
-storyLikeBtn.addEventListener('click', async () => {
-  const data = getCurrentStoryData();
-  if (!data || !data.story) return;
-  const { group, story } = data;
+if (storyLikeBtn) {
+  storyLikeBtn.addEventListener('click', async () => {
+    const data = getCurrentStoryData();
+    if (!data || !data.story) return;
+    const { group, story } = data;
 
-  const likes = story.likes || [];
-  const isLiked = likes.includes(currentUser.uid);
+    const likes = story.likes || [];
+    const isLiked = likes.includes(currentUser.uid);
 
-  try {
-    await updateDoc(doc(db, 'stories', story.id), {
-      likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-    });
-    storyLikeBtn.classList.toggle('liked', !isLiked);
-
-    if (!isLiked) {
-      await addDoc(collection(db, 'notifications'), {
-        toUid: group.uid,
-        fromUid: currentUser.uid,
-        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
-        fromLogoUrl: currentProfile.logoUrl || '',
-        type: 'story_like',
-        read: false,
-        createdAt: serverTimestamp()
+    try {
+      await updateDoc(doc(db, 'stories', story.id), {
+        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
       });
+      storyLikeBtn.classList.toggle('liked', !isLiked);
+
+      if (!isLiked) {
+        await addDoc(collection(db, 'notifications'), {
+          toUid: group.uid,
+          fromUid: currentUser.uid,
+          fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+          fromLogoUrl: currentProfile.logoUrl || '',
+          type: 'story_like',
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error('Errore like storia:', error);
     }
-  } catch (error) {
-    console.error('Errore like storia:', error);
-  }
-});
+  });
+}
 
-storyRepostBtn.addEventListener('click', async () => {
-  const data = getCurrentStoryData();
-  if (!data || !data.story) return;
-  const { group, story } = data;
+if (storyRepostBtn) {
+  storyRepostBtn.addEventListener('click', async () => {
+    const data = getCurrentStoryData();
+    if (!data || !data.story) return;
+    const { group, story } = data;
 
-  if (group.uid === currentUser.uid) {
-    alert('Non puoi repostare le tue stesse storie.');
-    return;
-  }
+    if (group.uid === currentUser.uid) {
+      alert('Non puoi repostare le tue stesse storie.');
+      return;
+    }
 
-  storyRepostBtn.disabled = true;
+    storyRepostBtn.disabled = true;
 
-  try {
-    const existingQuery = query(
-      collection(db, 'storyReposts'),
-      where('uid', '==', currentUser.uid),
-      where('storyId', '==', story.id)
-    );
-    const existingSnap = await getDocs(existingQuery);
+    try {
+      const existingQuery = query(
+        collection(db, 'storyReposts'),
+        where('uid', '==', currentUser.uid),
+        where('storyId', '==', story.id)
+      );
+      const existingSnap = await getDocs(existingQuery);
 
-    if (!existingSnap.empty) {
-      await deleteDoc(doc(db, 'storyReposts', existingSnap.docs[0].id));
-      storyRepostBtn.classList.remove('reposted');
+      if (!existingSnap.empty) {
+        await deleteDoc(doc(db, 'storyReposts', existingSnap.docs[0].id));
+        storyRepostBtn.classList.remove('reposted');
+      } else {
+        await addDoc(collection(db, 'storyReposts'), {
+          uid: currentUser.uid,
+          storyId: story.id,
+          originalUid: group.uid,
+          createdAt: serverTimestamp()
+        });
+        storyRepostBtn.classList.add('reposted');
+
+        await addDoc(collection(db, 'notifications'), {
+          toUid: group.uid,
+          fromUid: currentUser.uid,
+          fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
+          fromLogoUrl: currentProfile.logoUrl || '',
+          type: 'story_repost',
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error('Errore repost storia:', error);
+    } finally {
+      storyRepostBtn.disabled = false;
+    }
+  });
+}
+
+const storyTagViewBtn2 = document.getElementById('storyTagViewBtn2');
+if (storyTagViewBtn2) {
+  storyTagViewBtn2.addEventListener('click', () => {
+    const data = getCurrentStoryData();
+    if (!data || !data.story) return;
+    const tags = data.story.taggedUsernames || [];
+    if (tags.length === 0) {
+      alert('Nessuna persona taggata in questa storia.');
     } else {
-      await addDoc(collection(db, 'storyReposts'), {
-        uid: currentUser.uid,
-        storyId: story.id,
-        originalUid: group.uid,
-        createdAt: serverTimestamp()
-      });
-      storyRepostBtn.classList.add('reposted');
-
-      await addDoc(collection(db, 'notifications'), {
-        toUid: group.uid,
-        fromUid: currentUser.uid,
-        fromUsername: currentProfile.username || currentProfile.displayName || 'Utente',
-        fromLogoUrl: currentProfile.logoUrl || '',
-        type: 'story_repost',
-        read: false,
-        createdAt: serverTimestamp()
-      });
+      alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
     }
-  } catch (error) {
-    console.error('Errore repost storia:', error);
-  } finally {
-    storyRepostBtn.disabled = false;
-  }
-});
-
-storyTagViewBtn2.addEventListener('click', () => {
-  const data = getCurrentStoryData();
-  if (!data || !data.story) return;
-  const tags = data.story.taggedUsernames || [];
-  if (tags.length === 0) {
-    alert('Nessuna persona taggata in questa storia.');
-  } else {
-    alert('Persone taggate: ' + tags.map(u => '@' + u).join(', '));
-  }
-});
+  });
+}
 
 async function sendStoryComment() {
   const data = getCurrentStoryData();
@@ -2276,12 +2267,17 @@ async function sendStoryComment() {
   }
 }
 
-storyCommentSendBtn.addEventListener('click', sendStoryComment);
-storyCommentInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); sendStoryComment(); }
-});
-storyCommentInput.addEventListener('focus', pauseStoryTimer);
-storyCommentInput.addEventListener('blur', () => { if (!isStoryPaused) startStoryTimer(); });
+if (storyCommentSendBtn) {
+  storyCommentSendBtn.addEventListener('click', sendStoryComment);
+}
+
+if (storyCommentInput) {
+  storyCommentInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendStoryComment(); }
+  });
+  storyCommentInput.addEventListener('focus', pauseStoryTimer);
+  storyCommentInput.addEventListener('blur', () => { if (!isStoryPaused) startStoryTimer(); });
+}
 
 async function openViewersPanel() {
   const data = getCurrentStoryData();
@@ -2298,22 +2294,26 @@ async function openViewersPanel() {
   loadStoryCommentsForOwner(data.story.id);
 }
 
-storyViewersBtn.addEventListener('click', openViewersPanel);
+if (storyViewersBtn) {
+  storyViewersBtn.addEventListener('click', openViewersPanel);
+}
 
-storyDeleteBtn.addEventListener('click', async () => {
-  const data = getCurrentStoryData();
-  if (!data || !data.story) return;
-  if (!confirm('Vuoi eliminare questa storia?')) return;
+if (storyDeleteBtn) {
+  storyDeleteBtn.addEventListener('click', async () => {
+    const data = getCurrentStoryData();
+    if (!data || !data.story) return;
+    if (!confirm('Vuoi eliminare questa storia?')) return;
 
-  try {
-    await deleteDoc(doc(db, 'stories', data.story.id));
-    if (data.story.mediaPath) {
-      deleteObject(ref(storage, data.story.mediaPath)).catch(() => {});
+    try {
+      await deleteDoc(doc(db, 'stories', data.story.id));
+      if (data.story.mediaPath) {
+        deleteObject(ref(storage, data.story.mediaPath)).catch(() => {});
+      }
+    } catch (error) {
+      console.error('Errore eliminazione storia:', error);
     }
-  } catch (error) {
-    console.error('Errore eliminazione storia:', error);
-  }
-});
+  });
+}
 
 let touchStartY = 0;
 let touchStartX = 0;
@@ -2341,11 +2341,13 @@ storyViewer.addEventListener('mouseup', (e) => {
   if (deltaY > 60) openViewersPanel();
 });
 
-closeViewersPanelBtn.addEventListener('click', () => {
-  storyViewersPanel.classList.add('hidden');
-  if (unsubscribeStoryComments) unsubscribeStoryComments();
-  startStoryTimer();
-});
+if (closeViewersPanelBtn) {
+  closeViewersPanelBtn.addEventListener('click', () => {
+    storyViewersPanel.classList.add('hidden');
+    if (unsubscribeStoryComments) unsubscribeStoryComments();
+    startStoryTimer();
+  });
+}
 
 document.querySelectorAll('.story-viewers-tab').forEach(tab => {
   tab.addEventListener('click', () => switchViewersTab(tab.dataset.tab));
@@ -2397,15 +2399,17 @@ function renderViewersList(viewers) {
   lucide.createIcons();
 }
 
-viewersSearchInput.addEventListener('input', () => {
-  const term = viewersSearchInput.value.trim().toLowerCase();
-  if (!term) {
-    renderViewersList(allViewersCache);
-    return;
-  }
-  const filtered = allViewersCache.filter(v => (v.data.username || '').toLowerCase().includes(term));
-  renderViewersList(filtered);
-});
+if (viewersSearchInput) {
+  viewersSearchInput.addEventListener('input', () => {
+    const term = viewersSearchInput.value.trim().toLowerCase();
+    if (!term) {
+      renderViewersList(allViewersCache);
+      return;
+    }
+    const filtered = allViewersCache.filter(v => (v.data.username || '').toLowerCase().includes(term));
+    renderViewersList(filtered);
+  });
+}
 
 function loadStoryCommentsForOwner(storyId) {
   if (unsubscribeStoryComments) unsubscribeStoryComments();
@@ -2430,7 +2434,7 @@ function loadStoryCommentsForOwner(storyId) {
   });
 }
 
-// ===== Invia post nei messaggi =====
+// ===== Invia Post nei Messaggi =====
 async function openShareModal(postId) {
   sharingPostId = postId;
   shareModal.classList.remove('hidden');
@@ -2480,14 +2484,20 @@ function renderShareFriends(users) {
   });
 }
 
-shareSearchInput.addEventListener('input', () => {
-  const term = shareSearchInput.value.trim().toLowerCase();
-  if (!term) { renderShareFriends(allShareFriends); return; }
-  renderShareFriends(allShareFriends.filter(u => (u.data.username || '').toLowerCase().includes(term)));
-});
+if (shareSearchInput) {
+  shareSearchInput.addEventListener('input', () => {
+    const term = shareSearchInput.value.trim().toLowerCase();
+    if (!term) { renderShareFriends(allShareFriends); return; }
+    renderShareFriends(allShareFriends.filter(u => (u.data.username || '').toLowerCase().includes(term)));
+  });
+}
 
-closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
-shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+if (closeShareBtn) {
+  closeShareBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+}
+if (shareModal) {
+  shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.add('hidden'); });
+}
 
 async function sendPostToChat(otherUid, postId) {
   const postDoc = await getDoc(doc(db, 'posts', postId));
