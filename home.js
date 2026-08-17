@@ -855,7 +855,7 @@ function startListeningToPosts() {
         <article class="post-card">
           <div class="post-header">
             ${post.logoUrl
-              ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+              ? `${renderAvatar(post.logoUrl || post.userPhoto || post.authorPhoto, post.isVerified ?? false, "post-avatar-wrap", "post-logo")}`
               : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
             }
             <div class="post-header-info">
