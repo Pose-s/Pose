@@ -13,7 +13,7 @@ function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", i
 
   const badge = isVerified
     ? `<div class="verified-crown-badge">
-         <img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />
+         <img src="verificato.jpg" alt="Verificato" class="verified-crown-img" />
        </div>`
     : '';
 

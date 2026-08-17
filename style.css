@@ -3567,3 +3567,40 @@ html, body {
     /* Aggiunge un effetto Glow neon (bagliore) magenta più intenso */
     box-shadow: 0 0 10px rgba(255, 20, 147, 0.8), 0 0 20px rgba(255, 20, 147, 0.6);
 }
+/* Container della foto profilo */
+.profile-avatar-block,
+.profile-avatar-wrap,
+.post-avatar-wrap,
+.conversation-avatar-wrap {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+/* Badge posizionato nell'angolo in alto a destra */
+.verified-crown-badge {
+  position: absolute !important;
+  top: 0px !important;
+  right: 0px !important;
+  width: 38px !important;
+  height: 38px !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+  transform: translate(15%, -15%) !important;
+}
+
+/* Dimensioni per gli avatar più piccoli nei post */
+.post-avatar-wrap .verified-crown-badge,
+.conversation-avatar-wrap .verified-crown-badge {
+  width: 20px !important;
+  height: 20px !important;
+  transform: translate(20%, -20%) !important;
+}
+
+/* Immagine della coroncina */
+.verified-crown-img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  box-shadow: 0 0 10px rgba(255, 20, 147, 0.8) !important;
+}
