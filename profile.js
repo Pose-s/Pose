@@ -230,7 +230,7 @@ if (data.isVerified) {
   if (!existingBadge) {
     const badgeEl = document.createElement('div');
     badgeEl.className = 'verified-crown-badge';
-    badgeEl.innerHTML = `<img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />`;
+    badgeEl.innerHTML = `<img src="verificato.jpg" alt="Verificato" class="verified-crown-img" />`;
     profileAvatarContainer.style.position = 'relative';
     profileAvatarContainer.appendChild(badgeEl);
   }
