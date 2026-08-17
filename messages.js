@@ -6,6 +6,24 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { escapeHtml, compressImage } from './utils.js';
+function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
+  const avatarImage = photoUrl
+    ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
+    : `<div class="${imgClass}-placeholder"><i data-lucide="user"></i></div>`;
+
+  const badge = isVerified
+    ? `<div class="verified-crown-badge">
+         <img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />
+       </div>`
+    : '';
+
+  return `
+    <div class="${wrapperClass}">
+      ${avatarImage}
+      ${badge}
+    </div>
+  `;
+}
 
 const logoutBtn = document.getElementById('logoutBtn');
 const conversationsList = document.getElementById('conversationsList');

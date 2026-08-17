@@ -3528,3 +3528,42 @@ html, body {
 .messages-btn.has-notifications .msg-dots-front circle {
   fill: #ffffff; /* 3 Pallini Bianchi */
 }
+/* Container dell'avatar (deve essere position: relative) */
+.user-avatar-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100px; /* Esempio: regola in base alla grandezza dell'avatar nel profilo */
+    height: 100px;
+}
+
+/* La foto profilo reale */
+.user-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Il container del tuo badge (in alto a destra) */
+.verified-crown-container {
+    position: absolute;
+    top: 0px; /* Regola se necessario */
+    right: 0px; /* Regola se necessario */
+    width: 28%; /* Regola la dimensione del badge rispetto all'avatar (es. 28-30px) */
+    height: 28%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(25%, -25%); /* Centra il badge sull'angolo */
+}
+
+/* L'immagine della tua coroncina */
+.verified-crown-icon {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%; /* Mantiene il cerchio */
+    object-fit: contain;
+    
+    /* Aggiunge un effetto Glow neon (bagliore) magenta più intenso */
+    box-shadow: 0 0 10px rgba(255, 20, 147, 0.8), 0 0 20px rgba(255, 20, 147, 0.6);
+}

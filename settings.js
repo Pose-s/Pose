@@ -198,3 +198,53 @@ saveStoryDurationBtn.addEventListener('click', async () => {
     saveStoryDurationBtn.disabled = false;
   }
 });
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+
+const functionsInstance = getFunctions(app);
+const verifyStatusText = document.getElementById('verifyStatusText');
+const startVerifyBtn = document.getElementById('startVerifyBtn');
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+  const data = userDoc.exists() ? userDoc.data() : {};
+  const followers = (data.followers || []).length;
+
+  if (data.verified) {
+    verifyStatusText.textContent = 'Il tuo account è verificato ✓';
+    return;
+  }
+
+  if (followers < 100000) {
+    verifyStatusText.textContent = `Ti servono almeno 100.000 follower per richiedere la verifica (attualmente: ${followers}).`;
+    return;
+  }
+
+  const reqDoc = await getDoc(doc(db, 'verificationRequests', user.uid));
+  if (reqDoc.exists()) {
+    const r = reqDoc.data();
+    verifyStatusText.textContent = `Richiesta in corso — Identità: ${r.identityStatus || 'da avviare'}, Pagamento: ${r.paymentStatus || 'da avviare'}`;
+  } else {
+    verifyStatusText.textContent = 'Hai i requisiti per richiedere la verifica!';
+  }
+
+  startVerifyBtn.classList.remove('hidden');
+});
+
+startVerifyBtn.addEventListener('click', async () => {
+  startVerifyBtn.disabled = true;
+  try {
+    const createIdentitySession = httpsCallable(functionsInstance, 'createIdentitySession');
+    const identityResult = await createIdentitySession();
+    window.open(identityResult.data.url, '_blank');
+
+    const createCheckoutSession = httpsCallable(functionsInstance, 'createCheckoutSession');
+    const checkoutResult = await createCheckoutSession();
+    window.location.href = checkoutResult.data.url;
+  } catch (error) {
+    console.error(error);
+    alert('Errore: ' + error.message);
+    startVerifyBtn.disabled = false;
+  }
+});

@@ -8,6 +8,24 @@ import {
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 import { t } from './lang.js';
+function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
+  const avatarImage = photoUrl
+    ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
+    : `<div class="${imgClass}-placeholder"><i data-lucide="user"></i></div>`;
+
+  const badge = isVerified
+    ? `<div class="verified-crown-badge">
+         <img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />
+       </div>`
+    : '';
+
+  return `
+    <div class="${wrapperClass}">
+      ${avatarImage}
+      ${badge}
+    </div>
+  `;
+}
 lucide.createIcons();
 
 const locationInput = document.getElementById('locationInput');
@@ -204,6 +222,21 @@ onAuthStateChanged(auth, async (user) => {
   profileBio.textContent = data.bio || '';
   currentLogoUrl = data.logoUrl || '';
   updateAvatarDisplay(currentLogoUrl, currentLogo, logoPlaceholder);
+  // Gestione coroncina verificato sul profilo principale
+const profileAvatarContainer = currentLogo.parentElement;
+let existingBadge = profileAvatarContainer.querySelector('.verified-crown-badge');
+
+if (data.isVerified) {
+  if (!existingBadge) {
+    const badgeEl = document.createElement('div');
+    badgeEl.className = 'verified-crown-badge';
+    badgeEl.innerHTML = `<img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />`;
+    profileAvatarContainer.style.position = 'relative';
+    profileAvatarContainer.appendChild(badgeEl);
+  }
+} else if (existingBadge) {
+  existingBadge.remove();
+}
 
   statFollowers.textContent = (data.followers || []).length;
   statFollowing.textContent = (data.following || []).length;
@@ -1397,4 +1430,17 @@ function enableProductTaggingMode(postId) {
   }
 
   container.addEventListener('click', clickHandler, { once: true });
+}
+// Aggiungi o sostituisci questa funzione nei file .js
+function verifiedBadgeHtml(isVerified) {
+  if (!isVerified) return '';
+  return `
+    <div class="verified-crown-container">
+      <img 
+        src="assets/images/verified-badge.webp" 
+        alt="Account Verificato" 
+        class="verified-crown-icon"
+      >
+    </div>
+  `;
 }

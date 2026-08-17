@@ -6,6 +6,24 @@ import {
   deleteDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { escapeHtml, formatDate } from './utils.js';
+function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
+  const avatarImage = photoUrl
+    ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
+    : `<div class="${imgClass}-placeholder"><i data-lucide="user"></i></div>`;
+
+  const badge = isVerified
+    ? `<div class="verified-crown-badge">
+         <img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />
+       </div>`
+    : '';
+
+  return `
+    <div class="${wrapperClass}">
+      ${avatarImage}
+      ${badge}
+    </div>
+  `;
+}
 
 const logoutBtn = document.getElementById('logoutBtn');
 const profilePageContent = document.getElementById('profilePageContent');
@@ -314,10 +332,7 @@ async function renderProfile() {
       </div>
 
       <div class="profile-avatar-block">
-        ${data.logoUrl
-          ? `<img src="${data.logoUrl}" class="profile-avatar-lg" alt="Logo profilo" />`
-          : `<div class="profile-logo-placeholder-lg"><i data-lucide="user"></i></div>`
-        }
+        ${renderAvatar(data.logoUrl, data.isVerified, "profile-avatar-wrap", "profile-avatar-lg")}
       </div>
 
       <div class="profile-stats">
@@ -520,10 +535,7 @@ function startListeningToUserPosts(ownerData) {
       return `
         <article class="post-card">
           <div class="post-header">
-            ${ownerData && ownerData.logoUrl
-              ? `<img src="${ownerData.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-              : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-            }
+            ${renderAvatar(ownerData?.logoUrl, ownerData?.isVerified, "post-avatar-wrap", "post-logo")}
             <div class="post-header-info">
               <a href="user.html?u=${encodeURIComponent(viewedUsername)}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(viewedUsername)}</a>
               <span class="post-date">${formatDate(post.createdAt)}</span>
@@ -839,7 +851,7 @@ function renderShareFriends(users) {
   }
   shareFriendsList.innerHTML = users.map(u => `
     <div class="conversation-item" data-uid="${u.uid}">
-      ${u.data.logoUrl ? `<img src="${u.data.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+      ${renderAvatar(u.data.logoUrl, u.data.isVerified, "conversation-avatar-wrap", "conversation-avatar")}
       <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.data.username || 'utente')}</span></div>
     </div>
   `).join('');
@@ -942,10 +954,7 @@ function renderFullPostCardUser(post, id) {
   return `
     <article class="post-card">
       <div class="post-header">
-        ${post.logoUrl
-          ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-          : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-        }
+        ${renderAvatar(post.logoUrl, post.isVerified, "post-avatar-wrap", "post-logo")}
         <div class="post-header-info">
           <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
           <span class="post-date">${formatDate(post.createdAt)}</span>

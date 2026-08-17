@@ -8,6 +8,24 @@ import {
 import { getStorage, ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 import { t } from './lang.js';
+function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
+  const avatarImage = photoUrl
+    ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
+    : `<div class="${imgClass}-placeholder"><i data-lucide="user"></i></div>`;
+
+  const badge = isVerified
+    ? `<div class="verified-crown-badge">
+         <img src="assets/verificato.jpg" alt="Verificato" class="verified-crown-img" />
+       </div>`
+    : '';
+
+  return `
+    <div class="${wrapperClass}">
+      ${avatarImage}
+      ${badge}
+    </div>
+  `;
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyD5nn41jQU8Vk_ujlTO5t4r125zyq4p1z0",
@@ -421,7 +439,7 @@ if (tagSearchInput) {
           const u = docSnap.data();
           return `
             <div class="conversation-item" data-uid="${docSnap.id}" data-username="${escapeHtml(u.username || '')}">
-              ${u.logoUrl ? `<img src="${u.logoUrl}" class="conversation-avatar" alt="" />` : `<div class="conversation-avatar-placeholder"><i data-lucide="user"></i></div>`}
+              ${renderAvatar(u.logoUrl, u.isVerified, "conversation-avatar-wrap", "conversation-avatar")}
               <div class="conversation-info"><span class="conversation-username">@${escapeHtml(u.username || '')}</span></div>
             </div>
           `;
@@ -2717,4 +2735,17 @@ function enableProductTaggingMode(postId) {
   }
 
   container.addEventListener('click', clickHandler, { once: true });
+}
+// Aggiungi o sostituisci questa funzione nei file .js
+function verifiedBadgeHtml(isVerified) {
+  if (!isVerified) return '';
+  return `
+    <div class="verified-crown-container">
+      <img 
+        src="assets/images/verified-badge.webp" 
+        alt="Account Verificato" 
+        class="verified-crown-icon"
+      >
+    </div>
+  `;
 }
