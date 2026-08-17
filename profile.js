@@ -816,7 +816,7 @@ function renderProfilePosts() {
       <article class="post-card profile-post-card">
         <div class="post-header">
           ${currentLogoUrl
-            ? `<img src="${currentLogoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
+            ? `${renderAvatar(post.logoUrl, true, "post-avatar-wrap", "post-logo")}`
             : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
           }
           <div class="post-header-info">
