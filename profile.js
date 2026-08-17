@@ -629,10 +629,7 @@ function renderFullPostCard(post, id) {
   return `
     <article class="post-card">
       <div class="post-header">
-        ${post.logoUrl
-          ? `<img src="${post.logoUrl}" class="post-logo" alt="Logo" loading="lazy" />`
-          : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-        }
+       ${renderAvatar(post.logoUrl, post.isVerified ?? true, "post-avatar-wrap", "post-logo")}
         <div class="post-header-info">
             <a href="profile.html" class="post-author" onclick="event.stopPropagation()">${escapeHtml(currentUsername || 'Tu')}</a>
             ${post.location ? `<span class="post-location" style="display: block; font-size: 12px; color: #64748b;"><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 2px;"></i>${escapeHtml(post.location)}</span>` : ''}
