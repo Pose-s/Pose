@@ -855,7 +855,12 @@ function startListeningToPosts() {
         <article class="post-card">
           <div class="post-header">
             ${post.logoUrl
-              ? ` ${renderAvatar(post.logoUrl || post.userPhoto, post.isVerified === true || post.username === "elisabel_messa", "post-avatar-wrap", "post-logo")}`
+              ? `${renderAvatar(
+  post.logoUrl || post.userPhoto || post.authorPhoto || '',
+  post.isVerified === true || post.username === 'elisabel_messa' || post.author === 'elisabel_messa' || post.userId === 'elisabel_messa',
+  "post-avatar-wrap",
+  "post-logo"
+)} `
               : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
             }
             <div class="post-header-info">
