@@ -3604,3 +3604,29 @@ html, body {
   object-fit: cover !important;
   box-shadow: 0 0 10px rgba(255, 20, 147, 0.8) !important;
 }
+/* Container avatar nel post */
+.post-avatar-wrap {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+/* Badge della coroncina sui post */
+.post-avatar-wrap .verified-crown-badge {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translate(25%, -25%) !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+.post-avatar-wrap .verified-crown-img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  display: block !important;
+  box-shadow: 0 0 6px rgba(255, 20, 147, 0.8) !important;
+}
