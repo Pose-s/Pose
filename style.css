@@ -3632,3 +3632,170 @@ html, body {
   display: block !important;
   box-shadow: 0 0 6px rgba(255, 20, 147, 0.8) !important;
 }
+/* Popover Sticker */
+.sticker-popover {
+  position: fixed;
+  width: 320px;
+  max-height: 380px;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.sticker-header {
+  padding: 12px 12px 6px 12px;
+  background: #18181b;
+  border-bottom: 1px solid #27272a;
+}
+
+.sticker-search-wrap {
+  display: flex;
+  align-items: center;
+  background: #27272a;
+  border-radius: 20px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+}
+
+.sticker-search-wrap input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.sticker-categories {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.cat-btn {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cat-btn.active {
+  background: #27272a;
+  color: #ff007f;
+  font-weight: 600;
+}
+
+.upload-sticker-btn {
+  color: #ff007f;
+  cursor: pointer;
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.sticker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.sticker-item:hover {
+  transform: scale(1.12);
+  background: #27272a;
+}
+
+.sticker-item img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.sticker-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #71717a;
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+/* Rendering dello sticker nei commenti e nei messaggi */
+.comment-sticker-media, .message-sticker-media {
+  max-width: 130px;
+  max-height: 130px;
+  object-fit: contain;
+  display: block;
+  margin-top: 6px;
+}
+/* Pannello sticker */
+.sticker-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 20px;
+  width: 280px;
+  max-height: 320px;
+  background: #1e1e24;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sticker-panel.hidden {
+  display: none;
+}
+
+.sticker-grid-item {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.comment-sticker-display, .chat-sticker-msg {
+  font-size: 28px;
+  display: inline-block;
+}
+.comment-tool-btn {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-tool-btn:hover {
+  color: #ff007f;
+}
+
+.comment-sticker-display {
+  font-size: 28px;
+  display: inline-block;
+  margin-top: 4px;
+}

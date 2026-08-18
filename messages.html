@@ -94,36 +94,35 @@
               <span class="recording-hint" id="recordingHint">▲ Scorri per bloccare</span>
             </div>
 
-            <div class="sticker-panel hidden" id="stickerPanel">
-              <div class="sticker-panel-search">
-                <i data-lucide="search"></i>
-                <input type="text" id="stickerSearchInput" placeholder="Cerca sticker..." autocomplete="off" />
-              </div>
-              <div class="sticker-panel-tabs" id="stickerTabs"></div>
-              <div class="sticker-panel-grid" id="stickerGrid"></div>
-            </div>
+           <!-- Pannello Sticker a scomparsa -->
+      <div id="stickerPanel" class="sticker-panel hidden">
+        <div class="sticker-search-wrap">
+          <input type="text" id="stickerSearchInput" placeholder="Cerca emoji o categoria..." autocomplete="off" />
+        </div>
+        <div class="sticker-panel-tabs" id="stickerTabs"></div>
+        <div class="sticker-panel-grid" id="stickerGrid"></div>
+      </div>
 
-            <form id="chatForm" class="chat-form">
-              <div class="chat-form-left">
-                <button type="button" class="chat-icon-btn" id="voiceBtn">
-                  <i data-lucide="mic"></i>
-                </button>
-                <button type="button" class="chat-icon-btn" id="photoLeftBtn">
-                  <i data-lucide="image"></i>
-                </button>
-                <button type="button" class="chat-icon-btn" id="stickerBtn">
-                  <i data-lucide="smile"></i>
-                </button>
-              </div>
+      <form id="chatForm" class="chat-form">
+        <div class="chat-form-left">
+          <button type="button" class="chat-icon-btn" id="voiceBtn">
+            <i data-lucide="mic"></i>
+          </button>
+          <button type="button" class="chat-icon-btn" id="photoLeftBtn">
+            <i data-lucide="image"></i>
+          </button>
+          <button type="button" class="chat-icon-btn" id="stickerBtn">
+            <i data-lucide="smile"></i>
+          </button>
+        </div>
 
-              <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+        <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." required autocomplete="off" />
+        <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
 
-              <input type="file" id="chatPhotoInput" accept="image/*" class="hidden" />
-
-              <button type="submit" class="comment-send-btn">
-                <i data-lucide="send"></i>
-              </button>
-            </form>
+        <button type="submit" class="comment-send-btn">
+          <i data-lucide="send"></i>
+        </button>
+      </form>   
           </div>
         </div>
 

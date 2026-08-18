@@ -138,6 +138,7 @@ const addTagsChoiceBtn = document.getElementById('addTagsChoiceBtn');
 
 const storyTagViewBtn2 = document.getElementById('storyTagViewBtn2');
 const storyRepostBtn = document.getElementById('storyRepostBtn');
+const commentStickerBtn = document.getElementById('commentStickerBtn');
 
 lucide.createIcons();
 
@@ -1244,7 +1245,10 @@ function openComments(postId) {
       return `
         <div class="comment-item">
           <span class="comment-author">${escapeHtml(c.authorName || 'Utente')}</span>
-          <p class="comment-text">${escapeHtml(c.text || '')}</p>
+          ${c.type === 'sticker' 
+            ? `<span class="comment-sticker-display">${c.sticker}</span>`
+            : `<p class="comment-text">${escapeHtml(c.text || '')}</p>`
+          }
         </div>
       `;
     }).join('');
@@ -2754,4 +2758,38 @@ function verifiedBadgeHtml(isVerified) {
       >
     </div>
   `;
+}
+// Invio dello sticker come commento
+async function sendCommentSticker(postId, stickerTextOrUrl) {
+  if (!postId || !currentUser) return;
+
+  try {
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
+      uid: currentUser.uid,
+      authorName: currentProfile.username || currentUser.email.split('@')[0],
+      type: 'sticker',
+      sticker: stickerTextOrUrl,
+      createdAt: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, 'posts', postId), {
+      commentCount: increment(1)
+    });
+  } catch (error) {
+    console.error("Errore invio sticker commento:", error);
+  }
+}
+
+// Click sull'icona sticker nei commenti
+if (commentStickerBtn) {
+  commentStickerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!activeCommentsPostId) return;
+
+    // Apre il pannello sticker di messages o la funzione picker
+    const sticker = prompt("Scegli un'emoji/sticker da inviare:", "🔥");
+    if (sticker) {
+      sendCommentSticker(activeCommentsPostId, sticker);
+    }
+  });
 }
