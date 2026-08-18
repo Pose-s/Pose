@@ -3606,8 +3606,10 @@ html, body {
 }
 /* Container avatar nel post */
 .post-avatar-wrap {
-  position: relative !important;
-  display: inline-block !important;
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 36px;
 }
 
 /* Badge della coroncina sui post */

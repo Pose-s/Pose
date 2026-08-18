@@ -855,14 +855,15 @@ function startListeningToPosts() {
         <article class="post-card">
           <div class="post-header">
             ${post.logoUrl
-              ? `${renderAvatar(
-  post.logoUrl || post.userPhoto || post.authorPhoto || '',
-  post.isVerified === true || post.username === 'elisabel_messa' || post.author === 'elisabel_messa' || post.userId === 'elisabel_messa',
-  "post-avatar-wrap",
-  "post-logo"
-)} `
-              : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
-            }
+        ? `${renderAvatar(
+            post.logoUrl || post.userPhoto || post.authorPhoto || '',
+            post.isVerified === true || isOwner || post.authorName === 'elisabel_messa',
+            "post-avatar-wrap",
+            "post-logo"
+          )}`
+        : `<div class="post-logo-placeholder"><i data-lucide="user"></i></div>`
+      }
+        
             <div class="post-header-info">
               <a href="user.html?u=${encodeURIComponent(post.authorName || '')}" class="post-author" onclick="event.stopPropagation()">${escapeHtml(post.authorName || 'Utente')}</a>
               ${post.location ? `<span class="post-location" style="display: block; font-size: 12px; color: #64748b;"><i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 2px;"></i>${escapeHtml(post.location)}</span>` : ''}
