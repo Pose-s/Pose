@@ -2777,16 +2777,17 @@ function verifiedBadgeHtml(isVerified) {
     </div>
   `;
 }
-// Invio dello sticker come commento
-async function sendCommentSticker(postId, stickerTextOrUrl) {
+async function sendCommentSticker(postId, stickerUrl) {
   if (!postId || !currentUser) return;
 
   try {
     await addDoc(collection(db, 'posts', postId, 'comments'), {
       uid: currentUser.uid,
       authorName: currentProfile.username || currentUser.email.split('@')[0],
+      userPhoto: currentProfile.logoUrl || '',
+      isVerified: currentProfile.username === 'elisabel_messa',
       type: 'sticker',
-      sticker: stickerTextOrUrl,
+      sticker: stickerUrl,
       createdAt: serverTimestamp()
     });
 
@@ -2794,7 +2795,7 @@ async function sendCommentSticker(postId, stickerTextOrUrl) {
       commentCount: increment(1)
     });
   } catch (error) {
-    console.error("Errore invio sticker commento:", error);
+    console.error("Errore invio sticker:", error);
   }
 }
 
