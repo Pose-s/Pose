@@ -1242,16 +1242,32 @@ function openComments(postId) {
 
     commentsList.innerHTML = snapshot.docs.map(docSnap => {
       const c = docSnap.data();
+      const isSticker = c.type === 'sticker';
+      const isVerified = c.isVerified === true || c.authorName === 'elisabel_messa';
+
+      let bodyHtml;
+      if (isSticker) {
+        bodyHtml = c.sticker.startsWith('http')
+          ? `<img src="${c.sticker}" class="comment-sticker-media" alt="sticker" />`
+          : `<span class="comment-sticker-emoji">${c.sticker}</span>`;
+      } else {
+        bodyHtml = `<p class="comment-text">${escapeHtml(c.text || '')}</p>`;
+      }
+
       return `
-        <div class="comment-item">
-          <span class="comment-author">${escapeHtml(c.authorName || 'Utente')}</span>
-          ${c.type === 'sticker' 
-            ? `<span class="comment-sticker-display">${c.sticker}</span>`
-            : `<p class="comment-text">${escapeHtml(c.text || '')}</p>`
-          }
+        <div class="comment-row">
+          ${renderAvatar(c.userPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
+          <div class="comment-bubble">
+            <a href="user.html?u=${encodeURIComponent(c.authorName || '')}" class="comment-author-name">
+              @${escapeHtml(c.authorName || 'utente')}
+            </a>
+            ${bodyHtml}
+          </div>
         </div>
       `;
     }).join('');
+
+    lucide.createIcons();
 
     commentsList.scrollTop = commentsList.scrollHeight;
   });
@@ -1280,12 +1296,15 @@ if (commentForm) {
     if (!text) return;
 
     try {
-      await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
-        uid: currentUser.uid,
-        authorName: currentProfile.username || currentUser.email.split('@')[0],
-        text,
-        createdAt: serverTimestamp()
-      });
+      // Nel submit del commentForm:
+await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
+  uid: currentUser.uid,
+  authorName: currentProfile.username || currentUser.email.split('@')[0],
+  userPhoto: currentProfile.logoUrl || '',
+  isVerified: currentProfile.username === 'elisabel_messa',
+  text,
+  createdAt: serverTimestamp()
+});
 
       await updateDoc(doc(db, 'posts', activeCommentsPostId), {
         commentCount: increment(1)
