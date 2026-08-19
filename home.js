@@ -2805,13 +2805,12 @@ if (commentStickerBtn) {
     e.stopPropagation();
     if (!activeCommentsPostId) return;
 
-    // Apre il pannello sticker di messages o la funzione picker
-    const sticker = prompt("Scegli un'emoji/sticker da inviare:", "🔥");
-    if (sticker) {
-      sendCommentSticker(activeCommentsPostId, sticker);
-    }
+    openStickerModal(commentStickerBtn, (selectedUrl) => {
+      sendCommentSticker(activeCommentsPostId, selectedUrl);
+    });
   });
 }
+
 // Invio commento di testo classico
 if (commentForm) {
   commentForm.addEventListener('submit', async (e) => {
