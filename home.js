@@ -2777,28 +2777,6 @@ function verifiedBadgeHtml(isVerified) {
     </div>
   `;
 }
-async function sendCommentSticker(postId, stickerUrl) {
-  if (!postId || !currentUser) return;
-
-  try {
-    await addDoc(collection(db, 'posts', postId, 'comments'), {
-      uid: currentUser.uid,
-      authorName: currentProfile.username || currentUser.email.split('@')[0],
-      userPhoto: currentProfile.logoUrl || '',
-      isVerified: currentProfile.username === 'elisabel_messa',
-      type: 'sticker',
-      sticker: stickerUrl,
-      createdAt: serverTimestamp()
-    });
-
-    await updateDoc(doc(db, 'posts', postId), {
-      commentCount: increment(1)
-    });
-  } catch (error) {
-    console.error("Errore invio sticker:", error);
-  }
-}
-
 // Click sull'icona sticker nei commenti
 if (commentStickerBtn) {
   commentStickerBtn.addEventListener('click', (e) => {
@@ -2842,7 +2820,7 @@ if (commentForm) {
   });
 }
 
-// Invio Sticker come Commento
+// Funzione invio Sticker nei commenti
 async function sendCommentSticker(postId, stickerUrl) {
   if (!postId || !currentUser) return;
 
@@ -2863,17 +2841,4 @@ async function sendCommentSticker(postId, stickerUrl) {
   } catch (error) {
     console.error("Errore invio sticker:", error);
   }
-}
-
-// Click sull'icona sticker nei commenti
-const commentStickerBtn = document.getElementById('commentStickerBtn');
-if (commentStickerBtn) {
-  commentStickerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!activeCommentsPostId) return;
-
-    openStickerModal(commentStickerBtn, (selectedUrl) => {
-      sendCommentSticker(activeCommentsPostId, selectedUrl);
-    });
-  });
 }
