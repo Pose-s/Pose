@@ -1243,9 +1243,11 @@ function openComments(postId) {
 
     commentsList.innerHTML = snapshot.docs.map(docSnap => {
       const c = docSnap.data();
+      const commentId = docSnap.id;
       const isSticker = c.type === 'sticker';
       const isVerified = c.isVerified === true || c.authorName === 'elisabel_messa';
       const avatarPhoto = c.userPhoto || (currentUser && c.uid === currentUser.uid ? currentProfile.logoUrl : '');
+      const canDelete = currentUser && (c.uid === currentUser.uid || (post && post.uid === currentUser.uid));
 
       let bodyHtml;
       if (isSticker) {
@@ -1255,12 +1257,19 @@ function openComments(postId) {
       }
 
       return `
-        <div class="comment-row">
+        <div class="comment-row" data-comment-id="${commentId}">
           ${renderAvatar(avatarPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
           <div class="comment-bubble">
-            <a href="user.html?u=${encodeURIComponent(c.authorName || '')}" class="comment-author-name">
-              @${escapeHtml(c.authorName || 'utente')}
-            </a>
+            <div class="comment-bubble-header">
+              <a href="user.html?u=${encodeURIComponent(c.authorName || '')}" class="comment-author-name">
+                @${escapeHtml(c.authorName || 'utente')}
+              </a>
+              ${canDelete ? `
+                <button type="button" class="delete-comment-btn" data-comment-id="${commentId}" title="Elimina commento">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              ` : ''}
+            </div>
             ${bodyHtml}
           </div>
         </div>
@@ -1268,8 +1277,9 @@ function openComments(postId) {
     }).join('');
 
     lucide.createIcons();
+    attachDeleteCommentListeners(postId);
     commentsList.scrollTop = commentsList.scrollHeight;
-  }); 
+   }); 
 }
 
 if (closeCommentsBtn) {
@@ -2841,4 +2851,24 @@ async function sendCommentSticker(postId, stickerUrl) {
   } catch (error) {
     console.error("Errore invio sticker:", error);
   }
+}
+// Listener ed eliminazione dei commenti
+function attachDeleteCommentListeners(postId) {
+  document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const commentId = btn.dataset.commentId;
+      if (!confirm('Vuoi davvero eliminare questo commento?')) return;
+
+      try {
+        await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+        await updateDoc(doc(db, 'posts', postId), {
+          commentCount: increment(-1)
+        });
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione del commento:', error);
+        alert('Non è stato possibile eliminare il commento.');
+      }
+    });
+  });
 }

@@ -4003,3 +4003,30 @@ body.dark .comment-bubble,
   display: block;
   margin-top: 4px;
 }
+.comment-bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.delete-comment-btn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.delete-comment-btn:hover {
+  color: #ef4444;
+}
+
+.delete-comment-btn i, .delete-comment-btn svg {
+  width: 14px;
+  height: 14px;
+}
