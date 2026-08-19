@@ -8,6 +8,7 @@ import {
 import { getStorage, ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 import { t } from './lang.js';
+import { openStickerModal } from './stickers-data.js';
 function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
   const avatarImage = photoUrl
     ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
@@ -1244,19 +1245,18 @@ function openComments(postId) {
       const c = docSnap.data();
       const isSticker = c.type === 'sticker';
       const isVerified = c.isVerified === true || c.authorName === 'elisabel_messa';
+      const avatarPhoto = c.userPhoto || (currentUser && c.uid === currentUser.uid ? currentProfile.logoUrl : '');
 
       let bodyHtml;
       if (isSticker) {
-        bodyHtml = c.sticker.startsWith('http')
-          ? `<img src="${c.sticker}" class="comment-sticker-media" alt="sticker" />`
-          : `<span class="comment-sticker-emoji">${c.sticker}</span>`;
+        bodyHtml = `<img src="${c.sticker}" class="comment-sticker-media" alt="sticker" />`;
       } else {
         bodyHtml = `<p class="comment-text">${escapeHtml(c.text || '')}</p>`;
       }
 
       return `
         <div class="comment-row">
-          ${renderAvatar(c.userPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
+          ${renderAvatar(avatarPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
           <div class="comment-bubble">
             <a href="user.html?u=${encodeURIComponent(c.authorName || '')}" class="comment-author-name">
               @${escapeHtml(c.authorName || 'utente')}
@@ -1268,9 +1268,8 @@ function openComments(postId) {
     }).join('');
 
     lucide.createIcons();
-
     commentsList.scrollTop = commentsList.scrollHeight;
-  });
+  }); 
 }
 
 if (closeCommentsBtn) {
@@ -2810,5 +2809,71 @@ if (commentStickerBtn) {
     if (sticker) {
       sendCommentSticker(activeCommentsPostId, sticker);
     }
+  });
+}
+// Invio commento di testo classico
+if (commentForm) {
+  commentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeCommentsPostId || !currentUser) return;
+
+    const text = commentInput.value.trim();
+    if (!text) return;
+
+    try {
+      await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
+        uid: currentUser.uid,
+        authorName: currentProfile.username || currentUser.email.split('@')[0],
+        userPhoto: currentProfile.logoUrl || '',
+        isVerified: currentProfile.username === 'elisabel_messa',
+        type: 'text',
+        text: text,
+        createdAt: serverTimestamp()
+      });
+
+      await updateDoc(doc(db, 'posts', activeCommentsPostId), {
+        commentCount: increment(1)
+      });
+
+      commentInput.value = '';
+    } catch (error) {
+      console.error("Errore nell'invio del commento:", error);
+    }
+  });
+}
+
+// Invio Sticker come Commento
+async function sendCommentSticker(postId, stickerUrl) {
+  if (!postId || !currentUser) return;
+
+  try {
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
+      uid: currentUser.uid,
+      authorName: currentProfile.username || currentUser.email.split('@')[0],
+      userPhoto: currentProfile.logoUrl || '',
+      isVerified: currentProfile.username === 'elisabel_messa',
+      type: 'sticker',
+      sticker: stickerUrl,
+      createdAt: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, 'posts', postId), {
+      commentCount: increment(1)
+    });
+  } catch (error) {
+    console.error("Errore invio sticker:", error);
+  }
+}
+
+// Click sull'icona sticker nei commenti
+const commentStickerBtn = document.getElementById('commentStickerBtn');
+if (commentStickerBtn) {
+  commentStickerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!activeCommentsPostId) return;
+
+    openStickerModal(commentStickerBtn, (selectedUrl) => {
+      sendCommentSticker(activeCommentsPostId, selectedUrl);
+    });
   });
 }
