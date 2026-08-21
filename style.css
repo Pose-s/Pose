@@ -3577,39 +3577,51 @@ html, body {
 }
 
 /* Badge posizionato nell'angolo in alto a destra */
+/* Posizionamento e dimensione standard del badge (es. nei post) */
 .verified-crown-badge {
   position: absolute !important;
-  top: 0px !important;
-  right: 0px !important;
-  width: 38px !important;
-  height: 38px !important;
+  top: -4px !important;
+  right: -4px !important;
+  width: 14px !important;
+  height: 14px !important;
   z-index: 10 !important;
-  pointer-events: none !important;
-  transform: translate(15%, -15%) !important;
+  pointer-events: none;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Dimensioni per gli avatar più piccoli nei post */
-.post-avatar-wrap .verified-crown-badge,
-.conversation-avatar-wrap .verified-crown-badge {
-  width: 20px !important;
-  height: 20px !important;
-  transform: translate(20%, -20%) !important;
-}
-
-/* Immagine della coroncina */
+/* Immagine interna della coroncina */
 .verified-crown-img {
   width: 100% !important;
   height: 100% !important;
+  object-fit: contain !important;
+  border-radius: 50% !important;
+  filter: drop-shadow(0 0 2px rgba(255, 0, 127, 0.7));
+}
+
+/* Regola specifica per l'avatar nei commenti */
+.comment-avatar-wrap {
+  position: relative !important;
+  display: inline-block !important;
+  width: 34px !important;
+  height: 34px !important;
+  flex-shrink: 0;
+}
+
+.comment-avatar-wrap .verified-crown-badge {
+  top: -3px !important;
+  right: -3px !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.comment-avatar-img {
+  width: 34px !important;
+  height: 34px !important;
   border-radius: 50% !important;
   object-fit: cover !important;
-  box-shadow: 0 0 10px rgba(255, 20, 147, 0.8) !important;
-}
-/* Container avatar nel post */
-.post-avatar-wrap {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 36px;
+  display: block;
 }
 
 /* Badge della coroncina sui post */
