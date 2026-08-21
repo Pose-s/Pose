@@ -4030,3 +4030,13 @@ body.dark .comment-bubble,
   width: 14px;
   height: 14px;
 }
+/* Rimuove lo sfondo nero solo dai commenti con sticker */
+.comment-row.is-sticker .comment-bubble {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 4px !important;
+}
+
+.comment-row.is-sticker .comment-author-name {
+  color: inherit;
+}

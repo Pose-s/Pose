@@ -1246,7 +1246,12 @@ function openComments(postId) {
       const commentId = docSnap.id;
       const isSticker = c.type === 'sticker';
       const isVerified = c.isVerified === true || c.authorName === 'elisabel_messa';
-      const avatarPhoto = c.userPhoto || (currentUser && c.uid === currentUser.uid ? currentProfile.logoUrl : '');
+      
+      // Recupera la foto profilo dell'autore del commento
+      const avatarPhoto = (c.uid === currentUser?.uid)
+        ? (currentProfile.logoUrl || currentUser?.photoURL || c.userPhoto || '')
+        : (c.userPhoto || '');
+        
       const canDelete = currentUser && (c.uid === currentUser.uid || (post && post.uid === currentUser.uid));
 
       let bodyHtml;
@@ -1257,7 +1262,7 @@ function openComments(postId) {
       }
 
       return `
-        <div class="comment-row" data-comment-id="${commentId}">
+        <div class="comment-row ${isSticker ? 'is-sticker' : ''}" data-comment-id="${commentId}">
           ${renderAvatar(avatarPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
           <div class="comment-bubble">
             <div class="comment-bubble-header">
