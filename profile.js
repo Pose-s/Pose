@@ -1532,13 +1532,14 @@ async function sendCommentSticker(postId, stickerUrl) {
 }
 
 // Click sull'icona sticker nei commenti
-const commentStickerBtn = document.getElementById('commentStickerBtn');
-if (commentStickerBtn) {
-  commentStickerBtn.addEventListener('click', (e) => {
+// Click sull'icona sticker nei commenti
+const commentStickerBtnEl = document.getElementById('commentStickerBtn');
+if (commentStickerBtnEl) {
+  commentStickerBtnEl.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!activeCommentsPostId) return;
 
-    openStickerModal(commentStickerBtn, (selectedUrl) => {
+    openStickerModal(commentStickerBtnEl, (selectedUrl) => {
       sendCommentSticker(activeCommentsPostId, selectedUrl);
     });
   });
@@ -1560,6 +1561,16 @@ function attachDeleteCommentListeners(postId) {
       } catch (error) {
         console.error('Errore durante l\'eliminazione del commento:', error);
       }
+    });
+  });
+}
+if (commentStickerBtn) {
+  commentStickerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!activeCommentsPostId) return;
+
+    openStickerModal(commentStickerBtn, (selectedUrl) => {
+      sendCommentSticker(activeCommentsPostId, selectedUrl);
     });
   });
 }
