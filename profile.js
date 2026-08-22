@@ -97,6 +97,7 @@ let allShareFriends = [];
 let savedPostIds = new Set();
 let activeTagPostId = null;
 let activeTagCache = null;
+let currentProfile = { displayName: '', logoUrl: '', username: '' };
 
 settingsBtn.addEventListener('click', () => {
   window.location.href = 'settings.html';
@@ -211,11 +212,11 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   currentUser = user;
-  await loadSavedPosts();
-  startListeningToOwnPosts(user.uid);
 
   const userDoc = await getDoc(doc(db, 'users', user.uid));
-  const data = userDoc.exists() ? userDoc.data() : {};
+  if (userDoc.exists()) {
+    currentProfile = userDoc.data();
+  }
 
   currentUsername = data.username || '';
 
@@ -1512,12 +1513,15 @@ if (commentForm) {
 async function sendCommentSticker(postId, stickerUrl) {
   if (!postId || !currentUser) return;
 
+  const authorName = (currentProfile && currentProfile.username) || (currentUser.displayName) || (currentUser.email ? currentUser.email.split('@')[0] : 'utente');
+  const userPhoto = (currentProfile && currentProfile.logoUrl) || currentUser.photoURL || '';
+
   try {
     await addDoc(collection(db, 'posts', postId, 'comments'), {
       uid: currentUser.uid,
-      authorName: currentProfile.username || currentUser.email.split('@')[0],
-      userPhoto: currentProfile.logoUrl || '',
-      isVerified: currentProfile.username === 'elisabel_messa',
+      authorName: authorName,
+      userPhoto: userPhoto,
+      isVerified: authorName === 'elisabel_messa',
       type: 'sticker',
       sticker: stickerUrl,
       createdAt: serverTimestamp()
