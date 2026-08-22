@@ -1,8 +1,9 @@
 import { auth, db, storage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
-  doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy,
-  onSnapshot, addDoc, serverTimestamp, increment, arrayUnion, arrayRemove, getDocs, limit
+  doc, getDoc, setDoc, collection, query, where, orderBy,
+  onSnapshot, deleteDoc, updateDoc, addDoc, serverTimestamp,
+  increment, arrayUnion, arrayRemove, limit, getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
@@ -28,14 +29,15 @@ function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", i
   `;
 }
 
-// Elementi DOM Profilo
+// Elementi DOM
+const locationInput = document.getElementById('locationInput');
 const profileUsername = document.getElementById('profileUsername');
 const profileBio = document.getElementById('profileBio');
 const currentLogo = document.getElementById('currentLogo');
 const logoPlaceholder = document.getElementById('logoPlaceholder');
-const statPosts = document.getElementById('statPosts') || document.querySelector('.profile-stat:nth-child(1) .profile-stat-number') || {};
-const statFollowers = document.getElementById('statFollowers') || document.querySelector('.profile-stat:nth-child(2) .profile-stat-number') || {};
-const statFollowing = document.getElementById('statFollowing') || document.querySelector('.profile-stat:nth-child(3) .profile-stat-number') || {};
+const statPosts = document.getElementById('statPosts') || document.querySelector('.profile-stat:nth-child(1) .profile-stat-number');
+const statFollowers = document.getElementById('statFollowers') || document.querySelector('.profile-stat:nth-child(2) .profile-stat-number');
+const statFollowing = document.getElementById('statFollowing') || document.querySelector('.profile-stat:nth-child(3) .profile-stat-number');
 
 const editProfileBtn = document.getElementById('editProfileBtn');
 const editProfileCard = document.getElementById('editProfileCard');
@@ -48,7 +50,7 @@ const logoInput = document.getElementById('logoInput');
 const editLogoPreview = document.getElementById('editLogoPreview');
 const editLogoPlaceholder = document.getElementById('editLogoPlaceholder');
 
-const postsGrid = document.getElementById('postsGrid') || document.getElementById('profilePostsGrid');
+const postsList = document.getElementById('postsList') || document.getElementById('postsGrid');
 const postsLoader = document.getElementById('postsLoader');
 const logoutBtn = document.getElementById('logoutBtn');
 
@@ -75,7 +77,6 @@ let currentUser = null;
 let currentProfile = { displayName: '', logoUrl: '', username: '' };
 let currentUsername = '';
 let currentLogoUrl = '';
-let userPosts = [];
 let savedPostIds = new Set();
 let postsCache = new Map();
 let activeCommentsPostId = null;
@@ -101,7 +102,7 @@ function updateAvatarDisplay(url, imgEl, placeholderEl) {
   }
 }
 
-// Inizializzazione Auth e Caricamento Profilo
+// Inizializzazione Profilo
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = 'login.html';
@@ -147,7 +148,7 @@ onAuthStateChanged(auth, async (user) => {
   updateAvatarDisplay(currentLogoUrl, editLogoPreview, editLogoPlaceholder);
 
   await loadSavedPosts();
-  startListeningToUserPosts(user.uid);
+  startListeningToPosts(user.uid);
 });
 
 // Salvataggi
@@ -158,14 +159,124 @@ async function loadSavedPosts() {
   savedPostIds = new Set(data.savedPosts || []);
 }
 
+function attachSaveListeners(scopeSelector) {
+  document.querySelectorAll(`${scopeSelector} .save-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const isSaved = savedPostIds.has(postId);
+
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+        });
+        if (isSaved) {
+          savedPostIds.delete(postId);
+          btn.innerHTML = `<i data-lucide="bookmark"></i>`;
+        } else {
+          savedPostIds.add(postId);
+          btn.innerHTML = `<i data-lucide="bookmark" style="fill:currentColor;"></i>`;
+        }
+        lucide.createIcons();
+      } catch (err) {
+        console.error("Errore salvataggio post:", err);
+      }
+    });
+  });
+}
+
 function getPostMedia(post) {
   if (post.media && post.media.length > 0) return post.media;
   if (post.photoUrl) return [{ type: 'photo', url: post.photoUrl, path: post.photoPath || '' }];
   return [];
 }
 
-// Caricamento Post dell'utente
-function startListeningToUserPosts(uid) {
+// Rendering Card dei Post
+function renderPostCard(post, id) {
+  const isOwner = currentUser && post.uid === currentUser.uid;
+  const isLiked = currentUser && (post.likes || []).includes(currentUser.uid);
+  const likesCount = (post.likes || []).length;
+  const commentCount = post.commentCount || 0;
+  const isSaved = savedPostIds.has(id);
+  const media = getPostMedia(post);
+
+  let mediaHtml = '';
+  if (media.length === 1) {
+    const m = media[0];
+    mediaHtml = m.type === 'video'
+      ? `<video src="${m.url}" controls playsinline class="post-image single-media"></video>`
+      : `<img src="${m.url}" alt="Post image" class="post-image single-media" loading="lazy" />`;
+  } else if (media.length > 1) {
+    const slides = media.map(m =>
+      m.type === 'video'
+        ? `<div class="carousel-slide"><video src="${m.url}" controls playsinline class="post-image"></video></div>`
+        : `<div class="carousel-slide"><img src="${m.url}" alt="Post image" class="post-image" loading="lazy" /></div>`
+    ).join('');
+    const dots = media.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('');
+
+    mediaHtml = `
+      <div class="carousel-container" data-carousel-id="${id}">
+        <div class="carousel-track">${slides}</div>
+        <button type="button" class="carousel-btn prev hidden" aria-label="Precedente"><i data-lucide="chevron-left"></i></button>
+        <button type="button" class="carousel-btn next" aria-label="Successivo"><i data-lucide="chevron-right"></i></button>
+        <div class="carousel-dots">${dots}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <article class="post-card" data-id="${id}">
+      <div class="post-header">
+        ${renderAvatar(post.authorPhoto || '', post.isVerified || post.authorName === 'elisabel_messa', "post-avatar-wrap", "post-avatar-img")}
+        <div class="post-user-info">
+          <div class="post-user-row">
+            <span class="post-author-name">@${escapeHtml(post.authorName || 'utente')}</span>
+            <span class="post-date-separator">•</span>
+            <span class="post-date">${post.createdAt ? formatDate(post.createdAt.toDate()) : ''}</span>
+          </div>
+          ${post.location ? `<span class="post-location"><i data-lucide="map-pin"></i> ${escapeHtml(post.location)}</span>` : ''}
+        </div>
+        ${isOwner ? `
+          <div class="post-menu-wrap">
+            <button type="button" class="post-menu-btn" title="Opzioni"><i data-lucide="more-vertical"></i></button>
+            <div class="post-menu-dropdown hidden">
+              <button type="button" class="post-menu-item edit-post-btn" data-id="${id}"><i data-lucide="edit-3"></i> Modifica</button>
+              <button type="button" class="post-menu-item delete-post-btn" data-id="${id}"><i data-lucide="trash-2"></i> Elimina</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="post-media-area">${mediaHtml}</div>
+
+      <div class="post-actions">
+        <div class="post-actions-left">
+          <button type="button" class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-id="${id}">
+            <i data-lucide="heart" ${isLiked ? 'style="fill:#ef4444; color:#ef4444;"' : ''}></i>
+            <span class="like-count">${likesCount}</span>
+          </button>
+          <button type="button" class="action-btn comment-btn" data-id="${id}">
+            <i data-lucide="message-circle"></i>
+            <span class="comment-count">${commentCount}</span>
+          </button>
+        </div>
+        <button type="button" class="action-btn save-btn ${isSaved ? 'saved' : ''}" data-id="${id}">
+          <i data-lucide="bookmark" ${isSaved ? 'style="fill:currentColor;"' : ''}></i>
+        </button>
+      </div>
+
+      ${post.caption ? `
+        <div class="post-caption">
+          <span class="caption-author">@${escapeHtml(post.authorName || 'utente')}</span>
+          <span class="caption-text">${escapeHtml(post.caption)}</span>
+        </div>
+      ` : ''}
+    </article>
+  `;
+}
+
+// Caricamento Post
+function startListeningToPosts(uid) {
   const postsQuery = query(
     collection(db, 'posts'),
     where('uid', '==', uid),
@@ -176,56 +287,152 @@ function startListeningToUserPosts(uid) {
 
   onSnapshot(postsQuery, (snapshot) => {
     if (postsLoader) postsLoader.classList.add('hidden');
-    if (!postsGrid) return;
+    if (!postsList) return;
 
     if (statPosts) statPosts.textContent = snapshot.docs.length;
 
     if (snapshot.empty) {
-      postsGrid.innerHTML = '<p class="search-empty" style="grid-column: 1 / -1; text-align:center; padding: 40px 0; color:#94a3b8;">Non hai ancora pubblicato nessun post.</p>';
+      postsList.innerHTML = '<p class="search-empty" style="text-align:center; padding: 40px 0; color:#94a3b8;">Non hai ancora pubblicato nessun post.</p>';
       postsCache.clear();
       return;
     }
 
     postsCache.clear();
-
-    postsGrid.innerHTML = snapshot.docs.map(docSnap => {
-      const post = docSnap.data();
+    postsList.innerHTML = snapshot.docs.map(docSnap => {
+      const p = docSnap.data();
       const id = docSnap.id;
-      postsCache.set(id, post);
-
-      const media = getPostMedia(post);
-      const firstMedia = media[0];
-      const likes = post.likes || [];
-      const commentCount = post.commentCount || 0;
-
-      return `
-        <div class="profile-post-card" data-id="${id}">
-          ${firstMedia && firstMedia.type === 'video'
-            ? `<video src="${firstMedia.url}" class="profile-post-thumb"></video>`
-            : `<img src="${firstMedia ? firstMedia.url : ''}" class="profile-post-thumb" alt="Post" loading="lazy" />`
-          }
-          <div class="profile-post-overlay">
-            <span><i data-lucide="heart"></i> ${likes.length}</span>
-            <span><i data-lucide="message-circle"></i> ${commentCount}</span>
-          </div>
-        </div>
-      `;
+      postsCache.set(id, p);
+      return renderPostCard(p, id);
     }).join('');
 
     lucide.createIcons();
-
-    document.querySelectorAll('.profile-post-card').forEach(card => {
-      card.addEventListener('click', () => {
-        openComments(card.dataset.id);
-      });
-    });
-  }, (error) => {
+    attachPostCardListeners('#postsList');
+    attachSaveListeners('#postsList');
+    initCarousels();
+  }, (err) => {
     if (postsLoader) postsLoader.classList.add('hidden');
-    console.error("Errore caricamento post profilo:", error);
+    console.error("Errore snapshot post profilo:", err);
   });
 }
 
-// Modale Commenti e Sticker
+// Listener Card (Like, Commenti, Menu, Cancella, Modifica)
+function attachPostCardListeners(scopeSelector) {
+  // Menu tre puntini
+  document.querySelectorAll(`${scopeSelector} .post-menu-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = btn.nextElementSibling;
+      document.querySelectorAll('.post-menu-dropdown').forEach(d => { if (d !== dropdown) d.classList.add('hidden'); });
+      if (dropdown) dropdown.classList.toggle('hidden');
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.post-menu-dropdown').forEach(d => d.classList.add('hidden'));
+  });
+
+  // Like
+  document.querySelectorAll(`${scopeSelector} .like-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!currentUser) return;
+      const postId = btn.dataset.id;
+      const post = postsCache.get(postId);
+      if (!post) return;
+
+      const isLiked = (post.likes || []).includes(currentUser.uid);
+      try {
+        await updateDoc(doc(db, 'posts', postId), {
+          likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+        });
+      } catch (err) {
+        console.error("Errore like:", err);
+      }
+    });
+  });
+
+  // Commenti
+  document.querySelectorAll(`${scopeSelector} .comment-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openComments(btn.dataset.id);
+    });
+  });
+
+  // Elimina Post
+  document.querySelectorAll(`${scopeSelector} .delete-post-btn`).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      if (!confirm('Vuoi davvero eliminare questo post? L\'azione è irreversibile.')) return;
+
+      try {
+        const post = postsCache.get(postId);
+        if (post) {
+          const media = getPostMedia(post);
+          for (const m of media) {
+            if (m.path) {
+              try { await deleteObject(ref(storage, m.path)); } catch (_) {}
+            }
+          }
+        }
+        await deleteDoc(doc(db, 'posts', postId));
+      } catch (err) {
+        console.error("Errore cancellazione post:", err);
+      }
+    });
+  });
+
+  // Modifica Post
+  document.querySelectorAll(`${scopeSelector} .edit-post-btn`).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.id;
+      const post = postsCache.get(postId);
+      if (!post || !editPostModal) return;
+
+      editingPostId = postId;
+      if (editCaptionInput) editCaptionInput.value = post.caption || '';
+      if (editLocationInput) editLocationInput.value = post.location || '';
+      editPostModal.classList.remove('hidden');
+    });
+  });
+}
+
+// Carosello Swipe / Bottoni
+function initCarousels() {
+  document.querySelectorAll('.carousel-container').forEach(carousel => {
+    const track = carousel.querySelector('.carousel-track');
+    const slides = carousel.querySelectorAll('.carousel-slide');
+    const prevBtn = carousel.querySelector('.carousel-btn.prev');
+    const nextBtn = carousel.querySelector('.carousel-btn.next');
+    const dots = carousel.querySelectorAll('.carousel-dot');
+    let currentIndex = 0;
+
+    function update() {
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+      if (prevBtn) prevBtn.classList.toggle('hidden', currentIndex === 0);
+      if (nextBtn) nextBtn.classList.toggle('hidden', currentIndex === slides.length - 1);
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex));
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) { currentIndex--; update(); }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentIndex < slides.length - 1) { currentIndex++; update(); }
+      });
+    }
+  });
+}
+
+// Modale Commenti
 function openComments(postId) {
   activeCommentsPostId = postId;
   if (commentsModal) commentsModal.classList.remove('hidden');
@@ -375,7 +582,6 @@ async function sendCommentSticker(postId, stickerUrl) {
   }
 }
 
-// Click sull'icona sticker nei commenti del profilo
 if (commentStickerBtn) {
   commentStickerBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -387,7 +593,7 @@ if (commentStickerBtn) {
   });
 }
 
-// Eliminazione commenti
+// Cancellazione commenti
 function attachDeleteCommentListeners(postId) {
   document.querySelectorAll('.delete-comment-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -404,6 +610,28 @@ function attachDeleteCommentListeners(postId) {
         console.error('Errore durante l\'eliminazione del commento:', error);
       }
     });
+  });
+}
+
+// Modifica Post Modal
+if (closeEditPostModalBtn && editPostModal) {
+  closeEditPostModalBtn.addEventListener('click', () => editPostModal.classList.add('hidden'));
+}
+
+if (editPostForm) {
+  editPostForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingPostId) return;
+
+    try {
+      await updateDoc(doc(db, 'posts', editingPostId), {
+        caption: editCaptionInput ? editCaptionInput.value.trim() : '',
+        location: editLocationInput ? editLocationInput.value.trim() : ''
+      });
+      if (editPostModal) editPostModal.classList.add('hidden');
+    } catch (err) {
+      console.error("Errore aggiornamento post:", err);
+    }
   });
 }
 
