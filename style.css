@@ -4052,3 +4052,66 @@ body.dark .comment-bubble,
 .comment-row.is-sticker .comment-author-name {
   color: inherit;
 }
+/* Griglia post profilo Instagram-style */
+#postsGrid,
+#profilePostsGrid,
+.profile-posts-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 4px !important;
+  width: 100% !important;
+  max-width: 935px !important;
+  margin: 20px auto 0 auto !important;
+}
+
+/* Scheda del singolo post */
+.profile-post-card {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  overflow: hidden !important;
+  background-color: #f4f4f5 !important;
+  cursor: pointer !important;
+  border-radius: 4px;
+}
+
+/* Immagine o Video ritagliati quadrati perfetti */
+.profile-post-thumb {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+/* Overlay hover con cuori e commenti */
+.profile-post-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 20px !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  opacity: 0 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.profile-post-card:hover .profile-post-overlay {
+  opacity: 1 !important;
+}
+
+.profile-post-overlay span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-post-overlay svg,
+.profile-post-overlay i {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
