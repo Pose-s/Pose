@@ -247,6 +247,10 @@ onAuthStateChanged(auth, async (user) => {
   bioEditInput.value = data.bio || '';
   usernameEditInput.value = currentUsername;
   updateAvatarDisplay(currentLogoUrl, editLogoPreview, editLogoPlaceholder);
+
+// --- AGGIUNGI QUESTE RIGHE QUI SOTTO PER CARICARE I POST E I SALVATI ---
+  await loadSavedPosts();
+  startListeningToUserPosts(user.uid); // o il nome della tua funzione per i post del profilo
 });
 
 // ===== Salvati =====
