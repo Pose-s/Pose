@@ -8,6 +8,7 @@ import {
 import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { compressImage, escapeHtml, formatDate } from './utils.js';
 import { t } from './lang.js';
+import { openStickerModal } from './stickers-data.js';
 function renderAvatar(photoUrl, isVerified, wrapperClass = "avatar-container", imgClass = "user-avatar") {
   const avatarImage = photoUrl
     ? `<img src="${photoUrl}" class="${imgClass}" alt="Avatar" loading="lazy" />`
@@ -1095,29 +1096,64 @@ function openComments(postId, cache) {
       return;
     }
 
-    commentsList.innerHTML = snapshot.docs.map(docSnap => {
+   commentsList.innerHTML = snapshot.docs.map(docSnap => {
       const c = docSnap.data();
+      const commentId = docSnap.id;
+      const isSticker = c.type === 'sticker';
+      const isVerified = c.isVerified === true || c.authorName === 'elisabel_messa';
+      
+      const avatarPhoto = (c.uid === currentUser?.uid)
+        ? (currentProfile.logoUrl || currentUser?.photoURL || c.userPhoto || '')
+        : (c.userPhoto || '');
+        
+      const canDelete = currentUser && (c.uid === currentUser.uid || (post && post.uid === currentUser.uid));
+
+      let bodyHtml;
+      if (isSticker) {
+        bodyHtml = `<img src="${c.sticker}" class="comment-sticker-media" alt="sticker" />`;
+      } else {
+        bodyHtml = `<p class="comment-text">${escapeHtml(c.text || '')}</p>`;
+      }
+
       return `
-        <div class="comment-item">
-          <span class="comment-author">${escapeHtml(c.authorName || 'Utente')}</span>
-          <p class="comment-text">${escapeHtml(c.text || '')}</p>
+        <div class="comment-row ${isSticker ? 'is-sticker' : ''}" data-comment-id="${commentId}">
+          ${renderAvatar(avatarPhoto, isVerified, "comment-avatar-wrap", "comment-avatar-img")}
+          <div class="comment-bubble">
+            <div class="comment-bubble-header">
+              <a href="user.html?u=${encodeURIComponent(c.authorName || '')}" class="comment-author-name">
+                @${escapeHtml(c.authorName || 'utente')}
+              </a>
+              ${canDelete ? `
+                <button type="button" class="delete-comment-btn" data-comment-id="${commentId}" title="Elimina commento">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              ` : ''}
+            </div>
+            ${bodyHtml}
+          </div>
         </div>
       `;
     }).join('');
 
+    lucide.createIcons();
+    attachDeleteCommentListeners(postId);
     commentsList.scrollTop = commentsList.scrollHeight;
   });
 }
 
-closeCommentsBtn.addEventListener('click', closeComments);
-commentsModal.addEventListener('click', (e) => { if (e.target === commentsModal) closeComments(); });
+if (closeCommentsBtn) {
+  closeCommentsBtn.addEventListener('click', closeComments);
+}
+if (commentsModal) {
+  commentsModal.addEventListener('click', (e) => { if (e.target === commentsModal) closeComments(); });
+}
 
 function closeComments() {
-  commentsModal.classList.add('hidden');
+  if (commentsModal) commentsModal.classList.add('hidden');
   if (unsubscribeComments) unsubscribeComments();
   activeCommentsPostId = null;
-  commentInput.value = '';
-}
+  if (commentInput) commentInput.value = '';
+} 
 
 commentForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1440,4 +1476,90 @@ function verifiedBadgeHtml(isVerified) {
       >
     </div>
   `;
+}
+// Invio commento classico
+if (commentForm) {
+  commentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeCommentsPostId || !currentUser) return;
+
+    const text = commentInput.value.trim();
+    if (!text) return;
+
+    try {
+      await addDoc(collection(db, 'posts', activeCommentsPostId, 'comments'), {
+        uid: currentUser.uid,
+        authorName: currentProfile.username || currentUser.email.split('@')[0],
+        userPhoto: currentProfile.logoUrl || '',
+        isVerified: currentProfile.username === 'elisabel_messa',
+        type: 'text',
+        text: text,
+        createdAt: serverTimestamp()
+      });
+
+      await updateDoc(doc(db, 'posts', activeCommentsPostId), {
+        commentCount: increment(1)
+      });
+
+      commentInput.value = '';
+    } catch (error) {
+      console.error("Errore nell'invio del commento:", error);
+    }
+  });
+}
+
+// Invio Sticker come Commento
+async function sendCommentSticker(postId, stickerUrl) {
+  if (!postId || !currentUser) return;
+
+  try {
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
+      uid: currentUser.uid,
+      authorName: currentProfile.username || currentUser.email.split('@')[0],
+      userPhoto: currentProfile.logoUrl || '',
+      isVerified: currentProfile.username === 'elisabel_messa',
+      type: 'sticker',
+      sticker: stickerUrl,
+      createdAt: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, 'posts', postId), {
+      commentCount: increment(1)
+    });
+  } catch (error) {
+    console.error("Errore invio sticker:", error);
+  }
+}
+
+// Click sull'icona sticker nei commenti
+const commentStickerBtn = document.getElementById('commentStickerBtn');
+if (commentStickerBtn) {
+  commentStickerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!activeCommentsPostId) return;
+
+    openStickerModal(commentStickerBtn, (selectedUrl) => {
+      sendCommentSticker(activeCommentsPostId, selectedUrl);
+    });
+  });
+}
+
+// Eliminazione commenti
+function attachDeleteCommentListeners(postId) {
+  document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const commentId = btn.dataset.commentId;
+      if (!confirm('Vuoi davvero eliminare questo commento?')) return;
+
+      try {
+        await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+        await updateDoc(doc(db, 'posts', postId), {
+          commentCount: increment(-1)
+        });
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione del commento:', error);
+      }
+    });
+  });
 }
