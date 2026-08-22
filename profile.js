@@ -214,9 +214,8 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
   const userDoc = await getDoc(doc(db, 'users', user.uid));
-  if (userDoc.exists()) {
-    currentProfile = userDoc.data();
-  }
+  const data = userDoc.exists() ? userDoc.data() : {};
+  currentProfile = data;
 
   currentUsername = data.username || '';
 
@@ -224,21 +223,22 @@ onAuthStateChanged(auth, async (user) => {
   profileBio.textContent = data.bio || '';
   currentLogoUrl = data.logoUrl || '';
   updateAvatarDisplay(currentLogoUrl, currentLogo, logoPlaceholder);
-  // Gestione coroncina verificato sul profilo principale
-const profileAvatarContainer = currentLogo.parentElement;
-let existingBadge = profileAvatarContainer.querySelector('.verified-crown-badge');
 
-if (data.isVerified) {
-  if (!existingBadge) {
-    const badgeEl = document.createElement('div');
-    badgeEl.className = 'verified-crown-badge';
-    badgeEl.innerHTML = `<img src="verificato.jpg" alt="Verificato" class="verified-crown-img" />`;
-    profileAvatarContainer.style.position = 'relative';
-    profileAvatarContainer.appendChild(badgeEl);
+  // Gestione coroncina verificato sul profilo principale
+  const profileAvatarContainer = currentLogo.parentElement;
+  let existingBadge = profileAvatarContainer.querySelector('.verified-crown-badge');
+
+  if (data.isVerified) {
+    if (!existingBadge) {
+      const badgeEl = document.createElement('div');
+      badgeEl.className = 'verified-crown-badge';
+      badgeEl.innerHTML = `<img src="verificato.jpg" alt="Verificato" class="verified-crown-img" />`;
+      profileAvatarContainer.style.position = 'relative';
+      profileAvatarContainer.appendChild(badgeEl);
+    }
+  } else if (existingBadge) {
+    existingBadge.remove();
   }
-} else if (existingBadge) {
-  existingBadge.remove();
-}
 
   statFollowers.textContent = (data.followers || []).length;
   statFollowing.textContent = (data.following || []).length;
